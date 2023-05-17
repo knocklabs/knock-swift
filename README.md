@@ -3,12 +3,22 @@
 ## Features
 
 * Preferences
-    * getAllUserPreferences
-    * getUserPreferences
-    * setUserPreferences
+	* getAllUserPreferences
+	* getUserPreferences
+	* setUserPreferences
 * Channels
+	* registerTokenForAPNS
+	* getUserChannelData
+	* updateUserChannelData
 * Messages
+	* getMessage
+	* updateMessageStatus
+	* deleteMessageStatus
+	* bulkUpdateMessageStatus
+	* makeStatusUpdate
 * Users
+	* getUser
+	* updateUser
 
 ## Installation
 
@@ -79,7 +89,6 @@ knockClient = try! Knock(publishableKey: "your-pk", userId: "user-id")
 // on prod with enhanced security turned on:
 knockClient = try! Knock(publishableKey: "your-pk", userId: "user-id", userToken: "signed-user-token")
 ```
-
 
 
 
