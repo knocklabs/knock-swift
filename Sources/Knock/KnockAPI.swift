@@ -30,13 +30,17 @@ public struct NetworkError: NetworkErrorProtocol {
 class KnockAPI {
     private let publishableKey: String
     private let userToken: String?
-    private let apiBasePath = "https://api.knock.app/v1"
+    private var apiBasePath = "https://api.knock.app/v1"
     
     static let clientVersion = "0.0.1"
     
-    init(publishableKey: String, userToken: String? = nil) {
+    init(publishableKey: String, userToken: String? = nil, hostname: String? = nil) {
         self.publishableKey = publishableKey
         self.userToken = userToken
+        
+        if let customHostname = hostname {
+            self.apiBasePath = customHostname
+        }
     }
     
     // MARK: Decode functions, they encapsulate making the request and decoding the data
@@ -157,8 +161,8 @@ class KnockAPI {
         
         // Headers
         
-        request.addValue("knock-ios-sdk", forHTTPHeaderField: "X-Client-Name")
-        request.addValue(KnockAPI.clientVersion, forHTTPHeaderField: "X-Client-Version")
+        request.addValue("knock-swift@\(KnockAPI.clientVersion)", forHTTPHeaderField: "User-Agent")
+        
         request.addValue("Bearer \(publishableKey)", forHTTPHeaderField: "Authorization")
         if let userToken = userToken {
             request.addValue(userToken, forHTTPHeaderField: "X-Knock-User-Token")

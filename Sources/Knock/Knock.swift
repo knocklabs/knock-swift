@@ -892,15 +892,16 @@ public class Knock {
         - publishableKey: your public API key
         - userId: the user-id that will be used in the subsequent method calls
         - userToken: [optional] user token. Used in production when enhanced security is enabled
+        - hostname: [optional] custom hostname of the API, including schema (https://)
      */
-    public init(publishableKey: String, userId: String, userToken: String? = nil) throws {
+    public init(publishableKey: String, userId: String, userToken: String? = nil, hostname: String? = nil) throws {
         guard publishableKey.hasPrefix("sk_") == false else { throw KnockError.runtimeError("[Knock] You are using your secret API key on the client. Please use the public key.") }
         
         self.publishableKey = publishableKey
         self.userId = userId
         self.userToken = userToken
         
-        self.api = KnockAPI(publishableKey: publishableKey, userToken: userToken)
+        self.api = KnockAPI(publishableKey: publishableKey, userToken: userToken, hostname: hostname)
     }
 }
 
