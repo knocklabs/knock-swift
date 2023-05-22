@@ -885,6 +885,14 @@ public class Knock {
     
     // MARK: Constructor
     
+    /**
+     Returns a new instance of the Knock Client
+     
+     - Parameters:
+        - publishableKey: your public API key
+        - userId: the user-id that will be used in the subsequent method calls
+        - userToken: [optional] user token. Used in production when enhanced security is enabled
+     */
     public init(publishableKey: String, userId: String, userToken: String? = nil) throws {
         guard publishableKey.hasPrefix("sk_") == false else { throw KnockError.runtimeError("[Knock] You are using your secret API key on the client. Please use the public key.") }
         
