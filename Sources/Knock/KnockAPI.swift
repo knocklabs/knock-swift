@@ -30,7 +30,10 @@ public struct NetworkError: NetworkErrorProtocol {
 class KnockAPI {
     private let publishableKey: String
     private let userToken: String?
-    private var apiBasePath = "https://api.knock.app/v1"
+    public var hostname = "https://api.knock.app"
+    private var apiBasePath: String {
+        "\(hostname)/v1"
+    }
     
     static let clientVersion = "0.0.1"
     
@@ -39,7 +42,7 @@ class KnockAPI {
         self.userToken = userToken
         
         if let customHostname = hostname {
-            self.apiBasePath = customHostname
+            self.hostname = customHostname
         }
     }
     

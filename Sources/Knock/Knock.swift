@@ -194,7 +194,6 @@ public class Knock {
     
     public class FeedManager {
         private let api: KnockAPI
-        private let websocketPath = "wss://api.knock.app/ws/v1/websocket"
         private let socket: Socket
         private var feedChannel: Channel?
         private let userId: String
@@ -268,6 +267,10 @@ public class Knock {
         }
         
         public init(client: Knock, feedId: String) {
+            // use regex and circumflex accent to mark only the starting http to be replaced and not any others
+            let websocketHostname = client.api.hostname.replacingOccurrences(of: "^http", with: "ws", options: .regularExpression) // default: wss://api.knock.app
+            let websocketPath = "\(websocketHostname)/ws/v1/websocket" // default: wss://api.knock.app/ws/v1/websocket
+            
             self.socket = Socket(websocketPath, params: ["vsn": "2.0.0", "api_key": client.publishableKey, "user_token": client.userToken ?? ""])
             self.userId = client.userId
             self.feedId = feedId
