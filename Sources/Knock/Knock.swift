@@ -12,6 +12,24 @@ import AnyCodable
 public enum Either<T, U> {
     case left(T)
     case right(U)
+    
+    public func leftValue() -> T? {
+        switch self {
+        case .left(let value):
+            return value
+        default:
+            return nil
+        }
+    }
+
+    public func rightValue() -> U? {
+        switch self {
+        case .right(let value):
+            return value
+        default:
+            return nil
+        }
+    }
 }
 
 extension Either: Decodable where T: Decodable, U: Decodable {
@@ -673,10 +691,33 @@ public class Knock {
      It conforms to `Equatable` to be able to be monitored with `onChange` inside a SwiftUI List
      */
     public struct ChannelTypePreferenceItem: Identifiable, Equatable {
-        public var id: ChannelTypeKey
-        public var value: Bool
+        public static func == (lhs: Knock.ChannelTypePreferenceItem, rhs: Knock.ChannelTypePreferenceItem) -> Bool {
+            switch lhs.value {
+            case .left(let booll):
+                switch rhs.value {
+                case .left(let boolr):
+                    return booll == boolr
+                default:
+                    return false
+                }
+            case .right(let leftCa):
+                switch rhs.value {
+                case .right(let rightCa):
+                    return rightCa.conditions == leftCa.conditions
+                default:
+                    return false
+                }
+            }
+        }
         
-        public init(id: ChannelTypeKey, value: Bool) {
+        public var id: ChannelTypeKey
+        
+        /**
+         If this value is of type `ConditionsArray`, you must ensure that it has at least one element inside `conditions`, otherwise, an error will arise when saving the preferences.
+         */
+        public var value: Either<Bool, ConditionsArray>
+        
+        public init(id: ChannelTypeKey, value: Either<Bool, ConditionsArray>) {
             self.id = id
             self.value = value
         }
@@ -686,14 +727,18 @@ public class Knock {
      This struct will be converted to a dictionary when it's encoded to be sent to the API and it will only include the keys that are not set to nil
      When decoding from the API, if the key does not exists, the corresponding attribute will be nil here on the struct
      
+     For convenient use in SwiftUI, you can convert this struct to  an array of `ChannelTypePreferenceItem` using the method `asArray()`.
+     
      TODO: Just like the JS client, it would be great to pull this in (the keys/attributes) from an external location; it may be a bit tricky since Swift wants concrete types, but it may be a fun experiment to try to solve this.
+     
+     - Attention: for each attribute, if the value is of type `ConditionsArray`, you must ensure that it has at least one element inside `conditions`, otherwise, an error will arise when saving the preferences.
      */
     public struct ChannelTypePreferences: Codable {
-        public var email: Bool?
-        public var in_app_feed: Bool?
-        public var sms: Bool?
-        public var push: Bool?
-        public var chat: Bool?
+        public var email: Either<Bool, ConditionsArray>?
+        public var in_app_feed: Either<Bool, ConditionsArray>?
+        public var sms: Either<Bool, ConditionsArray>?
+        public var push: Either<Bool, ConditionsArray>?
+        public var chat: Either<Bool, ConditionsArray>?
         
         public func asArray() -> [ChannelTypePreferenceItem] {
             var array = [ChannelTypePreferenceItem]()
@@ -723,11 +768,11 @@ public class Knock {
         
         public init(from decoder: Decoder) throws {
             let container: KeyedDecodingContainer<Knock.ChannelTypePreferences.CodingKeys> = try decoder.container(keyedBy: Knock.ChannelTypePreferences.CodingKeys.self)
-            self.email = try container.decodeIfPresent(Bool.self, forKey: Knock.ChannelTypePreferences.CodingKeys.email)
-            self.in_app_feed = try container.decodeIfPresent(Bool.self, forKey: Knock.ChannelTypePreferences.CodingKeys.in_app_feed)
-            self.sms = try container.decodeIfPresent(Bool.self, forKey: Knock.ChannelTypePreferences.CodingKeys.sms)
-            self.push = try container.decodeIfPresent(Bool.self, forKey: Knock.ChannelTypePreferences.CodingKeys.push)
-            self.chat = try container.decodeIfPresent(Bool.self, forKey: Knock.ChannelTypePreferences.CodingKeys.chat)
+            self.email = try container.decodeIfPresent(Either<Bool, ConditionsArray>.self, forKey: Knock.ChannelTypePreferences.CodingKeys.email)
+            self.in_app_feed = try container.decodeIfPresent(Either<Bool, ConditionsArray>.self, forKey: Knock.ChannelTypePreferences.CodingKeys.in_app_feed)
+            self.sms = try container.decodeIfPresent(Either<Bool, ConditionsArray>.self, forKey: Knock.ChannelTypePreferences.CodingKeys.sms)
+            self.push = try container.decodeIfPresent(Either<Bool, ConditionsArray>.self, forKey: Knock.ChannelTypePreferences.CodingKeys.push)
+            self.chat = try container.decodeIfPresent(Either<Bool, ConditionsArray>.self, forKey: Knock.ChannelTypePreferences.CodingKeys.chat)
         }
         
         public init () {}
@@ -741,28 +786,84 @@ public class Knock {
         case chat
     }
     
-    public struct Condition: Codable {
+    /**
+     Struct to model a condition, see [here](https://docs.knock.app/send-and-manage-data/conditions#modeling-conditions) for more info
+     */
+    public struct Condition: Codable, Equatable, Identifiable {
+        public var id = UUID.init().uuidString
+        
         public let variable: String
-        public let `operator`: String // TODO: check this case. `operator` is a reserved word in Swift. Maybe handle it on the encoder or use backticks here
+        public let operation: String // TODO: check this case. `operator` is a reserved word in Swift. Maybe handle it on the encoder or use backticks here
         public let argument: String
+        
+        private enum CodingKeys: String, CodingKey {
+                case variable
+                case `operator`
+                case argument
+        }
+        
+        public init(from decoder: Decoder) throws {
+            let container: KeyedDecodingContainer<Knock.Condition.CodingKeys> = try decoder.container(keyedBy: Knock.Condition.CodingKeys.self)
+            self.variable = try container.decode(String.self, forKey: Knock.Condition.CodingKeys.variable)
+            self.operation = try container.decode(String.self, forKey: Knock.Condition.CodingKeys.operator)
+            self.argument = try container.decode(String.self, forKey: Knock.Condition.CodingKeys.argument)
+        }
+        
+        public init(variable: String, operation: String, argument: String) {
+            self.variable = variable
+            self.operation = operation
+            self.argument = argument
+        }
+        
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(self.variable, forKey: .variable)
+            try container.encode(self.operation, forKey: .operator)
+            try container.encode(self.argument, forKey: .argument)
+        }
+    }
+    
+    public struct ConditionsArray: Codable {
+        public var conditions: [Condition]
+        
+        public init(conditions: [Condition]) {
+            self.conditions = conditions
+        }
+        
+        public init(from decoder: Decoder) throws {
+            let container: KeyedDecodingContainer<Knock.ConditionsArray.CodingKeys> = try decoder.container(keyedBy: Knock.ConditionsArray.CodingKeys.self)
+            self.conditions = try container.decodeIfPresent([Knock.Condition].self, forKey: Knock.ConditionsArray.CodingKeys.conditions) ?? []
+        }
     }
     
     public struct WorkflowPreference: Codable {
-        public let channel_types: ChannelTypePreferences
+        public var channel_types: ChannelTypePreferences = ChannelTypePreferences()
+        public var conditions: [Condition] = []
+        
+        public init(from decoder: Decoder) throws {
+            let container: KeyedDecodingContainer<Knock.WorkflowPreference.CodingKeys> = try decoder.container(keyedBy: Knock.WorkflowPreference.CodingKeys.self)
+            self.channel_types = try container.decodeIfPresent(ChannelTypePreferences.self, forKey: Knock.WorkflowPreference.CodingKeys.channel_types) ?? ChannelTypePreferences()
+            self.conditions = try container.decodeIfPresent([Condition].self, forKey: Knock.WorkflowPreference.CodingKeys.conditions) ?? []
+        }
+
+        public init(channel_types: ChannelTypePreferences, conditions: [Condition]) {
+            self.channel_types = channel_types
+            self.conditions = conditions
+        }
     }
 
     public struct PreferenceSet: Codable {
         public var id: String? = nil // default or tenant.id; TODO: check this, because the API allows any value to be used here, not only default and an existing tenant.id
-        public var channel_types: ChannelTypePreferences? = ChannelTypePreferences()
-        public var workflows: [String: Either<Bool, WorkflowPreference>]?
-        public var categories: [String: Either<Bool, WorkflowPreference>]?
+        public var channel_types: ChannelTypePreferences = ChannelTypePreferences()
+        public var workflows: [String: Either<Bool, WorkflowPreference>] = [:]
+        public var categories: [String: Either<Bool, WorkflowPreference>] = [:]
         
         public init(from decoder: Decoder) throws {
             let container: KeyedDecodingContainer<Knock.PreferenceSet.CodingKeys> = try decoder.container(keyedBy: Knock.PreferenceSet.CodingKeys.self)
             self.id = try container.decodeIfPresent(String.self, forKey: Knock.PreferenceSet.CodingKeys.id)
-            self.channel_types = try container.decodeIfPresent(Knock.ChannelTypePreferences.self, forKey: Knock.PreferenceSet.CodingKeys.channel_types)
-            self.workflows = try container.decodeIfPresent([String : Either<Bool, Knock.WorkflowPreference>].self, forKey: Knock.PreferenceSet.CodingKeys.workflows)
-            self.categories = try container.decodeIfPresent([String : Either<Bool, Knock.WorkflowPreference>].self, forKey: Knock.PreferenceSet.CodingKeys.categories)
+            self.channel_types = try container.decodeIfPresent(Knock.ChannelTypePreferences.self, forKey: Knock.PreferenceSet.CodingKeys.channel_types) ?? ChannelTypePreferences()
+            self.workflows = try container.decodeIfPresent([String : Either<Bool, Knock.WorkflowPreference>].self, forKey: Knock.PreferenceSet.CodingKeys.workflows) ?? [:]
+            self.categories = try container.decodeIfPresent([String : Either<Bool, Knock.WorkflowPreference>].self, forKey: Knock.PreferenceSet.CodingKeys.categories) ?? [:]
         }
         
         public init() {}
@@ -780,16 +881,19 @@ public class Knock {
     
     public struct WorkflowPreferenceChannelTypesItem: Identifiable, Equatable {
         public var id: String // workflow or category id
-        public var channelTypes: [ChannelTypePreferenceItem]
+        public var channelTypes: [ChannelTypePreferenceItem] = []
+        public var conditions: [Condition] = []
         
-        public init(id: String, channelTypes: [ChannelTypePreferenceItem]) {
+        public init(id: String, channelTypes: [ChannelTypePreferenceItem], conditions: [Condition]) {
             self.id = id
             self.channelTypes = channelTypes
+            self.conditions = conditions
         }
     }
     
     public struct WorkflowPreferenceItems: Identifiable {
         public var id = UUID.init().uuidString
+        
         public var boolValues: [WorkflowPreferenceBoolItem] = []
         public var channelTypeValues: [WorkflowPreferenceChannelTypesItem] = []
         
@@ -801,15 +905,14 @@ public class Knock {
             }
             
             channelTypeValues.forEach { channelsItem in
-                let workflowPreference = WorkflowPreference(channel_types: channelsItem.channelTypes.toChannelTypePreferences())
+                let workflowPreference = WorkflowPreference(channel_types: channelsItem.channelTypes.toChannelTypePreferences(), conditions: channelsItem.conditions)
                 result[channelsItem.id] = .right(workflowPreference)
             }
             
             return result
         }
         
-        public init(id: String = UUID.init().uuidString, boolValues: [WorkflowPreferenceBoolItem], channelTypeValues: [WorkflowPreferenceChannelTypesItem]) {
-            self.id = id
+        public init(boolValues: [WorkflowPreferenceBoolItem], channelTypeValues: [WorkflowPreferenceChannelTypesItem]) {
             self.boolValues = boolValues
             self.channelTypeValues = channelTypeValues
         }
@@ -990,7 +1093,7 @@ public extension [String: Either<Bool, Knock.WorkflowPreference>] {
                 result.boolValues.append(newItem)
             case .right(let value):
                 let channelPrefs = value.channel_types.asArray()
-                let newItem = Knock.WorkflowPreferenceChannelTypesItem(id: key, channelTypes: channelPrefs)
+                let newItem = Knock.WorkflowPreferenceChannelTypesItem(id: key, channelTypes: channelPrefs, conditions: value.conditions)
                 result.channelTypeValues.append(newItem)
             }
         }
