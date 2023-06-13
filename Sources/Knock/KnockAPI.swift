@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import OSLog
 
 public protocol NetworkErrorProtocol: LocalizedError {
     var title: String? { get }
@@ -34,6 +35,8 @@ class KnockAPI {
     private var apiBasePath: String {
         "\(hostname)/v1"
     }
+    
+    private let logger = Logger(subsystem: "app.knock.sdk", category: "KnockAPI")
     
     static let clientVersion = "0.0.3"
     
@@ -93,10 +96,10 @@ class KnockAPI {
             }
             catch let error {
                 if let dataString = String(data: data, encoding: .utf8) {
-                    print("error decoding data: \(dataString)")
+                    logger.error("error decoding data: \(dataString)")
                 }
                 else {
-                    print("error processing undecodable data")
+                    logger.error("error processing undecodable data")
                 }
                 
                 DispatchQueue.main.async {

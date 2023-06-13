@@ -8,6 +8,7 @@
 import Foundation
 import SwiftPhoenixClient
 import AnyCodable
+import OSLog
 
 public extension Knock {
     struct Block: Codable {
@@ -150,6 +151,8 @@ public extension Knock {
         private let feedId: String
         private var feedTopic: String
         
+        private let logger = Logger(subsystem: "app.knock.sdk", category: "FeedManager")
+        
         public enum FeedItemScope: String, Codable {
             // TODO: check engagement_status in https://docs.knock.app/reference#bulk-update-channel-message-status
             // extras:
@@ -231,24 +234,24 @@ public extension Knock {
         public func connectToFeed() {
             // Setup the socket to receive open/close events
             socket.delegateOnOpen(to: self) { (self) in
-                print("Socket Opened")
+                self.logger.notice("Socket Opened")
             }
             
             socket.delegateOnClose(to: self) { (self) in
-                print("Socket Closed")
+                self.logger.notice("Socket Closed")
             }
             
             socket.delegateOnError(to: self) { (self, error) in
                 let (error, response) = error
                 if let statusCode = (response as? HTTPURLResponse)?.statusCode, statusCode > 400 {
-                    print("Socket Errored. \(statusCode)")
+                    self.logger.error("Socket Errored. \(statusCode)")
                     self.socket.disconnect()
                 } else {
-                    print("Socket Errored. \(error)")
+                    self.logger.error("Socket Errored. \(error)")
                 }
             }
             
-            socket.logger = { msg in print("LOG:", msg) }
+            socket.logger = { msg in self.logger.notice("\(msg)") }
             
             // Setup the Channel to receive and send messages
             let channel = socket.channel(feedTopic, params: [:])
@@ -258,10 +261,10 @@ public extension Knock {
             self.feedChannel?
                 .join()
                 .delegateReceive("ok", to: self) { (self, _) in
-                    print("CHANNEL: \(channel.topic) joined")
+                    self.logger.notice("CHANNEL: \(channel.topic) joined")
                 }
                 .delegateReceive("error", to: self) { (self, message) in
-                    print("CHANNEL: \(channel.topic) failed to join. \(message.payload)")
+                    self.logger.notice("CHANNEL: \(channel.topic) failed to join. \(message.payload)")
                 }
             
             self.socket.connect()
@@ -274,12 +277,12 @@ public extension Knock {
                 }
             }
             else {
-                print("Feed channel is nil. You should call first connectToFeed()")
+                self.logger.error("Feed channel is nil. You should call first connectToFeed()")
             }
         }
         
         public func disconnectFromFeed() {
-            print("Disconnecting from feed")
+            self.logger.notice("Disconnecting from feed")
             
             if let channel = self.feedChannel {
                 channel.leave()
