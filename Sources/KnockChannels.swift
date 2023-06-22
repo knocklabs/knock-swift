@@ -6,8 +6,7 @@
 //
 
 import Foundation
-import AnyCodable
-import OSLog
+//import AnyCodable
 
 public extension Knock {
     // MARK: Channels
@@ -68,13 +67,11 @@ public extension Knock {
         - token: the APNS device token as a `String`
      */
     func registerTokenForAPNS(channelId: String, token: String, completionHandler: @escaping ((Result<ChannelData, Error>) -> Void)) {
-        let logger = Logger(subsystem: "app.knock.sdk", category: "KnockChannels")
-        
         getUserChannelData(channelId: channelId) { result in
             switch result {
             case .failure(_):
                 // there's no data registered on that channel for that user, we'll create a new record
-                logger.notice("there's no data registered on that channel for that user, we'll create a new record")
+                print("there's no data registered on that channel for that user, we'll create a new record")
                 let data: AnyEncodable = [
                     "tokens": [token]
                 ]
@@ -82,7 +79,7 @@ public extension Knock {
             case .success(let channelData):
                 guard let data = channelData.data else {
                     // we don't have data for that channel for that user, we'll create a new record
-                    logger.notice("we don't have data for that channel for that user, we'll create a new record")
+                    print("we don't have data for that channel for that user, we'll create a new record")
                     let data: AnyEncodable = [
                         "tokens": [token]
                     ]
@@ -92,7 +89,7 @@ public extension Knock {
                 
                 guard var tokens = data["tokens"]?.value as? [String] else {
                     // we don't have an array of valid tokens so we'll register a new one
-                    logger.notice("we don't have an array of valid tokens so we'll register a new one")
+                    print("we don't have an array of valid tokens so we'll register a new one")
                     let data: AnyEncodable = [
                         "tokens": [token]
                     ]
@@ -102,12 +99,12 @@ public extension Knock {
                 
                 if tokens.contains(token) {
                     // we already have the token registered
-                    logger.notice("we already have the token registered")
+                    print("we already have the token registered")
                     completionHandler(.success(channelData))
                 }
                 else {
                     // we need to register the token
-                    logger.notice("we need to register the token")
+                    print("we need to register the token")
                     tokens.append(token)
                     let data: AnyEncodable = [
                         "tokens": tokens
