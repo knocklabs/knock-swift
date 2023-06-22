@@ -90,6 +90,15 @@ knockClient = try! Knock(publishableKey: "your-pk", userId: "user-id")
 knockClient = try! Knock(publishableKey: "your-pk", userId: "user-id", userToken: "signed-user-token")
 ```
 
+## Notes for publishing
+
+When releasing a new version of this SDK, please note:
+
+* You should update the version in a couple of places:
+	* in the file `Sources/KnockAPI.swift`: `clientVersion = "..."`
+	* in the file `Knock.podspec`: `‌spec.version = "..."`
+	* in git, add a tag, preferably to the commit that includes both previous changes
+
 
 
 
