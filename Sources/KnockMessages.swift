@@ -88,7 +88,7 @@ public extension Knock {
         case archive
     }
     
-    enum KnockMessageStatusBulkUpdateType: String, Codable {
+    enum KnockMessageStatusBatchUpdateType: String, Codable {
         case seen
         case read
         case interacted
@@ -119,38 +119,14 @@ public extension Knock {
     }
     
     /**
-     Make a status update for a message
-     
-     - Parameters:
-        - message: the `KnockMessage` to be updated
-        - status: the new `Status`
-        - completionHandler: the code to execute when the response is received
-     */
-    func bulkUpdateMessageStatus(message: KnockMessage, status: KnockMessageStatusBulkUpdateType, completionHandler: @escaping ((Result<[KnockMessage], Error>) -> Void)) {
-        makeStatusUpdate(messages: [message], status: status, completionHandler: completionHandler)
-    }
-    
-    /**
-     Make a status update for a message
-     
-     - Parameters:
-        - messageId: the message id to be updated
-        - status: the new `Status`
-        - completionHandler: the code to execute when the response is received
-     */
-    func bulkUpdateMessageStatus(messageId: String, status: KnockMessageStatusBulkUpdateType, completionHandler: @escaping ((Result<[KnockMessage], Error>) -> Void)) {
-        makeStatusUpdate(messageIds: [messageId], status: status, completionHandler: completionHandler)
-    }
-    
-    /**
-     Make a status update for a list of messages
+     Batch status update for a list of messages
      
      - Parameters:
         - messageIds: the list of message ids: `[String]` to be updated
         - status: the new `Status`
         - completionHandler: the code to execute when the response is received
      */
-    func makeStatusUpdate(messageIds: [String], status: KnockMessageStatusBulkUpdateType, completionHandler: @escaping ((Result<[KnockMessage], Error>) -> Void)) {
+    func batchUpdateStatuses(messageIds: [String], status: KnockMessageStatusBatchUpdateType, completionHandler: @escaping ((Result<[KnockMessage], Error>) -> Void)) {
         let body = [
             "message_ids": messageIds
         ]
@@ -159,14 +135,14 @@ public extension Knock {
     }
     
     /**
-     Make a status update for a list of messages
+     Batch status update for a list of messages
      
      - Parameters:
         - messages: the list of messages `[KnockMessage]` to be updated
         - status: the new `Status`
         - completionHandler: the code to execute when the response is received
      */
-    func makeStatusUpdate(messages: [KnockMessage], status: KnockMessageStatusBulkUpdateType, completionHandler: @escaping ((Result<[KnockMessage], Error>) -> Void)) {
+    func batchUpdateStatuses(messages: [KnockMessage], status: KnockMessageStatusBatchUpdateType, completionHandler: @escaping ((Result<[KnockMessage], Error>) -> Void)) {
         let messageIds = messages.map{$0.id}
         let body = [
             "message_ids": messageIds

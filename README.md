@@ -14,8 +14,7 @@
 	* getMessage
 	* updateMessageStatus
 	* deleteMessageStatus
-	* bulkUpdateMessageStatus
-	* makeStatusUpdate
+	* batchUpdateStatuses
 * Users
 	* getUser
 	* updateUser
