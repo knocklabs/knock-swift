@@ -147,6 +147,7 @@ public extension Knock {
         private let userId: String
         private let feedId: String
         private var feedTopic: String
+        private var defaultFeedOptions: FeedClientOptions
         
         public enum FeedItemScope: String, Codable {
             // TODO: check engagement_status in https://docs.knock.app/reference#bulk-update-channel-message-status
@@ -203,6 +204,63 @@ public extension Knock {
                 self.archived = archived
                 self.trigger_data = trigger_data
             }
+            
+            /**
+             Returns a new struct of type `FeedClientOptions` with the options passed as the parameter merged into it.
+             
+             - Parameters:
+                - options: the options to merge with the current struct, if they are nil, only a copy of `self` will be returned
+             */
+            public func mergeOptions(options: FeedClientOptions? = nil) -> FeedClientOptions {
+                // initialize a new `mergedOptions` struct with all the properties of the `self` struct
+                var mergedOptions = FeedClientOptions(
+                    before: self.before,
+                    after: self.after,
+                    page_size: self.page_size,
+                    status: self.status,
+                    source: self.source,
+                    tenant: self.tenant,
+                    has_tenant: self.has_tenant,
+                    archived: self.archived,
+                    trigger_data: self.trigger_data
+                )
+                
+                // check if the passed options are not nil
+                guard let options = options else {
+                    return mergedOptions
+                }
+                
+                // for each one of the properties `not nil` in the parameter `options`, override the ones in the new struct
+                if options.before != nil {
+                    mergedOptions.before = options.before
+                }
+                if options.after != nil {
+                    mergedOptions.after = options.after
+                }
+                if options.page_size != nil {
+                    mergedOptions.page_size = options.page_size
+                }
+                if options.status != nil {
+                    mergedOptions.status = options.status
+                }
+                if options.source != nil {
+                    mergedOptions.source = options.source
+                }
+                if options.tenant != nil {
+                    mergedOptions.tenant = options.tenant
+                }
+                if options.has_tenant != nil {
+                    mergedOptions.has_tenant = options.has_tenant
+                }
+                if options.archived != nil {
+                    mergedOptions.archived = options.archived
+                }
+                if options.trigger_data != nil {
+                    mergedOptions.trigger_data = options.trigger_data
+                }
+                
+                return mergedOptions
+            }
         }
         
         public enum BulkChannelMessageStatusUpdateType: String {
@@ -214,7 +272,7 @@ public extension Knock {
             case unarchived
         }
         
-        public init(client: Knock, feedId: String) {
+        public init(client: Knock, feedId: String, options: FeedClientOptions = FeedClientOptions(archived: .exclude)) {
             // use regex and circumflex accent to mark only the starting http to be replaced and not any others
             let websocketHostname = client.api.hostname.replacingOccurrences(of: "^http", with: "ws", options: .regularExpression) // default: wss://api.knock.app
             let websocketPath = "\(websocketHostname)/ws/v1/websocket" // default: wss://api.knock.app/ws/v1/websocket
@@ -224,9 +282,16 @@ public extension Knock {
             self.feedId = feedId
             self.feedTopic = "feeds:\(feedId):\(client.userId)"
             self.api = client.api
+            self.defaultFeedOptions = options
         }
         
-        public func connectToFeed() {
+        /**
+         Connect to the feed via socket. This will initialize the connection. You should also call the `on(eventName, completionHandler)` function to delegate what should be executed on certain received events and the `disconnectFromFeed()` function to terminate the connection.
+
+         - Parameters:
+            - options: options of type `FeedClientOptions` to merge with the default ones (set on the constructor) and scope as much as possible the results
+         */
+        public func connectToFeed(options: FeedClientOptions? = nil) {
             // Setup the socket to receive open/close events
             socket.delegateOnOpen(to: self) { (self) in
                 print("Socket Opened")
@@ -248,8 +313,12 @@ public extension Knock {
             
             socket.logger = { msg in print("LOG:", msg) }
             
+            let mergedOptions = defaultFeedOptions.mergeOptions(options: options)
+            
+            let params = paramsFromOptions(options: mergedOptions)
+            
             // Setup the Channel to receive and send messages
-            let channel = socket.channel(feedTopic, params: [:])
+            let channel = socket.channel(feedTopic, params: params)
             
             // Now connect the socket and join the channel
             self.feedChannel = channel
@@ -287,18 +356,27 @@ public extension Knock {
             self.socket.disconnect()
         }
         
-        public func getUserFeedContent(options: FeedClientOptions, completionHandler: @escaping ((Result<Feed, Error>) -> Void)) {
-            let triggerDataJSON = Knock.encodeGenericDataToJSON(data: options.trigger_data)
+        /**
+         Gets the content of the user feed
+
+         - Parameters:
+            - options: options of type `FeedClientOptions` to merge with the default ones (set on the constructor) and scope as much as possible the results
+            - completionHandler: the code to execute when the response is received
+         */
+        public func getUserFeedContent(options: FeedClientOptions? = nil, completionHandler: @escaping ((Result<Feed, Error>) -> Void)) {
+            let mergedOptions = defaultFeedOptions.mergeOptions(options: options)
+            
+            let triggerDataJSON = Knock.encodeGenericDataToJSON(data: mergedOptions.trigger_data)
             
             let queryItems = [
-                URLQueryItem(name: "page_size", value: (options.page_size != nil) ? "\(options.page_size!)" : nil),
-                URLQueryItem(name: "after", value: options.after),
-                URLQueryItem(name: "before", value: options.before),
-                URLQueryItem(name: "source", value: options.source),
-                URLQueryItem(name: "tenant", value: options.tenant),
-                URLQueryItem(name: "has_tenant", value: (options.has_tenant != nil) ? "true" : "false"),
-                URLQueryItem(name: "status", value: (options.status != nil) ? options.status?.rawValue : ""),
-                URLQueryItem(name: "archived", value: (options.archived != nil) ? options.archived?.rawValue : ""),
+                URLQueryItem(name: "page_size", value: (mergedOptions.page_size != nil) ? "\(mergedOptions.page_size!)" : nil),
+                URLQueryItem(name: "after", value: mergedOptions.after),
+                URLQueryItem(name: "before", value: mergedOptions.before),
+                URLQueryItem(name: "source", value: mergedOptions.source),
+                URLQueryItem(name: "tenant", value: mergedOptions.tenant),
+                URLQueryItem(name: "has_tenant", value: (mergedOptions.has_tenant != nil) ? "true" : "false"),
+                URLQueryItem(name: "status", value: (mergedOptions.status != nil) ? mergedOptions.status?.rawValue : ""),
+                URLQueryItem(name: "archived", value: (mergedOptions.archived != nil) ? mergedOptions.archived?.rawValue : ""),
                 URLQueryItem(name: "trigger_data", value: triggerDataJSON)
             ]
             
@@ -333,6 +411,40 @@ public extension Knock {
             ]
             
             api.decodeFromPost(BulkOperation.self, path: "/channels/\(feedId)/messages/bulk/\(type.rawValue)", body: body, then: completionHandler)
+        }
+        
+        private func paramsFromOptions(options: FeedClientOptions) -> [String: Any] {
+            var params: [String: Any] = [:]
+            
+            if let value = options.before {
+                params["before"] = value
+            }
+            if let value = options.after {
+                params["after"] = value
+            }
+            if let value = options.page_size {
+                params["page_size"] = value
+            }
+            if let value = options.status {
+                params["status"] = value.rawValue
+            }
+            if let value = options.source {
+                params["source"] = value
+            }
+            if let value = options.tenant {
+                params["tenant"] = value
+            }
+            if let value = options.has_tenant {
+                params["has_tenant"] = value
+            }
+            if let value = options.archived {
+                params["archived"] = value.rawValue
+            }
+            if let value = options.trigger_data {
+                params["trigger_data"] = value.dictionary()
+            }
+            
+            return params
         }
     }
     
