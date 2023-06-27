@@ -41,7 +41,7 @@ There are two ways to add this as a dependency using the Swift Package Manager:
 
 <img width="511" alt="Screenshot 2023-05-17 at 9 57 26" src="https://github.com/knocklabs/knock-swift/assets/952873/d4ae690b-2b00-4af2-a2cf-1f2d9cae928d">
 
-2. Search for `git@github.com:knocklabs/knock-swift.git` and then click `Add Package`
+2. Search for `https://github.com/knocklabs/knock-swift.git` and then click `Add Package`
 
 <img width="1207" alt="Screenshot 2023-05-17 at 9 58 08" src="https://github.com/knocklabs/knock-swift/assets/952873/420307e8-1e41-4260-9970-bb683f18c1cc">
 
@@ -55,13 +55,11 @@ There are two ways to add this as a dependency using the Swift Package Manager:
 
 #### Manually via `Package.swift`
 
-**NOTE: check the git url, when we make the repo public, we should change the ssh url to the http version**
-
 If you are managing dependencies using the `Package.swift` file, just add this to you dependencies array:
 
 ``` swift
 dependencies: [
-    .package(url: "git@github.com:knocklabs/knock-swift.git", .upToNextMajor(from: "0.0.5"))
+    .package(url: "https://github.com/knocklabs/knock-swift.git", .upToNextMajor(from: "0.1.0"))
 ]
 ```
 
@@ -70,7 +68,7 @@ dependencies: [
 1. Add this line to your Cartfile:
 
 ```
-github "knocklabs/knock-swift" ~> 0.0.5
+github "knocklabs/knock-swift" ~> 0.1.0
 ```
 
 2. Run `carthage update`. This will fetch dependencies into a Carthage/Checkouts folder, then build each one or download a pre-compiled framework.
@@ -99,8 +97,6 @@ When archiving your application for submission to the App Store or TestFlight, X
 
 ### Cocoapods
 
-**NOTE, this does not yet work, we still need to publish the Pod to the [CocoaPods trunk](https://guides.cocoapods.org/making/getting-setup-with-trunk.html)**
-
 Add the dependency to your `Podfile`:
 
 ```
@@ -108,7 +104,7 @@ platform :ios, '16.0'
 use_frameworks!
 
 target 'MyApp' do
-  pod 'Knock', '~> 0.0.5'
+  pod 'Knock', '~> 0.1.0'
 end
 ```
 
@@ -155,9 +151,9 @@ When releasing a new version of this SDK, please note:
 
 * You should update the version in a couple of places:
 	* in the file `Sources/KnockAPI.swift`: `clientVersion = "..."`
-	* in the file `Knock.podspec`: `‌spec.version = "..."`
+	* in the file `Knock.podspec`: `spec.version = "..."`
 	* in this `README.md`, in the installation instructions for all the package managers
-	* in git, add a tag, preferably to the commit that includes both previous changes
+	* in git, add a tag, preferably to the commit that includes this previous changes
 
 
 
