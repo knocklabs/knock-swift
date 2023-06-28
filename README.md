@@ -121,13 +121,12 @@ import Knock
 
 knockClient = try! Knock(publishableKey: "your-pk", userId: "user-id")
 
-knockClient.updateMessageStatus(messageId: "message-id", status: .seen) { result in
+knockClient.getUser{ result in
     switch result {
-    case .success(_):
-        print("message marked as seen")
+    case .success(let user):
+        print(user)
     case .failure(let error):
-        print("error marking message as seen")
-        print(error)
+        print(error.localizedDescription)
     }
 }
 ```
