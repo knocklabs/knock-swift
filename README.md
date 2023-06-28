@@ -39,19 +39,19 @@ There are two ways to add this as a dependency using the Swift Package Manager:
 
 1. Open your Xcode project and select `File` -> `Add Packages...`
 
-<img width="511" alt="Screenshot 2023-05-17 at 9 57 26" src="https://github.com/knocklabs/knock-swift/assets/952873/d4ae690b-2b00-4af2-a2cf-1f2d9cae928d">
+<img width="422" alt="Screenshot 2023-06-27 at 19 41 32" src="https://github.com/knocklabs/knock-swift/assets/952873/31bb67de-5272-445a-a5c4-5df3bcfa3c8b">
 
 2. Search for `https://github.com/knocklabs/knock-swift.git` and then click `Add Package`
 
-<img width="1207" alt="Screenshot 2023-05-17 at 9 58 08" src="https://github.com/knocklabs/knock-swift/assets/952873/420307e8-1e41-4260-9970-bb683f18c1cc">
+<img width="900" alt="Screenshot 2023-06-27 at 19 42 09" src="https://github.com/knocklabs/knock-swift/assets/952873/d947cc7f-8da6-4814-aa75-3e41ffe72ff4">
 
 3. Ensure that the Package is selected and click `Add Package`
 
-<img width="1120" alt="Screenshot 2023-05-17 at 9 58 34" src="https://github.com/knocklabs/knock-swift/assets/952873/3d4c826c-8d17-4e17-b701-a3d291095319">
+<img width="900" alt="Screenshot 2023-06-27 at 19 42 23" src="https://github.com/knocklabs/knock-swift/assets/952873/c6053b06-73dc-43c8-8a68-40fbc2298f7c">
 
 4. Wait for Xcode to fetch the dependencies and you should see the SDK on your Package Dependencies on the sidebar
 
-<img width="791" alt="Screenshot 2023-05-17 at 9 59 38" src="https://github.com/knocklabs/knock-swift/assets/952873/9803dfbf-5b2f-43ab-8121-3777a461dac9">
+<img width="505" alt="Screenshot 2023-06-27 at 19 42 45" src="https://github.com/knocklabs/knock-swift/assets/952873/9f314c9d-2525-4357-8da0-6ce4508b6db0">
 
 #### Manually via `Package.swift`
 
