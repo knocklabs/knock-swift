@@ -1,24 +1,11 @@
 //
-//  File.swift
-//  
+//  User.swift
 //
-//  Created by Diego on 30/05/23.
+//
+//  Created by Matt Gardner on 1/18/24.
 //
 
 import Foundation
-
-struct DynamicCodingKey: CodingKey {
-    var intValue: Int? = nil
-    var stringValue: String = ""
-    
-    init?(intValue: Int) {
-        self.intValue = intValue
-    }
-    
-    init?(stringValue: String) {
-        self.stringValue = stringValue
-    }
-}
 
 public extension Knock {
     // MARK: Users
@@ -95,13 +82,5 @@ public extension Knock {
                 try container.encode(value, forKey: DynamicCodingKey.init(stringValue: key)!)
             }
         }
-    }
-    
-    func getUser(completionHandler: @escaping ((Result<User, Error>) -> Void)) {
-        self.api.decodeFromGet(User.self, path: "/users/\(userId)", queryItems: nil, then: completionHandler)
-    }
-    
-    func updateUser(user: User, completionHandler: @escaping ((Result<User, Error>) -> Void)) {
-        self.api.decodeFromPut(User.self, path: "/users/\(userId)", body: user, then: completionHandler)
     }
 }

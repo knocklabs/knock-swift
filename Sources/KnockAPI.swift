@@ -7,26 +7,6 @@
 
 import Foundation
 
-public protocol NetworkErrorProtocol: LocalizedError {
-    var title: String? { get }
-    var code: Int { get }
-}
-
-public struct NetworkError: NetworkErrorProtocol {
-    public var title: String?
-    public var code: Int
-    public var errorDescription: String? { return _description }
-    public var failureReason: String? { return _description }
-    
-    private var _description: String
-    
-    public init(title: String?, description: String, code: Int) {
-        self.title = title ?? "Error"
-        self._description = description
-        self.code = code
-    }
-}
-
 class KnockAPI {
     private let publishableKey: String
     private let userToken: String?
@@ -203,5 +183,25 @@ class KnockAPI {
         })
         task.resume()
         session.finishTasksAndInvalidate()
+    }
+}
+
+public protocol NetworkErrorProtocol: LocalizedError {
+    var title: String? { get }
+    var code: Int { get }
+}
+
+public struct NetworkError: NetworkErrorProtocol {
+    public var title: String?
+    public var code: Int
+    public var errorDescription: String? { return _description }
+    public var failureReason: String? { return _description }
+    
+    private var _description: String
+    
+    public init(title: String?, description: String, code: Int) {
+        self.title = title ?? "Error"
+        self._description = description
+        self.code = code
     }
 }
