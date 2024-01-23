@@ -59,7 +59,7 @@ If you are managing dependencies using the `Package.swift` file, just add this t
 
 ``` swift
 dependencies: [
-    .package(url: "https://github.com/knocklabs/knock-swift.git", .upToNextMajor(from: "0.1.0"))
+    .package(url: "https://github.com/knocklabs/knock-swift.git", .upToNextMajor(from: "0.2.0"))
 ]
 ```
 
@@ -68,7 +68,7 @@ dependencies: [
 1. Add this line to your Cartfile:
 
 ```
-github "knocklabs/knock-swift" ~> 0.1.0
+github "knocklabs/knock-swift" ~> 0.2.0
 ```
 
 2. Run `carthage update`. This will fetch dependencies into a Carthage/Checkouts folder, then build each one or download a pre-compiled framework.
@@ -104,7 +104,7 @@ platform :ios, '16.0'
 use_frameworks!
 
 target 'MyApp' do
-  pod 'Knock', '~> 0.1.0'
+  pod 'Knock', '~> 0.2.0'
 end
 ```
 
