@@ -8,51 +8,52 @@
 import Foundation
 
 class KnockAPI {
-    private let publishableKey: String
-    private let userToken: String?
-    public var hostname = "https://api.knock.app"
-    private var apiBasePath: String {
-        "\(hostname)/v1"
-    }
+    internal let apiKey: String
+    internal let clientVersion: String
+    internal let apiBasePath: String
     
-    static let clientVersion = "0.2.0"
-    
-    init(publishableKey: String, userToken: String? = nil, hostname: String? = nil) {
-        self.publishableKey = publishableKey
+    internal var userToken: String?
+    internal var userId: String?
+
+    internal var host = "https://api.knock.app"
+
+    internal init(apiKey: String, clientVersion: String, hostname: String? = nil, userToken: String? = nil) {
+        self.apiKey = apiKey
         self.userToken = userToken
-        
+        self.clientVersion = clientVersion
         if let customHostname = hostname {
-            self.hostname = customHostname
+            self.host = customHostname
         }
+        apiBasePath = "\(host)/v1"
     }
     
     // MARK: Decode functions, they encapsulate making the request and decoding the data
     
-    func decodeFromGet<T:Codable>(_ type: T.Type, path: String, queryItems: [URLQueryItem]?, then handler: @escaping (Result<T, Error>) -> Void) {
+    internal func decodeFromGet<T:Codable>(_ type: T.Type, path: String, queryItems: [URLQueryItem]?, then handler: @escaping (Result<T, Error>) -> Void) {
         get(path: path, queryItems: queryItems) { (result) in
             self.decodeData(result, handler: handler)
         }
     }
     
-    func decodeFromPost<T:Codable>(_ type: T.Type, path: String, body: Encodable?, then handler: @escaping (Result<T, Error>) -> Void) {
+    internal func decodeFromPost<T:Codable>(_ type: T.Type, path: String, body: Encodable?, then handler: @escaping (Result<T, Error>) -> Void) {
         post(path: path, body: body) { (result) in
             self.decodeData(result, handler: handler)
         }
     }
     
-    func decodeFromPut<T:Codable>(_ type: T.Type, path: String, body: Encodable?, then handler: @escaping (Result<T, Error>) -> Void) {
+    internal func decodeFromPut<T:Codable>(_ type: T.Type, path: String, body: Encodable?, then handler: @escaping (Result<T, Error>) -> Void) {
         put(path: path, body: body) { (result) in
             self.decodeData(result, handler: handler)
         }
     }
     
-    func decodeFromDelete<T:Codable>(_ type: T.Type, path: String, body: Encodable?, then handler: @escaping (Result<T, Error>) -> Void) {
+    internal func decodeFromDelete<T:Codable>(_ type: T.Type, path: String, body: Encodable?, then handler: @escaping (Result<T, Error>) -> Void) {
         delete(path: path, body: body) { (result) in
             self.decodeData(result, handler: handler)
         }
     }
     
-    private func decodeData<T:Codable>(_ result: Result<Data, Error>, handler: @escaping (Result<T, Error>) -> Void) {
+    internal func decodeData<T:Codable>(_ result: Result<Data, Error>, handler: @escaping (Result<T, Error>) -> Void) {
         switch result {
         case .success(let data):
             let decoder = JSONDecoder()
@@ -144,9 +145,9 @@ class KnockAPI {
         
         // Headers
         
-        request.addValue("knock-swift@\(KnockAPI.clientVersion)", forHTTPHeaderField: "User-Agent")
+        request.addValue("knock-swift@\(clientVersion)", forHTTPHeaderField: "User-Agent")
         
-        request.addValue("Bearer \(publishableKey)", forHTTPHeaderField: "Authorization")
+        request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         if let userToken = userToken {
             request.addValue(userToken, forHTTPHeaderField: "X-Knock-User-Token")
         }
