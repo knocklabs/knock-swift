@@ -1,144 +1,14 @@
 //
-//  File.swift
-//  
+//  FeedManager.swift
 //
-//  Created by Diego on 30/05/23.
+//
+//  Created by Matt Gardner on 1/19/24.
 //
 
 import Foundation
+import SwiftPhoenixClient
 
 public extension Knock {
-    struct Block: Codable {
-        public let content: String
-        public let name: String
-        public let rendered: String
-        
-        public init(from decoder: Decoder) throws {
-            let container: KeyedDecodingContainer<Knock.Block.CodingKeys> = try decoder.container(keyedBy: Knock.Block.CodingKeys.self)
-            self.content = try container.decode(String.self, forKey: Knock.Block.CodingKeys.content)
-            self.name = try container.decode(String.self, forKey: Knock.Block.CodingKeys.name)
-            self.rendered = try container.decode(String.self, forKey: Knock.Block.CodingKeys.rendered)
-        }
-        
-        public init(content: String, name: String, rendered: String) {
-            self.content = content
-            self.name = name
-            self.rendered = rendered
-        }
-    }
-
-    struct NotificationSource: Codable {
-        public let key: String
-        public let version_id: String
-        
-        public init(from decoder: Decoder) throws {
-            let container: KeyedDecodingContainer<Knock.NotificationSource.CodingKeys> = try decoder.container(keyedBy: Knock.NotificationSource.CodingKeys.self)
-            self.key = try container.decode(String.self, forKey: Knock.NotificationSource.CodingKeys.key)
-            self.version_id = try container.decode(String.self, forKey: Knock.NotificationSource.CodingKeys.version_id)
-        }
-        
-        public init(key: String, version_id: String) {
-            self.key = key
-            self.version_id = version_id
-        }
-    }
-
-    struct FeedItem: Codable {
-        public let __cursor: String
-    //        public let clicked_at: Date?
-        public let blocks: [Block]
-        public let data: [String: AnyCodable]? // GenericData
-        public let id: String
-        public let inserted_at: Date?
-    //        public let interacted_at: Date?
-    //        public let link_clicked_at: Date?
-        public var read_at: Date?
-        public var seen_at: Date?
-        public let tenant: String
-        public let total_activities: Int
-        public let total_actors: Int
-        public let updated_at: Date?
-        
-        public init(from decoder: Decoder) throws {
-            let container: KeyedDecodingContainer<Knock.FeedItem.CodingKeys> = try decoder.container(keyedBy: Knock.FeedItem.CodingKeys.self)
-            self.__cursor = try container.decode(String.self, forKey: Knock.FeedItem.CodingKeys.__cursor)
-            self.blocks = try container.decode([Knock.Block].self, forKey: Knock.FeedItem.CodingKeys.blocks)
-            self.data = try container.decodeIfPresent([String : AnyCodable].self, forKey: Knock.FeedItem.CodingKeys.data)
-            self.id = try container.decode(String.self, forKey: Knock.FeedItem.CodingKeys.id)
-            self.inserted_at = try container.decodeIfPresent(Date.self, forKey: Knock.FeedItem.CodingKeys.inserted_at)
-            self.read_at = try container.decodeIfPresent(Date.self, forKey: Knock.FeedItem.CodingKeys.read_at)
-            self.seen_at = try container.decodeIfPresent(Date.self, forKey: Knock.FeedItem.CodingKeys.seen_at)
-            self.tenant = try container.decode(String.self, forKey: Knock.FeedItem.CodingKeys.tenant)
-            self.total_activities = try container.decode(Int.self, forKey: Knock.FeedItem.CodingKeys.total_activities)
-            self.total_actors = try container.decode(Int.self, forKey: Knock.FeedItem.CodingKeys.total_actors)
-            self.updated_at = try container.decodeIfPresent(Date.self, forKey: Knock.FeedItem.CodingKeys.updated_at)
-        }
-        
-        public init(__cursor: String, blocks: [Block], data: [String : AnyCodable]?, id: String, inserted_at: Date?, read_at: Date? = nil, seen_at: Date? = nil, tenant: String, total_activities: Int, total_actors: Int, updated_at: Date?) {
-            self.__cursor = __cursor
-            self.blocks = blocks
-            self.data = data
-            self.id = id
-            self.inserted_at = inserted_at
-            self.read_at = read_at
-            self.seen_at = seen_at
-            self.tenant = tenant
-            self.total_activities = total_activities
-            self.total_actors = total_actors
-            self.updated_at = updated_at
-        }
-    }
-
-    struct PageInfo: Codable {
-        public var before: String?
-        public var after: String?
-        public var page_size: Int = 0
-    }
-
-    struct FeedMetadata: Codable {
-        public var total_count: Int = 0
-        public var unread_count: Int = 0
-        public var unseen_count: Int = 0
-    }
-
-    struct Feed: Codable {
-        public var entries: [FeedItem] = []
-        public var meta: FeedMetadata = FeedMetadata()
-        public var page_info: PageInfo = PageInfo()
-        
-        public init(from decoder: Decoder) throws {
-            let container: KeyedDecodingContainer<Knock.Feed.CodingKeys> = try decoder.container(keyedBy: Knock.Feed.CodingKeys.self)
-            self.entries = try container.decode([Knock.FeedItem].self, forKey: Knock.Feed.CodingKeys.entries)
-            self.meta = try container.decode(Knock.FeedMetadata.self, forKey: Knock.Feed.CodingKeys.meta)
-            self.page_info = try container.decode(Knock.PageInfo.self, forKey: Knock.Feed.CodingKeys.page_info)
-        }
-        
-        public init(entries: [FeedItem], meta: FeedMetadata, page_info: PageInfo) {
-            self.entries = entries
-            self.meta = meta
-            self.page_info = page_info
-        }
-        
-        public init() {}
-    }
-    
-    enum BulkOperationStatus: String, Codable {
-        case queued
-        case processing
-        case completed
-        case failed
-    }
-    
-    struct BulkOperation: Codable {
-        public let id: String
-        public let name: String
-        public let status: BulkOperationStatus
-        public let estimated_total_rows: Int
-        public let processed_rows: Int
-        public let started_at: Date?
-        public let completed_at: Date?
-        public let failed_at: Date?
-    }
     
     class FeedManager {
         private let api: KnockAPI
@@ -446,26 +316,5 @@ public extension Knock {
             
             return params
         }
-    }
-    
-    // MARK: Utilities
-    
-    private static func encodeGenericDataToJSON(data: [String: AnyCodable]?) -> String? {
-        let encoder = JSONEncoder()
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ"
-        formatter.calendar = Calendar(identifier: .iso8601)
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        
-        encoder.dateEncodingStrategy = .formatted(formatter)
-        
-        var jsonString: String?
-        
-        if let triggerData = try? encoder.encode(data) {
-            jsonString = String(data: triggerData, encoding: .utf8)
-        }
-        
-        return jsonString
     }
 }

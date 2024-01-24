@@ -8,13 +8,7 @@
 import Foundation
 
 public extension Knock {
-    // MARK: Channels
-    
-    struct ChannelData: Codable {
-        public let channel_id: String
-        public let data: [String: AnyCodable]? // GenericData
-    }
-    
+
     func getUserChannelData(channelId: String, completionHandler: @escaping ((Result<ChannelData, Error>) -> Void)) {
         self.api.decodeFromGet(ChannelData.self, path: "/users/\(userId)/channel_data/\(channelId)", queryItems: nil, then: completionHandler)
     }

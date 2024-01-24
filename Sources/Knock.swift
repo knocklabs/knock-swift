@@ -16,11 +16,6 @@ public class Knock {
     
     public var feedManager: FeedManager?
     
-//    @Published public var feedItems = [FeedItem]()
-//    @Published public var totalCount = 0
-//    @Published public var unreadCount = 0
-//    @Published public var unseenCount = 0
-    
     public enum KnockError: Error {
         case runtimeError(String)
     }
