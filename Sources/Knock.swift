@@ -50,19 +50,19 @@ public struct KnockOptions {
 
 // Knock client SDK.
 public class Knock {
-    public let publishableKey: String
-    public var userId: String?
-    public var userToken: String?
-    public var feedManager: FeedManager?
-
-    internal let api: KnockAPI
-
+    internal static let clientVersion = "1.0.0"
+    internal static let loggingSubsytem = "knock-swift"
     
     public private(set) static var shared = Knock()
-    
-    private let clientVersion = "1.0.0"
+
+    public private(set) var publishableKey: String?
+//    public private(set) var userId: String?
+    public internal(set) var userId: String?
+    public internal(set) var userToken: String?
+    public var feedManager: FeedManager?
+
         
-    internal var api: KnockAPI!
+    internal private(set) var api: KnockAPI!
     
     public func initialize(apiKey: String, options: KnockOptions? = nil) {
         
@@ -70,24 +70,38 @@ public class Knock {
         if apiKey.hasPrefix("sk") {
             fatalError("[Knock] You are using your secret API key on the client. Please use the public key.")
         }
-        self.api = KnockAPI(apiKey: apiKey, clientVersion: clientVersion, hostname: options?.host)
+        self.api = KnockAPI(apiKey: apiKey, hostname: options?.host)
     }
     
-    private func assertInitialized() {
-        if api == nil {
-            fatalError("[Knock] You must call initialize() first before trying to make a request...")
+//    private func assertInitialized() {
+//        if api == nil {
+//            fatalError("[Knock] You must call initialize() first before trying to make a request...")
+//        }
+//    }
+//    
+//    private func assertAuthenticated() {
+//        if !isAuthenticated() {
+//            fatalError("[Knock] You must call authenticate() first before trying to make a request...")
+//        }
+//    }
+//    
+//    private func assertAuthAndInit() {
+//        assertInitialized()
+//        assertAuthenticated()
+//    }
+    
+    internal var safePublishableKey: String {
+        guard let key = publishableKey else {
+            fatalError("[Knock] You must call Knock.shared.initialize() first before trying to make a request...")
         }
+        return key
     }
     
-    private func assertAuthenticated() {
-        if !isAuthenticated() {
-            fatalError("[Knock] You must call authenticate() first before trying to make a request...")
+    internal var safeUserId: String {
+        guard let id = userId else {
+            fatalError("[Knock] You must call Knock.shared.authenticate() first before trying to make a request where userId is required...")
         }
-    }
-    
-    private func assertAuthAndInit() {
-        assertInitialized()
-        assertAuthenticated()
+        return id
     }
 }
 

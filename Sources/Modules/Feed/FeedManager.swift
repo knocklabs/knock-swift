@@ -7,29 +7,26 @@
 
 import Foundation
 import SwiftPhoenixClient
+import OSLog
 
 public extension Knock {
     
     class FeedManager {
-        private let api: KnockAPI
         private let socket: Socket
         private var feedChannel: Channel?
-        private let userId: String
         private let feedId: String
         private var feedTopic: String
         private var defaultFeedOptions: FeedClientOptions
+        private let logger: Logger = Logger(subsystem: Knock.loggingSubsytem, category: "FeedManager")
         
         public init(feedId: String, options: FeedClientOptions = FeedClientOptions(archived: .exclude)) throws {
-            guard let userId = client.userId else { throw Knock.KnockError.runtimeError("Unable to initialize FeedManager without first authenticating Knock user.") }
             // use regex and circumflex accent to mark only the starting http to be replaced and not any others
-            let websocketHostname = client.api.host.replacingOccurrences(of: "^http", with: "ws", options: .regularExpression) // default: wss://api.knock.app
+            let websocketHostname = Knock.shared.api.host.replacingOccurrences(of: "^http", with: "ws", options: .regularExpression) // default: wss://api.knock.app
             let websocketPath = "\(websocketHostname)/ws/v1/websocket" // default: wss://api.knock.app/ws/v1/websocket
             
-            self.socket = Socket(websocketPath, params: ["vsn": "2.0.0", "api_key": client.api.apiKey, "user_token": client.api.userToken ?? ""])
-            self.userId = userId
+            self.socket = Socket(websocketPath, params: ["vsn": "2.0.0", "api_key": Knock.shared.safePublishableKey, "user_token": Knock.shared.userToken ?? ""])
             self.feedId = feedId
-            self.feedTopic = "feeds:\(feedId):\(userId)"
-            self.api = client.api
+            self.feedTopic = "feeds:\(feedId):\(Knock.shared.safeUserId)"
             self.defaultFeedOptions = options
         }
         
@@ -42,24 +39,24 @@ public extension Knock {
         public func connectToFeed(options: FeedClientOptions? = nil) {
             // Setup the socket to receive open/close events
             socket.delegateOnOpen(to: self) { (self) in
-                print("Socket Opened")
+                self.logger.debug("[Knock] Socket Opened")
             }
             
             socket.delegateOnClose(to: self) { (self) in
-                print("Socket Closed")
+                self.logger.debug("[Knock] Socket Closed")
             }
             
             socket.delegateOnError(to: self) { (self, error) in
                 let (error, response) = error
                 if let statusCode = (response as? HTTPURLResponse)?.statusCode, statusCode > 400 {
-                    print("Socket Errored. \(statusCode)")
+                    self.logger.error("[Knock] Socket Errored. \(statusCode)")
                     self.socket.disconnect()
                 } else {
-                    print("Socket Errored. \(error)")
+                    self.logger.error("[Knock] Socket Errored. \(error)")
                 }
             }
             
-            socket.logger = { msg in print("LOG:", msg) }
+//            socket.logger = { msg in print("LOG:", msg) }
             
             let mergedOptions = defaultFeedOptions.mergeOptions(options: options)
             
@@ -73,10 +70,10 @@ public extension Knock {
             self.feedChannel?
                 .join()
                 .delegateReceive("ok", to: self) { (self, _) in
-                    print("CHANNEL: \(channel.topic) joined")
+                    self.logger.debug("[Knock] CHANNEL: \(channel.topic) joined")
                 }
                 .delegateReceive("error", to: self) { (self, message) in
-                    print("CHANNEL: \(channel.topic) failed to join. \(message.payload)")
+                    self.logger.debug("[Knock] CHANNEL: \(channel.topic) failed to join. \(message.payload)")
                 }
             
             self.socket.connect()
@@ -89,12 +86,12 @@ public extension Knock {
                 }
             }
             else {
-                print("Feed channel is nil. You should call first connectToFeed()")
+                logger.error("[Knock] Feed channel is nil. You should call first connectToFeed()")
             }
         }
         
         public func disconnectFromFeed() {
-            print("Disconnecting from feed")
+            logger.debug("[Knock] Disconnecting from feed")
             
             if let channel = self.feedChannel {
                 channel.leave()
@@ -128,7 +125,7 @@ public extension Knock {
                 URLQueryItem(name: "trigger_data", value: triggerDataJSON)
             ]
             
-            api.decodeFromGet(Feed.self, path: "/users/\(userId)/feeds/\(feedId)", queryItems: queryItems) { (result) in
+            Knock.shared.api.decodeFromGet(Feed.self, path: "/users/\(Knock.shared.safeUserId)/feeds/\(feedId)", queryItems: queryItems) { (result) in
                 completionHandler(result)
             }
         }
@@ -151,14 +148,14 @@ public extension Knock {
             // engagement_status: one of `seen`, `unseen`, `read`, `unread`, `archived`, `unarchived`, `interacted`
             // Also check if the parameters sent here are valid
             let body: AnyEncodable = [
-                "user_ids": [userId],
+                "user_ids": [Knock.shared.safeUserId],
                 "engagement_status": options.status != nil && options.status != .all ? options.status!.rawValue : "",
                 "archived": options.archived ?? "",
                 "has_tenant": options.has_tenant ?? "",
                 "tenants": (options.tenant != nil) ? [options.tenant!] : ""
             ]
             
-            api.decodeFromPost(BulkOperation.self, path: "/channels/\(feedId)/messages/bulk/\(type.rawValue)", body: body, then: completionHandler)
+            Knock.shared.api.decodeFromPost(BulkOperation.self, path: "/channels/\(feedId)/messages/bulk/\(type.rawValue)", body: body, then: completionHandler)
         }
         
         private func paramsFromOptions(options: FeedClientOptions) -> [String: Any] {

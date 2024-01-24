@@ -74,7 +74,7 @@ open class KnockAppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificat
                 
         let defaults = UserDefaults.standard
         defaults.set(token, forKey: "device_push_token")
-        deviceTokenDidChange(apnsToken: token, isDebugging: isDebuggerAttached)
+//        deviceTokenDidChange(apnsToken: token, isDebugging: isDebuggerAttached)
 //        self.pushToken = token
     }
     

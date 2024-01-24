@@ -8,23 +8,15 @@
 import Foundation
 
 class KnockAPI {
-    internal let apiKey: String
-    internal let clientVersion: String
-    internal let apiBasePath: String
-    
-    internal var userToken: String?
-    internal var userId: String?
+    internal private(set) var host = "https://api.knock.app"
+    private var apiBasePath: String {
+        "\(host)/v1"
+    }
 
-    internal var host = "https://api.knock.app"
-
-    internal init(apiKey: String, clientVersion: String, hostname: String? = nil, userToken: String? = nil) {
-        self.apiKey = apiKey
-        self.userToken = userToken
-        self.clientVersion = clientVersion
+    internal init(apiKey: String, hostname: String? = nil) {
         if let customHostname = hostname {
             self.host = customHostname
         }
-        apiBasePath = "\(host)/v1"
     }
     
     // MARK: Decode functions, they encapsulate making the request and decoding the data
@@ -124,6 +116,13 @@ class KnockAPI {
         - then: the code to execute when the response is received
      */
     private func makeGeneralRequest(method: String, path: String, queryItems: [URLQueryItem]?, body: Encodable?, then handler: @escaping (Result<Data, Error>) -> Void) {
+        guard let apiKey = Knock.shared.publishableKey else {
+            DispatchQueue.main.async {
+                handler(.failure(Knock.KnockError.runtimeError("Can't make request until Knock.shared.initialize has been called.")))
+            }
+            return
+        }
+        
         let sessionConfig = URLSessionConfiguration.default
         let session = URLSession(configuration: sessionConfig, delegate: nil, delegateQueue: nil)
         guard var URL = URL(string: "\(apiBasePath)\(path)") else {return}
@@ -145,10 +144,10 @@ class KnockAPI {
         
         // Headers
         
-        request.addValue("knock-swift@\(clientVersion)", forHTTPHeaderField: "User-Agent")
+        request.addValue("knock-swift@\(Knock.shared.clientVersion)", forHTTPHeaderField: "User-Agent")
         
         request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-        if let userToken = userToken {
+        if let userToken = Knock.shared.userToken {
             request.addValue(userToken, forHTTPHeaderField: "X-Knock-User-Token")
         }
         

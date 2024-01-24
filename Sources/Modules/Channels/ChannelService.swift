@@ -6,11 +6,12 @@
 //
 
 import Foundation
+import OSLog
 
 public extension Knock {
-
+    
     func getUserChannelData(channelId: String, completionHandler: @escaping ((Result<ChannelData, Error>) -> Void)) {
-        self.api.decodeFromGet(ChannelData.self, path: "/users/\(userId)/channel_data/\(channelId)", queryItems: nil, then: completionHandler)
+        self.api.decodeFromGet(ChannelData.self, path: "/users/\(self.safeUserId)/channel_data/\(channelId)", queryItems: nil, then: completionHandler)
     }
     
     /**
@@ -24,7 +25,7 @@ public extension Knock {
         let payload = [
             "data": data
         ]
-        self.api.decodeFromPut(ChannelData.self, path: "/users/\(userId)/channel_data/\(channelId)", body: payload, then: completionHandler)
+        self.api.decodeFromPut(ChannelData.self, path: "/users/\(self.safeUserId)/channel_data/\(channelId)", body: payload, then: completionHandler)
     }
     
     /**
@@ -64,7 +65,6 @@ public extension Knock {
             switch result {
             case .failure(_):
                 // there's no data registered on that channel for that user, we'll create a new record
-                print("there's no data registered on that channel for that user, we'll create a new record")
                 let data: AnyEncodable = [
                     "tokens": [token]
                 ]
@@ -72,7 +72,6 @@ public extension Knock {
             case .success(let channelData):
                 guard let data = channelData.data else {
                     // we don't have data for that channel for that user, we'll create a new record
-                    print("we don't have data for that channel for that user, we'll create a new record")
                     let data: AnyEncodable = [
                         "tokens": [token]
                     ]
@@ -82,7 +81,6 @@ public extension Knock {
                 
                 guard var tokens = data["tokens"]?.value as? [String] else {
                     // we don't have an array of valid tokens so we'll register a new one
-                    print("we don't have an array of valid tokens so we'll register a new one")
                     let data: AnyEncodable = [
                         "tokens": [token]
                     ]
@@ -92,12 +90,10 @@ public extension Knock {
                 
                 if tokens.contains(token) {
                     // we already have the token registered
-                    print("we already have the token registered")
                     completionHandler(.success(channelData))
                 }
                 else {
                     // we need to register the token
-                    print("we need to register the token")
                     tokens.append(token)
                     let data: AnyEncodable = [
                         "tokens": tokens
