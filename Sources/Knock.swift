@@ -45,15 +45,25 @@ extension Knock {
     // Configuration options for the Knock client SDK.
     public struct KnockOptions {
         var host: String?
+        
+        init(host: String? = nil) {
+            self.host = host
+        }
     }
     
     public enum KnockError: Error {
         case runtimeError(String)
         case userIdError
-//        "UserId not found. Please authenticate your userId with Knock.authenticate()."
     }
 }
 
-
-// NoTES:
-// Should we provide more safety around userID being invalid? Instead of fatal erroring out the app.
+extension Knock.KnockError: LocalizedError {
+    public var errorDescription: String? {
+        switch self {
+        case .runtimeError(let message):
+            return message
+        case .userIdError:
+            return "UserId not found. Please authenticate your userId with Knock.authenticate()."
+        }
+    }
+}
