@@ -41,17 +41,17 @@ public class Knock {
     }
 }
 
-extension Knock {
+public extension Knock {
     // Configuration options for the Knock client SDK.
-    public struct KnockOptions {
+    struct KnockOptions {
         var host: String?
         
-        init(host: String? = nil) {
+        public init(host: String? = nil) {
             self.host = host
         }
     }
     
-    public enum KnockError: Error {
+    enum KnockError: Error {
         case runtimeError(String)
         case userIdError
     }
