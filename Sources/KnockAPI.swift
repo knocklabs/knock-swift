@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct KnockAPI {
+class KnockAPI {
     internal let publishableKey: String
     internal private(set) var host = "https://api.knock.app"
     public internal(set) var userToken: String?
@@ -21,10 +21,6 @@ struct KnockAPI {
             self.host = customHostname
         }
         self.publishableKey = publishableKey
-    }
-    
-    internal mutating func updateUserInfo(userToken: String?) {
-        self.userToken = userToken
     }
     
     // MARK: Decode functions, they encapsulate making the request and decoding the data

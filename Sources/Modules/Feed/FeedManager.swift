@@ -10,8 +10,13 @@ import SwiftPhoenixClient
 import OSLog
 
 public extension Knock {
-    func initializeFeedManager(feedId: String, options: FeedManager.FeedClientOptions = FeedManager.FeedClientOptions(archived: .exclude)) {
-        self.feedManager = FeedManager(api: self.api, userId: self.safeUserId, feedId: feedId, options: options)
+    func initializeFeedManager(feedId: String, options: FeedManager.FeedClientOptions = FeedManager.FeedClientOptions(archived: .exclude)) throws {
+        guard let safeUserId = self.userId else { throw KnockError.userIdError }
+        self.feedManager = FeedManager(api: self.api, userId: safeUserId, feedId: feedId, options: options)
+    }
+    
+    func deInitializeFeedManager() {
+        self.feedManager = nil
     }
     
     class FeedManager {
@@ -63,6 +68,7 @@ public extension Knock {
                 }
             }
             
+            // TODO: Determine the level of logging we want from SwiftPhoenixClient. Currently this produces a lot of noise.
 //            socket.logger = { msg in print("LOG:", msg) }
             
             let mergedOptions = defaultFeedOptions.mergeOptions(options: options)

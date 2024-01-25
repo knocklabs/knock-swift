@@ -14,7 +14,9 @@ public extension Knock {
     }
 
     func getUserChannelData(channelId: String, completionHandler: @escaping ((Result<ChannelData, Error>) -> Void)) {
-        self.api.decodeFromGet(ChannelData.self, path: "/users/\(self.safeUserId)/channel_data/\(channelId)", queryItems: nil, then: completionHandler)
+        performActionWithUserId( { userId, completion in
+            self.api.decodeFromGet(ChannelData.self, path: "/users/\(userId)/channel_data/\(channelId)", queryItems: nil, then: completion)
+        }, completionHandler: completionHandler)
     }
     
     /**
@@ -25,10 +27,12 @@ public extension Knock {
         - data: the shape of the payload varies depending on the channel. You can learn more about channel data schemas [here](https://docs.knock.app/send-notifications/setting-channel-data#provider-data-requirements).
      */
     func updateUserChannelData(channelId: String, data: AnyEncodable, completionHandler: @escaping ((Result<ChannelData, Error>) -> Void)) {
-        let payload = [
-            "data": data
-        ]
-        self.api.decodeFromPut(ChannelData.self, path: "/users/\(self.safeUserId)/channel_data/\(channelId)", body: payload, then: completionHandler)
+        performActionWithUserId( { userId, completion in
+            let payload = [
+                "data": data
+            ]
+            self.api.decodeFromPut(ChannelData.self, path: "/users/\(userId)/channel_data/\(channelId)", body: payload, then: completion)
+        }, completionHandler: completionHandler)
     }
     
     // Mark: Registration of APNS device tokens

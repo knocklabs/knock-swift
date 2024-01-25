@@ -28,7 +28,7 @@ public extension Knock {
         self.userId = userId
         self.pushChannelId = pushChannelId
         self.userDeviceToken = deviceToken
-        self.api.updateUserInfo(userToken: userToken)
+        self.api.userToken = userToken
         if let token = deviceToken, let channelId = pushChannelId {
             self.registerTokenForAPNS(channelId: channelId, token: token) { result in
                 switch result {
@@ -75,10 +75,14 @@ public extension Knock {
     }
     
     func getUser(completionHandler: @escaping ((Result<User, Error>) -> Void)) {
-        self.api.decodeFromGet(User.self, path: "/users/\(self.safeUserId)", queryItems: nil, then: completionHandler)
+        performActionWithUserId( { userId, completion in
+            self.api.decodeFromGet(User.self, path: "/users/\(userId)", queryItems: nil, then: completion)
+        }, completionHandler: completionHandler)
     }
     
     func updateUser(user: User, completionHandler: @escaping ((Result<User, Error>) -> Void)) {
-        self.api.decodeFromPut(User.self, path: "/users/\(self.safeUserId)", body: user, then: completionHandler)
+        performActionWithUserId( { userId, completion in
+            self.api.decodeFromPut(User.self, path: "/users/\(userId)", body: user, then: completion)
+        }, completionHandler: completionHandler)
     }
 }

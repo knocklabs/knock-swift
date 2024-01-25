@@ -14,7 +14,7 @@ public class Knock {
     
     internal var api: KnockAPI
     
-    public var feedManager: FeedManager?
+    public internal(set) var feedManager: FeedManager?
     public internal(set) var userId: String?
     public internal(set) var pushChannelId: String?
     public internal(set) var userDeviceToken: String?
@@ -37,15 +37,15 @@ public class Knock {
         self.feedManager = nil
         self.userDeviceToken = nil
         self.pushChannelId = nil
-        self.api.updateUserInfo(userToken: nil)
+        self.api.userToken = nil
     }
     
-    internal var safeUserId: String {
-        guard let id = userId else {
-            fatalError("[Knock] You must call Knock.shared.authenticate() first before trying to make a request where userId is required...")
-        }
-        return id
-    }
+//    internal var safeUserId: String {
+//        guard let id = userId else {
+//            fatalError("[Knock] You must call Knock.shared.authenticate() first before trying to make a request where userId is required...")
+//        }
+//        return id
+//    }
 }
 
 extension Knock {
@@ -56,10 +56,19 @@ extension Knock {
     
     public enum KnockError: Error {
         case runtimeError(String)
+        case userIdError
+//        "UserId not found. Please authenticate your userId with Knock.authenticate()."
+    }
+    
+    func performActionWithUserId<T>(_ action: @escaping (String, @escaping (Result<T, Error>) -> Void) -> Void, completionHandler: @escaping (Result<T, Error>) -> Void) {
+        guard let userId = self.userId else {
+            completionHandler(.failure(KnockError.userIdError))
+            return
+        }
+        action(userId, completionHandler)
     }
 }
 
 
 // NoTES:
 // Should we provide more safety around userID being invalid? Instead of fatal erroring out the app.
-// Ensure that switching api to struct is the right move.
