@@ -39,13 +39,6 @@ public class Knock {
         self.pushChannelId = nil
         self.api.userToken = nil
     }
-    
-//    internal var safeUserId: String {
-//        guard let id = userId else {
-//            fatalError("[Knock] You must call Knock.shared.authenticate() first before trying to make a request where userId is required...")
-//        }
-//        return id
-//    }
 }
 
 extension Knock {
@@ -58,14 +51,6 @@ extension Knock {
         case runtimeError(String)
         case userIdError
 //        "UserId not found. Please authenticate your userId with Knock.authenticate()."
-    }
-    
-    func performActionWithUserId<T>(_ action: @escaping (String, @escaping (Result<T, Error>) -> Void) -> Void, completionHandler: @escaping (Result<T, Error>) -> Void) {
-        guard let userId = self.userId else {
-            completionHandler(.failure(KnockError.userIdError))
-            return
-        }
-        action(userId, completionHandler)
     }
 }
 

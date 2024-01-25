@@ -33,6 +33,14 @@ internal extension Knock {
         }
         return tokenParts.joined()
     }
+    
+    func performActionWithUserId<T>(_ action: @escaping (String, @escaping (Result<T, Error>) -> Void) -> Void, completionHandler: @escaping (Result<T, Error>) -> Void) {
+        guard let userId = self.userId else {
+            completionHandler(.failure(KnockError.userIdError))
+            return
+        }
+        action(userId, completionHandler)
+    }
 }
 
 struct DynamicCodingKey: CodingKey {
