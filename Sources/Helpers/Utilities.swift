@@ -26,6 +26,13 @@ internal extension Knock {
         
         return jsonString
     }
+    
+    static func convertTokenToString(token: Data) -> String {
+        let tokenParts = token.map { data -> String in
+            return String(format: "%02.2hhx", data)
+        }
+        return tokenParts.joined()
+    }
 }
 
 struct DynamicCodingKey: CodingKey {

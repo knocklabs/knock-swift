@@ -10,8 +10,13 @@ import SwiftPhoenixClient
 import OSLog
 
 public extension Knock {
+    func initializeFeedManager(feedId: String, options: FeedManager.FeedClientOptions = FeedManager.FeedClientOptions(archived: .exclude)) {
+        self.feedManager = FeedManager(api: self.api, userId: self.safeUserId, feedId: feedId, options: options)
+    }
     
     class FeedManager {
+        private let api: KnockAPI
+        private let userId: String
         private let socket: Socket
         private var feedChannel: Channel?
         private let feedId: String
@@ -19,14 +24,16 @@ public extension Knock {
         private var defaultFeedOptions: FeedClientOptions
         private let logger: Logger = Logger(subsystem: Knock.loggingSubsytem, category: "FeedManager")
         
-        public init(feedId: String, options: FeedClientOptions = FeedClientOptions(archived: .exclude)) throws {
+        internal init(api: KnockAPI, userId: String, feedId: String, options: FeedClientOptions = FeedClientOptions(archived: .exclude)) {
             // use regex and circumflex accent to mark only the starting http to be replaced and not any others
-            let websocketHostname = Knock.shared.api.host.replacingOccurrences(of: "^http", with: "ws", options: .regularExpression) // default: wss://api.knock.app
+            let websocketHostname = api.host.replacingOccurrences(of: "^http", with: "ws", options: .regularExpression) // default: wss://api.knock.app
             let websocketPath = "\(websocketHostname)/ws/v1/websocket" // default: wss://api.knock.app/ws/v1/websocket
             
-            self.socket = Socket(websocketPath, params: ["vsn": "2.0.0", "api_key": Knock.shared.safePublishableKey, "user_token": Knock.shared.userToken ?? ""])
+            self.api = api
+            self.userId = userId
+            self.socket = Socket(websocketPath, params: ["vsn": "2.0.0", "api_key": api.publishableKey, "user_token": api.userToken ?? ""])
             self.feedId = feedId
-            self.feedTopic = "feeds:\(feedId):\(Knock.shared.safeUserId)"
+            self.feedTopic = "feeds:\(feedId):\(userId)"
             self.defaultFeedOptions = options
         }
         
@@ -125,7 +132,7 @@ public extension Knock {
                 URLQueryItem(name: "trigger_data", value: triggerDataJSON)
             ]
             
-            Knock.shared.api.decodeFromGet(Feed.self, path: "/users/\(Knock.shared.safeUserId)/feeds/\(feedId)", queryItems: queryItems) { (result) in
+            api.decodeFromGet(Feed.self, path: "/users/\(userId)/feeds/\(feedId)", queryItems: queryItems) { (result) in
                 completionHandler(result)
             }
         }
@@ -148,14 +155,14 @@ public extension Knock {
             // engagement_status: one of `seen`, `unseen`, `read`, `unread`, `archived`, `unarchived`, `interacted`
             // Also check if the parameters sent here are valid
             let body: AnyEncodable = [
-                "user_ids": [Knock.shared.safeUserId],
+                "user_ids": [userId],
                 "engagement_status": options.status != nil && options.status != .all ? options.status!.rawValue : "",
                 "archived": options.archived ?? "",
                 "has_tenant": options.has_tenant ?? "",
                 "tenants": (options.tenant != nil) ? [options.tenant!] : ""
             ]
             
-            Knock.shared.api.decodeFromPost(BulkOperation.self, path: "/channels/\(feedId)/messages/bulk/\(type.rawValue)", body: body, then: completionHandler)
+            api.decodeFromPost(BulkOperation.self, path: "/channels/\(feedId)/messages/bulk/\(type.rawValue)", body: body, then: completionHandler)
         }
         
         private func paramsFromOptions(options: FeedClientOptions) -> [String: Any] {

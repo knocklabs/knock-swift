@@ -9,7 +9,10 @@ import Foundation
 import OSLog
 
 public extension Knock {
-    
+    private var logger: Logger {
+        Logger(subsystem: Knock.loggingSubsytem, category: "ChannelService")
+    }
+
     func getUserChannelData(channelId: String, completionHandler: @escaping ((Result<ChannelData, Error>) -> Void)) {
         self.api.decodeFromGet(ChannelData.self, path: "/users/\(self.safeUserId)/channel_data/\(channelId)", queryItems: nil, then: completionHandler)
     }
@@ -28,6 +31,8 @@ public extension Knock {
         self.api.decodeFromPut(ChannelData.self, path: "/users/\(self.safeUserId)/channel_data/\(channelId)", body: payload, then: completionHandler)
     }
     
+    // Mark: Registration of APNS device tokens
+    
     /**
      Registers an Apple Push Notification Service token so that the device can receive remote push notifications. This is a convenience method that internally gets the channel data and searches for the token. If it exists, then it's already registered and it returns. If the data does not exists or the token is missing from the array, it's added.
      
@@ -41,10 +46,7 @@ public extension Knock {
      */
     func registerTokenForAPNS(channelId: String, token: Data, completionHandler: @escaping ((Result<ChannelData, Error>) -> Void)) {
         // 1. Convert device token to string
-        let tokenParts = token.map { data -> String in
-            return String(format: "%02.2hhx", data)
-        }
-        let tokenString = tokenParts.joined()
+        let tokenString = Knock.convertTokenToString(token: token)
         
         registerTokenForAPNS(channelId: channelId, token: tokenString, completionHandler: completionHandler)
     }
@@ -61,44 +63,81 @@ public extension Knock {
         - token: the APNS device token as a `String`
      */
     func registerTokenForAPNS(channelId: String, token: String, completionHandler: @escaping ((Result<ChannelData, Error>) -> Void)) {
+        // Closure to handle token registration/update
+        let registerOrUpdateToken = { [weak self] (existingTokens: [String]?) in
+            guard let self = self else { return }
+            var tokens = existingTokens ?? []
+            if !tokens.contains(token) {
+                tokens.append(token)
+            }
+            let data: AnyEncodable = ["tokens": tokens]
+            self.updateUserChannelData(channelId: channelId, data: data, completionHandler: completionHandler)
+        }
+        
         getUserChannelData(channelId: channelId) { result in
             switch result {
             case .failure(_):
-                // there's no data registered on that channel for that user, we'll create a new record
-                let data: AnyEncodable = [
-                    "tokens": [token]
-                ]
-                self.updateUserChannelData(channelId: channelId, data: data, completionHandler: completionHandler)
+                // No data registered on that channel for that user, we'll create a new record
+                registerOrUpdateToken(nil)
+                completionHandler(.success(ChannelData.init(channel_id: channelId, data: [:])))
             case .success(let channelData):
-                guard let data = channelData.data else {
-                    // we don't have data for that channel for that user, we'll create a new record
-                    let data: AnyEncodable = [
-                        "tokens": [token]
-                    ]
-                    self.updateUserChannelData(channelId: channelId, data: data, completionHandler: completionHandler)
-                    return
-                }
-                
-                guard var tokens = data["tokens"]?.value as? [String] else {
-                    // we don't have an array of valid tokens so we'll register a new one
-                    let data: AnyEncodable = [
-                        "tokens": [token]
-                    ]
-                    self.updateUserChannelData(channelId: channelId, data: data, completionHandler: completionHandler)
+                guard let data = channelData.data, let tokens = data["tokens"]?.value as? [String] else {
+                    // No valid tokens array found, register a new one
+                    registerOrUpdateToken(nil)
                     return
                 }
                 
                 if tokens.contains(token) {
-                    // we already have the token registered
+                    // Token already registered
                     completionHandler(.success(channelData))
+                } else {
+                    // Register the new token
+                    registerOrUpdateToken(tokens)
                 }
-                else {
-                    // we need to register the token
-                    tokens.append(token)
+            }
+        }
+    }
+    
+    /**
+     Unregisters the current deviceId associated to the user so that the device will no longer  receive remote push notifications for the provided channelId.
+     
+     - Parameters:
+        - channelId: the id of the APNS channel in Knock
+        - token: the APNS device token as a `String`
+     */
+    
+    func unregisterTokenForAPNS(channelId: String, token: String, completionHandler: @escaping ((Result<ChannelData, Error>) -> Void)) {
+        getUserChannelData(channelId: channelId) { result in
+            switch result {
+            case .failure(let error):
+                if let networkError = error as? NetworkError, networkError.code == 404 {
+                    // No data registered on that channel for that user
+                    self.logger.warning("[Knock] Could not unregister user from channel \(channelId). Reason: User doesn't have any channel data associated to the provided channelId.")
+                    completionHandler(.success(.init(channel_id: channelId, data: [:])))
+                } else {
+                    // Unknown error. Could be network or server related. Try again.
+                    self.logger.error("[Knock] Could not unregister user from channel \(channelId). Please try again. Reason: \(error.localizedDescription)")
+                    completionHandler(.failure(error))
+                }
+                
+            case .success(let channelData):
+                guard let data = channelData.data, let tokens = data["tokens"]?.value as? [String] else {
+                    // No valid tokens array found.
+                    self.logger.warning("[Knock] Could not unregister user from channel \(channelId). Reason: User doesn't have any device tokens associated to the provided channelId.")
+                    completionHandler(.success(channelData))
+                    return
+                }
+                
+                if tokens.contains(token) {
+                    let newTokensSet = Set(tokens).subtracting([token])
+                    let newTokens = Array(newTokensSet)
                     let data: AnyEncodable = [
-                        "tokens": tokens
+                        "tokens": newTokens
                     ]
                     self.updateUserChannelData(channelId: channelId, data: data, completionHandler: completionHandler)
+                } else {
+                    self.logger.warning("[Knock] Could not unregister user from channel \(channelId). Reason: User doesn't have any device tokens that match the token provided.")
+                    completionHandler(.success(channelData))
                 }
             }
         }

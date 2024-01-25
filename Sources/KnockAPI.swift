@@ -7,16 +7,24 @@
 
 import Foundation
 
-class KnockAPI {
+struct KnockAPI {
+    internal let publishableKey: String
     internal private(set) var host = "https://api.knock.app"
+    public internal(set) var userToken: String?
+    
     private var apiBasePath: String {
         "\(host)/v1"
     }
 
-    internal init(apiKey: String, hostname: String? = nil) {
+    internal init(publishableKey: String, hostname: String? = nil) {
         if let customHostname = hostname {
             self.host = customHostname
         }
+        self.publishableKey = publishableKey
+    }
+    
+    internal mutating func updateUserInfo(userToken: String?) {
+        self.userToken = userToken
     }
     
     // MARK: Decode functions, they encapsulate making the request and decoding the data
@@ -116,12 +124,6 @@ class KnockAPI {
         - then: the code to execute when the response is received
      */
     private func makeGeneralRequest(method: String, path: String, queryItems: [URLQueryItem]?, body: Encodable?, then handler: @escaping (Result<Data, Error>) -> Void) {
-        guard let apiKey = Knock.shared.publishableKey else {
-            DispatchQueue.main.async {
-                handler(.failure(Knock.KnockError.runtimeError("Can't make request until Knock.shared.initialize has been called.")))
-            }
-            return
-        }
         
         let sessionConfig = URLSessionConfiguration.default
         let session = URLSession(configuration: sessionConfig, delegate: nil, delegateQueue: nil)
@@ -144,10 +146,10 @@ class KnockAPI {
         
         // Headers
         
-        request.addValue("knock-swift@\(Knock.shared.clientVersion)", forHTTPHeaderField: "User-Agent")
+        request.addValue("knock-swift@\(Knock.clientVersion)", forHTTPHeaderField: "User-Agent")
         
-        request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-        if let userToken = Knock.shared.userToken {
+        request.addValue("Bearer \(publishableKey)", forHTTPHeaderField: "Authorization")
+        if let userToken = userToken {
             request.addValue(userToken, forHTTPHeaderField: "X-Knock-User-Token")
         }
         
