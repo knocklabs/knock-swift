@@ -28,7 +28,7 @@ public class Knock {
         - userToken: [optional] user token. Used in production when enhanced security is enabled
         - options: [optional] Options for customizing the Knock instance.
      */
-    public init(publishableKey: String, options: KnockOptions?) {
+    public init(publishableKey: String, options: KnockOptions? = nil) {
         self.api = KnockAPI(publishableKey: publishableKey, hostname: options?.host)
     }
     
