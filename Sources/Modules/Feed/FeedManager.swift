@@ -10,15 +10,7 @@ import SwiftPhoenixClient
 import OSLog
 
 public extension Knock {
-//    func initializeFeedManager(feedId: String, options: FeedManager.FeedClientOptions = FeedManager.FeedClientOptions(archived: .exclude)) throws {
-//        guard let safeUserId = self.userId else { throw KnockError.userIdError }
-//        self.feedManager = FeedManager(userId: safeUserId, feedId: feedId, options: options)
-//    }
-//    
-//    func deInitializeFeedManager() {
-//        self.feedManager = nil
-//    }
-    
+
     class FeedManager {
         private let feedModule: FeedModule
         

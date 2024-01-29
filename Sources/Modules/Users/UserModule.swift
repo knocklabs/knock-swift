@@ -104,11 +104,19 @@ public extension Knock {
     }
     
     /**
-     Set the current credentials for the user and their access token
+     Set the current credentials for the user and their access token.
+      Will also registerAPNS device token if set previously.
      You should consider using this in areas where you update your local user's state
      */
     func signIn(userId: String, userToken: String?) async throws {
         KnockEnvironment.shared.setUserInfo(userId: userId, userToken: userToken)
+        
+        if let token = KnockEnvironment.shared.userDevicePushToken, let channelId = KnockEnvironment.shared.pushChannelId {
+            let _ = try await registerTokenForAPNS(channelId: channelId, token: token)
+            return
+        }
+        
+        return
     }
     
     func signIn(userId: String, userToken: String?, completionHandler: @escaping ((Result<Void, Error>) -> Void)) {

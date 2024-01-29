@@ -8,7 +8,7 @@
 import Foundation
 
 public extension Knock {
-    enum KnockError: Error {
+    enum KnockError: Error, Equatable {
         case runtimeError(String)
         case userIdError
     }

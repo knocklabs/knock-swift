@@ -10,7 +10,7 @@ import OSLog
 
 internal class ChannelModule {
     let channelService = ChannelService()
-    private let logger: Logger =  Logger(subsystem: Knock.loggingSubsytem, category: "ChannelModule")
+    private let logger: Logger = Logger(subsystem: Knock.loggingSubsytem, category: "Channels")
 
     func getUserChannelData(channelId: String) async throws -> Knock.ChannelData {
         try await channelService.getUserChannelData(channelId: channelId)
@@ -31,8 +31,9 @@ internal class ChannelModule {
     }
     
     func registerTokenForAPNS(channelId: String, token: String) async throws -> Knock.ChannelData {
+        KnockEnvironment.shared.setPushInformation(channelId: channelId, deviceToken: token)
+        
         do {
-            
             let channelData = try await getUserChannelData(channelId: channelId)
             guard let data = channelData.data, let tokens = data["tokens"]?.value as? [String] else {
                 // No valid tokens array found, register a new one
@@ -46,6 +47,9 @@ internal class ChannelModule {
                 // Register the new token
                 return try await registerOrUpdateToken(token: token, channelId: channelId, existingTokens: tokens)
             }
+        } catch let userIdError as Knock.KnockError where userIdError == Knock.KnockError.userIdError {
+            logger.warning("[Knock] ChannelId and deviceToken were saved. However, we cannot register for APNS until you have have called Knock.signIn().")
+            throw userIdError
         } catch {
             // No data registered on that channel for that user, we'll create a new record
             return try await registerOrUpdateToken(token: token, channelId: channelId, existingTokens: nil)

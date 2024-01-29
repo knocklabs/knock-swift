@@ -15,7 +15,7 @@ internal class FeedModule {
     private let feedId: String
     private var feedTopic: String
     private var feedOptions: Knock.FeedClientOptions
-    private let logger: Logger = Logger(subsystem: Knock.loggingSubsytem, category: "FeedManager")
+    private let logger: Logger = Logger(subsystem: Knock.loggingSubsytem, category: "Feed")
     private let feedService = FeedService()
     
     internal init(feedId: String, options: Knock.FeedClientOptions) throws {
