@@ -67,5 +67,6 @@ internal class KnockLogger {
         case pushNotification
         case message
         case general
+        case appDelegate
     }
 }

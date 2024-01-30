@@ -27,14 +27,14 @@ public class Knock {
         - publishableKey: your public API key
         - options: [optional] Options for customizing the Knock instance.
      */
-    public init(publishableKey: String, hostname: String? = nil) {
-        KnockEnvironment.shared.setPublishableKey(key: publishableKey)
+    public init(publishableKey: String, hostname: String? = nil) throws {
+        try KnockEnvironment.shared.setPublishableKey(key: publishableKey)
         KnockEnvironment.shared.setBaseUrl(baseUrl: hostname)
     }
     
     @available(*, deprecated, message: "See v1.0.0 migration guide for more details.")
-    public init(publishableKey: String, userId: String, userToken: String? = nil, hostname: String? = nil) {
-        KnockEnvironment.shared.setPublishableKey(key: publishableKey)
+    public init(publishableKey: String, userId: String, userToken: String? = nil, hostname: String? = nil) throws {
+        try KnockEnvironment.shared.setPublishableKey(key: publishableKey)
         KnockEnvironment.shared.setUserInfo(userId: userId, userToken: userToken)
         KnockEnvironment.shared.setBaseUrl(baseUrl: hostname)
     }

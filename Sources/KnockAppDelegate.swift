@@ -11,9 +11,7 @@ import OSLog
 
 @available(iOSApplicationExtension, unavailable)
 open class KnockAppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
-    
-    private let logger = Logger(subsystem: "knock-swift", category: "KnockAppDelegate")
-    
+        
     // MARK: Init
     
     override init() {
@@ -34,7 +32,7 @@ open class KnockAppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificat
     // MARK: Notifications
     
     open func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        logger.debug("userNotificationCenter willPresent notification: \(notification)")
+        KnockLogger.log(type: .debug, category: .appDelegate, message: "userNotificationCenter willPresent notification", description: "\(notification)")
 
         let userInfo = notification.request.content.userInfo
         
@@ -43,8 +41,8 @@ open class KnockAppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificat
     }
     
     open func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
-        logger.debug("didReceiveNotificationResponse: \(response)")
-        
+        KnockLogger.log(type: .debug, category: .appDelegate, message: "didReceiveNotificationResponse", description: "\(response)")
+
         let userInfo = response.notification.request.content.userInfo
         
         if response.actionIdentifier == UNNotificationDismissActionIdentifier {
@@ -58,19 +56,17 @@ open class KnockAppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificat
     // MARK: Token Management
     
     open func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        logger.error("Failed to register for notifications: \(error.localizedDescription)")
+        KnockLogger.log(type: .error, category: .appDelegate, message: "Failed to register for notifications", description: error.localizedDescription)
     }
     
     open func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        logger.debug("Successfully registered for notifications!")
-        
         // 1. Convert device token to string
         let tokenParts = deviceToken.map { data -> String in
             return String(format: "%02.2hhx", data)
         }
         let token = tokenParts.joined()
         // 2. Print device token to use for PNs payloads
-        logger.debug("Device Token: \(token)")
+        KnockLogger.log(type: .debug, category: .appDelegate, message: "Successfully registered for notifications!", description: "Device Token: \(token)")
                 
         let defaults = UserDefaults.standard
         defaults.set(token, forKey: "device_push_token")
