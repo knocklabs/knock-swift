@@ -35,7 +35,7 @@ internal class KnockEnvironment {
     }
     
     func setBaseUrl(baseUrl: String?) {
-        self.baseUrl = baseUrl ?? KnockEnvironment.defaultBaseUrl
+        self.baseUrl = "\(baseUrl ?? KnockEnvironment.defaultBaseUrl)/v1"
     }
     
     func resetEnvironment() {
