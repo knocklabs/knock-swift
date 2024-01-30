@@ -26,6 +26,21 @@ internal extension Knock {
         
         return jsonString
     }
+    
+    static func convertTokenToString(token: Data) -> String {
+        let tokenParts = token.map { data -> String in
+            return String(format: "%02.2hhx", data)
+        }
+        return tokenParts.joined()
+    }
+    
+    func performActionWithUserId<T>(_ action: @escaping (String, @escaping (Result<T, Error>) -> Void) -> Void, completionHandler: @escaping (Result<T, Error>) -> Void) {
+        guard let userId = self.userId else {
+            completionHandler(.failure(KnockError.userIdError))
+            return
+        }
+        action(userId, completionHandler)
+    }
 }
 
 struct DynamicCodingKey: CodingKey {
