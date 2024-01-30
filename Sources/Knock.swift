@@ -35,7 +35,7 @@ public class Knock {
     public init(publishableKey: String, userId: String, userToken: String? = nil, hostname: String? = nil) {
         KnockEnvironment.shared.setPublishableKey(key: publishableKey)
         KnockEnvironment.shared.setUserInfo(userId: userId, userToken: userToken)
-        KnockEnvironment.shared.baseUrl = hostname ?? "https://api.knock.app"
+        KnockEnvironment.shared.setBaseUrl(baseUrl: hostname)
     }
     
     internal func resetInstance() {
