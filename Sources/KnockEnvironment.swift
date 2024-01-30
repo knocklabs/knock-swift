@@ -17,7 +17,7 @@ internal class KnockEnvironment {
     private(set) var userDevicePushToken: String?
     private(set) var pushChannelId: String?
     private(set) var publishableKey: String = ""
-    var baseUrl: String = KnockEnvironment.defaultBaseUrl
+    private(set) var baseUrl: String = ""
 
     func setPublishableKey(key: String) {
         guard key.hasPrefix("sk_") == false else { fatalError("[Knock] You are using your secret API key on the client. Please use the public key.") }
@@ -35,7 +35,7 @@ internal class KnockEnvironment {
     }
     
     func setBaseUrl(baseUrl: String?) {
-        self.baseUrl = "\(baseUrl ?? KnockEnvironment.defaultBaseUrl)/v1"
+        self.baseUrl = "\(baseUrl ?? KnockEnvironment.defaultBaseUrl)/v1)"
     }
     
     func resetEnvironment() {

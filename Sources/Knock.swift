@@ -28,7 +28,7 @@ public class Knock {
      */
     public init(publishableKey: String, hostname: String? = nil) {
         KnockEnvironment.shared.setPublishableKey(key: publishableKey)
-        KnockEnvironment.shared.baseUrl = hostname ?? "https://api.knock.app"
+        KnockEnvironment.shared.setBaseUrl(baseUrl: hostname)
     }
     
     @available(*, deprecated, message: "See v1.0.0 migration guide for more details.")
