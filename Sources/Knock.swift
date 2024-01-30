@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import OSLog
 
 // Knock client SDK.
 public class Knock {
@@ -54,5 +55,7 @@ public extension Knock {
 
 
 
-// Possibly return user in authenticate method.
-
+// TODO: Possibly return user in authenticate method.
+// TODO: Ensure threads are correct
+// TODO: Handle AppDelegate
+// TODO: Evaluate classes and determine if they should be structs

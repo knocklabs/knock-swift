@@ -11,19 +11,47 @@ internal class MessageModule {
     let messageService = MessageService()
     
     internal func getMessage(messageId: String) async throws -> Knock.KnockMessage {
-        try await messageService.getMessage(messageId: messageId)
+        do {
+            let message = try await messageService.getMessage(messageId: messageId)
+            KnockLogger.log(type: .debug, category: .message, message: "getMessage", status: .success, additionalInfo: ["messageId": messageId])
+            return message
+        } catch let error {
+            KnockLogger.log(type: .error, category: .message, message: "getMessage", status: .fail, errorMessage: error.localizedDescription, additionalInfo: ["messageId": messageId])
+            throw error
+        }
     }
     
     internal func updateMessageStatus(messageId: String, status: Knock.KnockMessageStatusUpdateType) async throws -> Knock.KnockMessage {
-        try await messageService.updateMessageStatus(messageId: messageId, status: status)
+        do {
+            let message = try await messageService.updateMessageStatus(messageId: messageId, status: status)
+            KnockLogger.log(type: .debug, category: .message, message: "updateMessageStatus", status: .success, additionalInfo: ["messageId": messageId])
+            return message
+        } catch let error {
+            KnockLogger.log(type: .error, category: .message, message: "updateMessageStatus", status: .fail, errorMessage: error.localizedDescription, additionalInfo: ["messageId": messageId])
+            throw error
+        }
     }
     
     internal func deleteMessageStatus(messageId: String, status: Knock.KnockMessageStatusUpdateType) async throws -> Knock.KnockMessage {
-        try await messageService.deleteMessageStatus(messageId: messageId, status: status)
+        do {
+            let message = try await messageService.deleteMessageStatus(messageId: messageId, status: status)
+            KnockLogger.log(type: .debug, category: .message, message: "deleteMessageStatus", status: .success, additionalInfo: ["messageId": messageId])
+            return message
+        } catch let error {
+            KnockLogger.log(type: .error, category: .message, message: "deleteMessageStatus", status: .fail, errorMessage: error.localizedDescription, additionalInfo: ["messageId": messageId])
+            throw error
+        }
     }
     
     internal func batchUpdateStatuses(messageIds: [String], status: Knock.KnockMessageStatusBatchUpdateType) async throws -> [Knock.KnockMessage] {
-        try await messageService.batchUpdateStatuses(messageIds: messageIds, status: status)
+        do {
+            let messages = try await messageService.batchUpdateStatuses(messageIds: messageIds, status: status)
+            KnockLogger.log(type: .debug, category: .message, message: "batchUpdateStatuses", status: .success)
+            return messages
+        } catch let error {
+            KnockLogger.log(type: .error, category: .message, message: "batchUpdateStatuses", status: .fail, errorMessage: error.localizedDescription)
+            throw error
+        }
     }
 }
 

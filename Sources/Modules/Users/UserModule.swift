@@ -10,14 +10,27 @@ import OSLog
 
 internal class UserModule {
     let userService = UserService()
-    private let logger: Logger =  Logger(subsystem: Knock.loggingSubsytem, category: "User")
     
     func getUser() async throws -> Knock.User {
-        return try await userService.getUser()
+        do {
+            let user = try await userService.getUser()
+            KnockLogger.log(type: .debug, category: .user, message: "getUser", status: .success)
+            return user
+        } catch let error {
+            KnockLogger.log(type: .error, category: .user, message: "getUser", status: .fail, errorMessage: error.localizedDescription)
+            throw error
+        }
     }
     
     func updateUser(user: Knock.User) async throws -> Knock.User {
-        return try await userService.updateUser(user: user)
+        do {
+            let user = try await userService.updateUser(user: user)
+            KnockLogger.log(type: .debug, category: .user, message: "updateUser", status: .success)
+            return user
+        } catch let error {
+            KnockLogger.log(type: .error, category: .user, message: "updateUser", status: .fail, errorMessage: error.localizedDescription)
+            throw error
+        }
     }
 }
 

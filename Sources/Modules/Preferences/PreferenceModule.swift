@@ -12,15 +12,36 @@ internal class PreferenceModule {
     let preferenceService = PreferenceService()
         
     internal func getAllUserPreferences() async throws -> [Knock.PreferenceSet] {
-        try await preferenceService.getAllUserPreferences()
+        do {
+            let set = try await preferenceService.getAllUserPreferences()
+            KnockLogger.log(type: .debug, category: .preferences, message: "getAllUserPreferences", status: .success)
+            return set
+        } catch let error {
+            KnockLogger.log(type: .error, category: .preferences, message: "getAllUserPreferences", status: .fail, errorMessage: error.localizedDescription)
+            throw error
+        }
     }
     
     internal func getUserPreferences(preferenceId: String) async throws -> Knock.PreferenceSet {
-        try await preferenceService.getUserPreferences(preferenceId: preferenceId)
+        do {
+            let set = try await preferenceService.getUserPreferences(preferenceId: preferenceId)
+            KnockLogger.log(type: .debug, category: .preferences, message: "getUserPreferences", status: .success)
+            return set
+        } catch let error {
+            KnockLogger.log(type: .error, category: .preferences, message: "getUserPreferences", status: .fail, errorMessage: error.localizedDescription)
+            throw error
+        }
     }
     
     internal func setUserPreferences(preferenceId: String, preferenceSet: Knock.PreferenceSet) async throws -> Knock.PreferenceSet {
-        try await preferenceService.setUserPreferences(preferenceId: preferenceId, preferenceSet: preferenceSet)
+        do {
+            let set = try await preferenceService.setUserPreferences(preferenceId: preferenceId, preferenceSet: preferenceSet)
+            KnockLogger.log(type: .debug, category: .preferences, message: "setUserPreferences", status: .success)
+            return set
+        } catch let error {
+            KnockLogger.log(type: .error, category: .preferences, message: "setUserPreferences", status: .fail, errorMessage: error.localizedDescription)
+            throw error
+        }
     }
 }
 
@@ -44,6 +65,7 @@ public extension Knock {
         try await self.preferenceModule.getUserPreferences(preferenceId: preferenceId)
     }
     
+    @MainActor
     func getUserPreferences(preferenceId: String, completionHandler: @escaping ((Result<PreferenceSet, Error>) -> Void)) {
         Task {
             do {
