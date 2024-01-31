@@ -46,7 +46,7 @@ internal class ChannelModule {
     }
     
     func registerTokenForAPNS(channelId: String, token: String) async throws -> Knock.ChannelData {
-        KnockEnvironment.shared.setPushInformation(channelId: channelId, deviceToken: token)
+        Knock.shared.environment.setPushInformation(channelId: channelId, deviceToken: token)
         
         do {
             let channelData = try await getUserChannelData(channelId: channelId)

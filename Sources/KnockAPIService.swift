@@ -8,21 +8,24 @@
 import Foundation
 import OSLog
 
-internal class KnockAPIService: NSObject {
-    private let logger: Logger = Logger(subsystem: Knock.loggingSubsytem, category: "Network")
-    
+internal class KnockAPIService: NSObject {    
     private let apiVersion = "v1"
     private var apiBaseUrl: String {
-        return "\(KnockEnvironment.shared.baseUrl)/v1"
+        return "\(Knock.shared.environment.baseUrl)/v1"
+    }
+    
+    internal func getSafeUserId() throws -> String {
+        try Knock.shared.environment.getSafeUserId()
     }
 
     func makeRequest<T:Codable>(method: String, path: String, queryItems: [URLQueryItem]?, body: Encodable?) async throws -> T {
         let sessionConfig = URLSessionConfiguration.default
         let session = URLSession(configuration: sessionConfig, delegate: nil, delegateQueue: nil)
-        let loggingMessageSummary = "\(method) \(KnockEnvironment.shared.baseUrl)\(path)"
+        
+        let loggingMessageSummary = "\(method) \(apiBaseUrl)\(path)"
                 
         guard var URL = URL(string: "\(apiBaseUrl)\(path)") else {
-            let networkError = Knock.NetworkError(title: "Invalid URL", description: "The URL: \(KnockEnvironment.shared.baseUrl)\(path) is invalid", code: 0)
+            let networkError = Knock.NetworkError(title: "Invalid URL", description: "The URL: \(apiBaseUrl)\(path) is invalid", code: 0)
             KnockLogger.log(type: .warning, category: .networking, message: loggingMessageSummary, status: .fail, errorMessage: networkError.localizedDescription)
             throw networkError
         }
@@ -46,8 +49,8 @@ internal class KnockAPIService: NSObject {
         
         request.addValue("knock-swift@\(Knock.clientVersion)", forHTTPHeaderField: "User-Agent")
         
-        request.addValue("Bearer \(KnockEnvironment.shared.publishableKey)", forHTTPHeaderField: "Authorization")
-        if let userToken = KnockEnvironment.shared.userToken {
+        request.addValue("Bearer \(try Knock.shared.environment.getSafePublishableKey())", forHTTPHeaderField: "Authorization")
+        if let userToken = Knock.shared.environment.userToken {
             request.addValue(userToken, forHTTPHeaderField: "X-Knock-User-Token")
         }
         

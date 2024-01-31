@@ -11,6 +11,7 @@ public extension Knock {
     enum KnockError: Error, Equatable {
         case runtimeError(String)
         case userIdError
+        case publishableKeyError(String)
     }
 
     struct NetworkError: NetworkErrorProtocol {
@@ -36,6 +37,8 @@ extension Knock.KnockError: LocalizedError {
             return message
         case .userIdError:
             return "UserId not found. Please authenticate your userId with Knock.authenticate()."
+        case .publishableKeyError(let message):
+            return message
         }
     }
 }

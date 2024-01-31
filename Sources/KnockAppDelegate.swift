@@ -66,6 +66,7 @@ open class KnockAppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificat
         }
         let token = tokenParts.joined()
         // 2. Print device token to use for PNs payloads
+        Knock.shared.registerTokenForAPNS(channelId: <#T##String#>, token: <#T##String#>, completionHandler: <#T##((Result<Knock.ChannelData, Error>) -> Void)##((Result<Knock.ChannelData, Error>) -> Void)##(Result<Knock.ChannelData, Error>) -> Void#>)
         KnockLogger.log(type: .debug, category: .appDelegate, message: "Successfully registered for notifications!", description: "Device Token: \(token)")
                 
         let defaults = UserDefaults.standard

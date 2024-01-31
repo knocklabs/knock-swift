@@ -9,7 +9,7 @@ import Foundation
 
 internal class FeedService: KnockAPIService {
     func getUserFeedContent(queryItems: [URLQueryItem]?, feedId: String) async throws -> Knock.Feed {
-        try await get(path: "/users/\(KnockEnvironment.shared.getSafeUserId())/feeds/\(feedId)", queryItems: queryItems)
+        try await get(path: "/users/\(getSafeUserId())/feeds/\(feedId)", queryItems: queryItems)
     }
     
     func makeBulkStatusUpdate(feedId: String, type: Knock.BulkChannelMessageStatusUpdateType, body: AnyEncodable?) async throws -> Knock.BulkOperation {
