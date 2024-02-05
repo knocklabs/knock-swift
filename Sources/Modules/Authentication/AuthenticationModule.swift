@@ -9,12 +9,15 @@ import Foundation
 
 internal class AuthenticationModule {
         
-    func signIn(userId: String, userToken: String?) async throws {
+    func signIn(userId: String, userToken: String?) async {
         Knock.shared.environment.setUserInfo(userId: userId, userToken: userToken)
         
         if let token = Knock.shared.environment.userDevicePushToken, let channelId = Knock.shared.environment.pushChannelId {
-            let _ = try await Knock.shared.channelModule.registerTokenForAPNS(channelId: channelId, token: token)
-            return
+            do {
+                try await Knock.shared.channelModule.registerTokenForAPNS(channelId: channelId, token: token)
+            } catch {
+                Knock.shared.logger.log(type: .warning, category: .user, message: "signIn", description: "Successfully set user, however, unable to registerTokenForAPNS as this time.")
+            }
         }
         
         return
@@ -22,11 +25,11 @@ internal class AuthenticationModule {
     
     func signOut() async throws {
         guard let channelId = Knock.shared.environment.pushChannelId, let token = Knock.shared.environment.userDevicePushToken else {
-            Knock.shared.resetInstance()
+            Knock.shared.environment.setUserInfo(userId: nil, userToken: nil)
             return
         }
         let _ = try await Knock.shared.channelModule.unregisterTokenForAPNS(channelId: channelId, token: token)
-        Knock.shared.resetInstance()
+        Knock.shared.environment.setUserInfo(userId: nil, userToken: nil)
         return
     }
 }
@@ -46,18 +49,14 @@ public extension Knock {
       Will also registerAPNS device token if set previously.
      You should consider using this in areas where you update your local user's state
      */
-    func signIn(userId: String, userToken: String?) async throws {
-        try await authenticationModule.signIn(userId: userId, userToken: userToken)
+    func signIn(userId: String, userToken: String?) async {
+        await authenticationModule.signIn(userId: userId, userToken: userToken)
     }
     
-    func signIn(userId: String, userToken: String?, completionHandler: @escaping ((Result<Void, Error>) -> Void)) {
+    func signIn(userId: String, userToken: String?, completionHandler: @escaping (() -> Void)) {
         Task {
-            do {
-                try await signIn(userId: userId, userToken: userToken)
-                completionHandler(.success(()))
-            } catch {
-                completionHandler(.failure(error))
-            }
+            await signIn(userId: userId, userToken: userToken)
+            completionHandler()
         }
     }
     
