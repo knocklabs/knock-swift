@@ -10,8 +10,21 @@ import os.log
 
 internal class KnockLogger {
     private static let loggingSubsytem = "knock-swift"
+    
+    internal var loggingDebugOptions: Knock.DebugOptions = .errorsOnly
 
-    internal static func log(type: LogType, category: LogCategory, message: String, description: String? = nil, status: LogStatus? = nil, errorMessage: String? = nil, additionalInfo: [String: String]? = nil) {
+    internal func log(type: LogType, category: LogCategory, message: String, description: String? = nil, status: LogStatus? = nil, errorMessage: String? = nil, additionalInfo: [String: String]? = nil) {
+        switch loggingDebugOptions {
+        case .errorsOnly:
+            if type != .error {
+                return
+            }
+        case .verbose:
+            break
+        case .none:
+            return
+        }
+        
         var composedMessage = "[Knock] "
         composedMessage += message
         if let description = description {
@@ -30,7 +43,7 @@ internal class KnockLogger {
         }
 
         // Use the Logger API for logging
-        let logger = Logger(subsystem: loggingSubsytem, category: category.rawValue.capitalized)
+        let logger = Logger(subsystem: KnockLogger.loggingSubsytem, category: category.rawValue.capitalized)
         switch type {
         case .debug:
             logger.debug("\(composedMessage)")
@@ -68,5 +81,11 @@ internal class KnockLogger {
         case message
         case general
         case appDelegate
+    }
+}
+
+extension Knock {
+    internal func log(type: KnockLogger.LogType, category: KnockLogger.LogCategory, message: String, description: String? = nil, status: KnockLogger.LogStatus? = nil, errorMessage: String? = nil, additionalInfo: [String: String]? = nil) {
+        Knock.shared.logger.log(type: type, category: category, message: message, description: description, status: status, errorMessage: errorMessage, additionalInfo: additionalInfo)
     }
 }

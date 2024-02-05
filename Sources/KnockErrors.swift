@@ -36,7 +36,7 @@ extension Knock.KnockError: LocalizedError {
         case .runtimeError(let message):
             return message
         case .userIdError:
-            return "UserId not found. Please authenticate your userId with Knock.authenticate()."
+            return "UserId not found. Please authenticate your userId with Knock.signIn()."
         case .publishableKeyError(let message):
             return message
         }

@@ -22,6 +22,7 @@ public class Knock {
     internal lazy var preferenceModule = PreferenceModule()
     internal lazy var messageModule = MessageModule()
     internal lazy var channelModule = ChannelModule()
+    internal lazy var logger = KnockLogger()
     
     /**
      Returns a new instance of the Knock Client
@@ -30,36 +31,42 @@ public class Knock {
         - publishableKey: your public API key
         - options: [optional] Options for customizing the Knock instance.
      */
-    public func setup(publishableKey: String, pushChannelId: String?, hostname: String? = nil) throws {
+    public func setup(publishableKey: String, pushChannelId: String?, options: Knock.KnockStartupOptions? = nil) throws {
+        logger.loggingDebugOptions = options?.debuggingType ?? .errorsOnly
         try environment.setPublishableKey(key: publishableKey)
-        environment.setBaseUrl(baseUrl: hostname)
+        environment.setBaseUrl(baseUrl: options?.hostname)
         environment.pushChannelId = pushChannelId
     }
-    
-//    @available(*, deprecated, message: "See v1.0.0 migration guide for more details.")
-//    public init(publishableKey: String, userId: String, userToken: String? = nil, hostname: String? = nil) throws {
-//        try KnockEnvironment.shared.setPublishableKey(key: publishableKey)
-//        KnockEnvironment.shared.setUserInfo(userId: userId, userToken: userToken)
-//        KnockEnvironment.shared.setBaseUrl(baseUrl: hostname)
-//    }
-    
-    internal func resetInstance() {
+
+    public func resetInstance() async throws {
+        try await self.environment.resetInstance()
         self.feedManager = nil
-        environment.resetEnvironment()
     }
 }
 
 public extension Knock {
-   var userId: String? {
-       get {
-           return environment.userId
-       }
-   }
+    struct KnockStartupOptions {
+        public init(hostname: String? = nil, debuggingType: DebugOptions = .errorsOnly) {
+            self.hostname = hostname
+            self.debuggingType = debuggingType
+        }
+        var hostname: String?
+        var debuggingType: DebugOptions
+    }
+    
+    enum DebugOptions {
+        case errorsOnly
+        case verbose
+        case none
+    }
 }
 
-
-
-// TODO: Possibly return user in authenticate method.
-// TODO: Ensure threads are correct
-// TODO: Handle AppDelegate
-// TODO: Evaluate classes and determine if they should be structs
+public extension Knock {
+    var userId: String? {
+       get { return environment.userId }
+    }
+    
+    var apnsDeviceToken: String? {
+        get { return environment.userId }
+    }
+}

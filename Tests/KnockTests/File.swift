@@ -1,15 +1,14 @@
 //
-//  KnockTests.swift
-//  KnockTests
+//  UserTests.swift
 //
-//  Created by Diego on 19/06/23.
+//
+//  Created by Matt Gardner on 1/31/24.
 //
 
 import XCTest
 @testable import Knock
 
-final class KnockTests: XCTestCase {
-    var knock: Knock!
+final class UserTests: XCTestCase {
     
     override func setUpWithError() throws {
         try? Knock.shared.setup(publishableKey: "pk_123", pushChannelId: "test")
@@ -25,7 +24,7 @@ final class KnockTests: XCTestCase {
     
     func testUserIdNilError() async throws {
         do {
-            _ = try await knock.getUser()
+            _ = try await Knock.shared.getUser()
             XCTFail("Expected getUser() to throw, but it did not.")
         } catch {}
     }
@@ -70,13 +69,3 @@ final class KnockTests: XCTestCase {
         XCTAssertTrue(reencodedString.contains("a1"))
     }
 }
-
-// signing in before token has registered
-// making a network request before Knock has been setup
-// making a network request before Knock has received userid
-// registering for push without channel id
-// signIn, make sure we have everything
-// signOut, make sure everything is cleared
-// deadlock
-
-

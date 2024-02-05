@@ -8,14 +8,41 @@
 import Foundation
 import SwiftPhoenixClient
 import OSLog
+import UIKit
 
 public extension Knock {
 
     class FeedManager {
         private let feedModule: FeedModule
+        private var foregroundObserver: NSObjectProtocol?
+        private var backgroundObserver: NSObjectProtocol?
         
         public init(feedId: String, options: FeedClientOptions = FeedClientOptions(archived: .exclude)) throws {
             self.feedModule = try FeedModule(feedId: feedId, options: options)
+            registerForAppLifecycleNotifications()
+        }
+        
+        deinit {
+            unregisterFromAppLifecycleNotifications()
+        }
+        
+        private func registerForAppLifecycleNotifications() {
+            foregroundObserver = NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
+                self?.didEnterForeground()
+            }
+
+            backgroundObserver = NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
+                self?.didEnterBackground()
+            }
+        }
+
+        private func unregisterFromAppLifecycleNotifications() {
+            if let observer = foregroundObserver {
+                NotificationCenter.default.removeObserver(observer)
+            }
+            if let observer = backgroundObserver {
+                NotificationCenter.default.removeObserver(observer)
+            }
         }
         
         /**
@@ -81,6 +108,14 @@ public extension Knock {
                     completionHandler(.failure(error))
                 }
             }
+        }
+        
+        public func didEnterForeground() {
+            Knock.shared.feedManager?.connectToFeed()
+        }
+
+        public func didEnterBackground() {
+            Knock.shared.feedManager?.disconnectFromFeed()
         }
     }
 }

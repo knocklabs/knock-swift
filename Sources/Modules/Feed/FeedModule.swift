@@ -25,7 +25,7 @@ internal class FeedModule {
         do {
             userId = try Knock.shared.environment.getSafeUserId()
         } catch let error {
-            KnockLogger.log(type: .error, category: .feed, message: "FeedManager", status: .fail, errorMessage: "Must sign user in before initializing the FeedManager")
+            Knock.shared.log(type: .error, category: .feed, message: "FeedManager", status: .fail, errorMessage: "Must sign user in before initializing the FeedManager")
             throw error
         }
         
@@ -33,7 +33,7 @@ internal class FeedModule {
         self.feedId = feedId
         self.feedTopic = "feeds:\(feedId):\(userId)"
         self.feedOptions = options
-        KnockLogger.log(type: .debug, category: .feed, message: "FeedManager", status: .success)
+        Knock.shared.log(type: .debug, category: .feed, message: "FeedManager", status: .success)
     }
     
     func getUserFeedContent(options: Knock.FeedClientOptions? = nil) async throws -> Knock.Feed {
@@ -54,11 +54,11 @@ internal class FeedModule {
         ]
         
         do {
-            let feed = try await feedService.getUserFeedContent(queryItems: queryItems, feedId: feedId)
-            KnockLogger.log(type: .debug, category: .feed, message: "getUserFeedContent", status: .success)
+            let feed = try await feedService.getUserFeedContent(userId: Knock.shared.environment.getSafeUserId(), queryItems: queryItems, feedId: feedId)
+            Knock.shared.log(type: .debug, category: .feed, message: "getUserFeedContent", status: .success)
             return feed
         } catch let error {
-            KnockLogger.log(type: .error, category: .feed, message: "getUserFeedContent", status: .fail, errorMessage: error.localizedDescription)
+            Knock.shared.log(type: .error, category: .feed, message: "getUserFeedContent", status: .fail, errorMessage: error.localizedDescription)
             throw error
         }
     }
@@ -80,16 +80,16 @@ internal class FeedModule {
         ]
         do {
             let op = try await feedService.makeBulkStatusUpdate(feedId: feedId, type: type, body: body)
-            KnockLogger.log(type: .debug, category: .feed, message: "makeBulkStatusUpdate", status: .success)
+            Knock.shared.log(type: .debug, category: .feed, message: "makeBulkStatusUpdate", status: .success)
             return op
         } catch let error {
-            KnockLogger.log(type: .error, category: .feed, message: "makeBulkStatusUpdate", status: .fail, errorMessage: error.localizedDescription)
+            Knock.shared.log(type: .error, category: .feed, message: "makeBulkStatusUpdate", status: .fail, errorMessage: error.localizedDescription)
             throw error
         }
     }
     
     func disconnectFromFeed() {
-        KnockLogger.log(type: .debug, category: .feed, message: "Disconnecting from feed")
+        Knock.shared.log(type: .debug, category: .feed, message: "Disconnecting from feed")
         
         if let channel = self.feedChannel {
             channel.leave()
@@ -99,7 +99,7 @@ internal class FeedModule {
         self.socket.disconnect()
     }
     
-    // Todo: Make async await method for this
+    // Todo: Make AsyncStream method for this
     func on(eventName: String, completionHandler: @escaping ((Message) -> Void)) {
         if let channel = feedChannel {
             channel.delegateOn(eventName, to: self) { (self, message) in
@@ -107,33 +107,33 @@ internal class FeedModule {
             }
         }
         else {
-            KnockLogger.log(type: .error, category: .feed, message: "FeedManager.on", status: .fail, errorMessage: "Feed channel is nil. You should call first connectToFeed()")
+            Knock.shared.log(type: .error, category: .feed, message: "FeedManager.on", status: .fail, errorMessage: "Feed channel is nil. You should call first connectToFeed()")
         }
     }
     
     func connectToFeed(options: Knock.FeedClientOptions? = nil) {
         // Setup the socket to receive open/close events
         socket.delegateOnOpen(to: self) { (self) in
-            KnockLogger.log(type: .debug, category: .feed, message: "connectToFeed", description: "Socket Opened")
+            Knock.shared.log(type: .debug, category: .feed, message: "connectToFeed", description: "Socket Opened")
         }
         
         socket.delegateOnClose(to: self) { (self) in
-            KnockLogger.log(type: .debug, category: .feed, message: "connectToFeed", description: "Socket Closed")
+            Knock.shared.log(type: .debug, category: .feed, message: "connectToFeed", description: "Socket Closed")
         }
         
         socket.delegateOnError(to: self) { (self, error) in
             let (error, response) = error
             if let statusCode = (response as? HTTPURLResponse)?.statusCode, statusCode > 400 {
-                KnockLogger.log(type: .error, category: .feed, message: "connectToFeed", description: "Socket Errored \(statusCode)", status: .fail, errorMessage: error.localizedDescription)
+                Knock.shared.log(type: .error, category: .feed, message: "connectToFeed", description: "Socket Errored \(statusCode)", status: .fail, errorMessage: error.localizedDescription)
                 self.socket.disconnect()
             } else {
-                KnockLogger.log(type: .error, category: .feed, message: "connectToFeed", description: "Socket Errored", status: .fail, errorMessage: error.localizedDescription)
+                Knock.shared.log(type: .error, category: .feed, message: "connectToFeed", description: "Socket Errored", status: .fail, errorMessage: error.localizedDescription)
             }
         }
         
         // TODO: Determine the level of logging we want from SwiftPhoenixClient. Currently this produces a lot of noise.
         socket.logger = { msg in
-            KnockLogger.log(type: .debug, category: .feed, message: "SwiftPhoenixClient", description: msg)
+            Knock.shared.log(type: .debug, category: .feed, message: "SwiftPhoenixClient", description: msg)
         }
         
         let mergedOptions = feedOptions.mergeOptions(options: options)
@@ -148,10 +148,10 @@ internal class FeedModule {
         self.feedChannel?
             .join()
             .delegateReceive("ok", to: self) { (self, _) in
-                KnockLogger.log(type: .debug, category: .feed, message: "connectToFeed", description: "CHANNEL: \(channel.topic) joined")
+                Knock.shared.log(type: .debug, category: .feed, message: "connectToFeed", description: "CHANNEL: \(channel.topic) joined")
             }
             .delegateReceive("error", to: self) { (self, message) in
-                KnockLogger.log(type: .error, category: .feed, message: "connectToFeed", status: .fail, errorMessage: "CHANNEL: \(channel.topic) failed to join. \(message.payload)")
+                Knock.shared.log(type: .error, category: .feed, message: "connectToFeed", status: .fail, errorMessage: "CHANNEL: \(channel.topic) failed to join. \(message.payload)")
             }
         
         self.socket.connect()

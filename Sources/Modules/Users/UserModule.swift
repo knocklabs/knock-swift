@@ -13,11 +13,11 @@ internal class UserModule {
     
     func getUser() async throws -> Knock.User {
         do {
-            let user = try await userService.getUser()
-            KnockLogger.log(type: .debug, category: .user, message: "getUser", status: .success)
+            let user = try await userService.getUser(userId: Knock.shared.environment.getSafeUserId())
+            Knock.shared.log(type: .debug, category: .user, message: "getUser", status: .success)
             return user
         } catch let error {
-            KnockLogger.log(type: .error, category: .user, message: "getUser", status: .fail, errorMessage: error.localizedDescription)
+            Knock.shared.log(type: .error, category: .user, message: "getUser", status: .fail, errorMessage: error.localizedDescription)
             throw error
         }
     }
@@ -25,10 +25,10 @@ internal class UserModule {
     func updateUser(user: Knock.User) async throws -> Knock.User {
         do {
             let user = try await userService.updateUser(user: user)
-            KnockLogger.log(type: .debug, category: .user, message: "updateUser", status: .success)
+            Knock.shared.log(type: .debug, category: .user, message: "updateUser", status: .success)
             return user
         } catch let error {
-            KnockLogger.log(type: .error, category: .user, message: "updateUser", status: .fail, errorMessage: error.localizedDescription)
+            Knock.shared.log(type: .error, category: .user, message: "updateUser", status: .fail, errorMessage: error.localizedDescription)
             throw error
         }
     }
@@ -66,3 +66,4 @@ public extension Knock {
         }
     }
 }
+

@@ -13,33 +13,33 @@ internal class PreferenceModule {
         
     internal func getAllUserPreferences() async throws -> [Knock.PreferenceSet] {
         do {
-            let set = try await preferenceService.getAllUserPreferences()
-            KnockLogger.log(type: .debug, category: .preferences, message: "getAllUserPreferences", status: .success)
+            let set = try await preferenceService.getAllUserPreferences(userId: Knock.shared.environment.getSafeUserId())
+            Knock.shared.log(type: .debug, category: .preferences, message: "getAllUserPreferences", status: .success)
             return set
         } catch let error {
-            KnockLogger.log(type: .error, category: .preferences, message: "getAllUserPreferences", status: .fail, errorMessage: error.localizedDescription)
+            Knock.shared.log(type: .error, category: .preferences, message: "getAllUserPreferences", status: .fail, errorMessage: error.localizedDescription)
             throw error
         }
     }
     
     internal func getUserPreferences(preferenceId: String) async throws -> Knock.PreferenceSet {
         do {
-            let set = try await preferenceService.getUserPreferences(preferenceId: preferenceId)
-            KnockLogger.log(type: .debug, category: .preferences, message: "getUserPreferences", status: .success)
+            let set = try await preferenceService.getUserPreferences(userId: Knock.shared.environment.getSafeUserId(), preferenceId: preferenceId)
+            Knock.shared.log(type: .debug, category: .preferences, message: "getUserPreferences", status: .success)
             return set
         } catch let error {
-            KnockLogger.log(type: .error, category: .preferences, message: "getUserPreferences", status: .fail, errorMessage: error.localizedDescription)
+            Knock.shared.log(type: .error, category: .preferences, message: "getUserPreferences", status: .fail, errorMessage: error.localizedDescription)
             throw error
         }
     }
     
     internal func setUserPreferences(preferenceId: String, preferenceSet: Knock.PreferenceSet) async throws -> Knock.PreferenceSet {
         do {
-            let set = try await preferenceService.setUserPreferences(preferenceId: preferenceId, preferenceSet: preferenceSet)
-            KnockLogger.log(type: .debug, category: .preferences, message: "setUserPreferences", status: .success)
+            let set = try await preferenceService.setUserPreferences(userId: Knock.shared.environment.getSafeUserId(), preferenceId: preferenceId, preferenceSet: preferenceSet)
+            Knock.shared.log(type: .debug, category: .preferences, message: "setUserPreferences", status: .success)
             return set
         } catch let error {
-            KnockLogger.log(type: .error, category: .preferences, message: "setUserPreferences", status: .fail, errorMessage: error.localizedDescription)
+            Knock.shared.log(type: .error, category: .preferences, message: "setUserPreferences", status: .fail, errorMessage: error.localizedDescription)
             throw error
         }
     }
@@ -65,7 +65,6 @@ public extension Knock {
         try await self.preferenceModule.getUserPreferences(preferenceId: preferenceId)
     }
     
-    @MainActor
     func getUserPreferences(preferenceId: String, completionHandler: @escaping ((Result<PreferenceSet, Error>) -> Void)) {
         Task {
             do {

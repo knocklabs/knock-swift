@@ -7,28 +7,32 @@
 
 import Foundation
 import OSLog
+import UIKit
 
 internal class ChannelModule {
     let channelService = ChannelService()
+    
+    internal var userNotificationCenter: UNUserNotificationCenter {
+        get { UNUserNotificationCenter.current() }
+    }
 
     func getUserChannelData(channelId: String) async throws -> Knock.ChannelData {
         do {
-            let data = try await channelService.getUserChannelData(channelId: channelId)
-            KnockLogger.log(type: .debug, category: .channel, message: "getUserChannelData", status: .success)
+            let data = try await channelService.getUserChannelData(userId: Knock.shared.environment.getSafeUserId(), channelId: channelId)
             return data
         } catch let error {
-            KnockLogger.log(type: .warning, category: .channel, message: "getUserChannelData", status: .fail, errorMessage: error.localizedDescription)
+            Knock.shared.log(type: .warning, category: .channel, message: "getUserChannelData", status: .fail, errorMessage: error.localizedDescription)
             throw error
         }
     }
     
     func updateUserChannelData(channelId: String, data: AnyEncodable) async throws -> Knock.ChannelData  {
         do {
-            let data = try await channelService.updateUserChannelData(channelId: channelId, data: data)
-            KnockLogger.log(type: .debug, category: .channel, message: "updateUserChannelData", status: .success)
+            let data = try await channelService.updateUserChannelData(userId: Knock.shared.environment.getSafeUserId(), channelId: channelId, data: data)
+            Knock.shared.log(type: .debug, category: .channel, message: "updateUserChannelData", status: .success)
             return data
         } catch let error {
-            KnockLogger.log(type: .warning, category: .channel, message: "updateUserChannelData", status: .fail, errorMessage: error.localizedDescription)
+            Knock.shared.log(type: .warning, category: .channel, message: "updateUserChannelData", status: .fail, errorMessage: error.localizedDescription)
             throw error
         }
     }
@@ -41,12 +45,13 @@ internal class ChannelModule {
         
         let data: AnyEncodable = ["tokens": tokens]
         let channelData = try await updateUserChannelData(channelId: channelId, data: data)
-        KnockLogger.log(type: .debug, category: .pushNotification, message: "registerOrUpdateToken", status: .success)
+        Knock.shared.log(type: .debug, category: .pushNotification, message: "registerOrUpdateToken", status: .success)
         return channelData
     }
     
     func registerTokenForAPNS(channelId: String, token: String) async throws -> Knock.ChannelData {
-        Knock.shared.environment.setPushInformation(channelId: channelId, deviceToken: token)
+        Knock.shared.environment.pushChannelId = channelId
+        Knock.shared.environment.userDevicePushToken = token
         
         do {
             let channelData = try await getUserChannelData(channelId: channelId)
@@ -57,13 +62,14 @@ internal class ChannelModule {
             
             if tokens.contains(token) {
                 // Token already registered
+                Knock.shared.log(type: .debug, category: .pushNotification, message: "registerTokenForAPNS", status: .success)
                 return channelData
             } else {
                 // Register the new token
                 return try await registerOrUpdateToken(token: token, channelId: channelId, existingTokens: tokens)
             }
         } catch let userIdError as Knock.KnockError where userIdError == Knock.KnockError.userIdError {
-            KnockLogger.log(type: .warning, category: .pushNotification, message: "ChannelId and deviceToken were saved. However, we cannot register for APNS until you have have called Knock.signIn().")
+            Knock.shared.log(type: .warning, category: .pushNotification, message: "ChannelId and deviceToken were saved. However, we cannot register for APNS until you have have called Knock.signIn().")
             throw userIdError
         } catch {
             // No data registered on that channel for that user, we'll create a new record
@@ -76,7 +82,7 @@ internal class ChannelModule {
             let channelData = try await getUserChannelData(channelId: channelId)
             guard let data = channelData.data, let tokens = data["tokens"]?.value as? [String] else {
                 // No valid tokens array found.
-                KnockLogger.log(type: .warning, category: .pushNotification, message: "unregisterTokenForAPNS", description: "Could not unregister user from channel \(channelId). Reason: User doesn't have any device tokens associated to the provided channelId.")
+                Knock.shared.log(type: .warning, category: .pushNotification, message: "unregisterTokenForAPNS", description: "Could not unregister user from channel \(channelId). Reason: User doesn't have any device tokens associated to the provided channelId.")
                 return channelData
             }
             
@@ -87,20 +93,20 @@ internal class ChannelModule {
                     "tokens": newTokens
                 ]
                 let updateData = try await updateUserChannelData(channelId: channelId, data: data)
-                KnockLogger.log(type: .debug, category: .pushNotification, message: "unregisterTokenForAPNS", status: .success)
+                Knock.shared.log(type: .debug, category: .pushNotification, message: "unregisterTokenForAPNS", status: .success)
                 return updateData
             } else {
-                KnockLogger.log(type: .warning, category: .pushNotification, message: "unregisterTokenForAPNS", description: "Could not unregister user from channel \(channelId). Reason: User doesn't have any device tokens associated to the provided channelId.")
+                Knock.shared.log(type: .warning, category: .pushNotification, message: "unregisterTokenForAPNS", description: "Could not unregister user from channel \(channelId). Reason: User doesn't have any device tokens associated to the provided channelId.")
                 return channelData
             }
         } catch {
             if let networkError = error as? Knock.NetworkError, networkError.code == 404 {
                 // No data registered on that channel for that user
-                KnockLogger.log(type: .warning, category: .pushNotification, message: "unregisterTokenForAPNS", description: "Could not unregister user from channel \(channelId). Reason: User doesn't have any channel data associated to the provided channelId.")
+                Knock.shared.log(type: .warning, category: .pushNotification, message: "unregisterTokenForAPNS", description: "Could not unregister user from channel \(channelId). Reason: User doesn't have any channel data associated to the provided channelId.")
                 return .init(channel_id: channelId, data: [:])
             } else {
                 // Unknown error. Could be network or server related. Try again.
-                KnockLogger.log(type: .error, category: .pushNotification, message: "unregisterTokenForAPNS", description: "Could not unregister user from channel \(channelId)", status: .fail, errorMessage: error.localizedDescription)
+                Knock.shared.log(type: .error, category: .pushNotification, message: "unregisterTokenForAPNS", description: "Could not unregister user from channel \(channelId)", status: .fail, errorMessage: error.localizedDescription)
                 throw error
             }
         }
@@ -110,7 +116,13 @@ internal class ChannelModule {
 public extension Knock {
     
     func getUserChannelData(channelId: String) async throws -> ChannelData {
-        try await self.channelModule.getUserChannelData(channelId: channelId)
+        do {
+            try await self.channelModule.getUserChannelData(channelId: channelId)
+            Knock.shared.log(type: .debug, category: .channel, message: "getUserChannelData", status: .success)
+        } catch let error {
+            Knock.shared.log(type: .warning, category: .channel, message: "getUserChannelData", status: .fail, errorMessage: error.localizedDescription)
+            throw error
+        }
     }
 
     func getUserChannelData(channelId: String, completionHandler: @escaping ((Result<ChannelData, Error>) -> Void)) {
@@ -231,5 +243,32 @@ public extension Knock {
         // 1. Convert device token to string
         let tokenString = Knock.convertTokenToString(token: token)
         unregisterTokenForAPNS(channelId: channelId, token: tokenString, completionHandler: completionHandler)
+    }
+    
+    func getNotificationPermissionStatus(completion: @escaping (UNAuthorizationStatus) -> Void) {
+        channelModule.userNotificationCenter.getNotificationSettings(completionHandler: { settings in
+            completion(settings.authorizationStatus)
+        })
+    }
+    
+    func getNotificationPermissionStatus() async -> UNAuthorizationStatus {
+        let settings = await channelModule.userNotificationCenter.notificationSettings()
+        return settings.authorizationStatus
+    }
+    
+    func requestNotificationPermission(options: UNAuthorizationOptions = [.sound, .badge, .alert], completion: @escaping (UNAuthorizationStatus) -> Void) {
+        channelModule.userNotificationCenter.requestAuthorization(
+            options: options,
+            completionHandler: { _, _ in
+                self.getNotificationPermissionStatus { permission in
+                    completion(permission)
+                }
+            }
+        )
+    }
+    
+    func requestNotificationPermission(options: UNAuthorizationOptions = [.sound, .badge, .alert]) async throws -> UNAuthorizationStatus {
+        try await channelModule.userNotificationCenter.requestAuthorization(options: options)
+        return await getNotificationPermissionStatus()
     }
 }

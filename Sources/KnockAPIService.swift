@@ -8,14 +8,17 @@
 import Foundation
 import OSLog
 
-internal class KnockAPIService: NSObject {    
-    private let apiVersion = "v1"
+internal protocol KnockAPIService {
+    func get<T: Codable>(path: String, queryItems: [URLQueryItem]?) async throws -> T
+    func put<T: Codable>(path: String, body: Encodable?) async throws -> T
+    func post<T:Codable>(path: String, body: Encodable?) async throws -> T
+    func delete<T:Codable>(path: String, body: Encodable?) async throws -> T
+    func makeRequest<T:Codable>(method: String, path: String, queryItems: [URLQueryItem]?, body: Encodable?) async throws -> T
+}
+
+extension KnockAPIService {
     private var apiBaseUrl: String {
         return "\(Knock.shared.environment.baseUrl)/v1"
-    }
-    
-    internal func getSafeUserId() throws -> String {
-        try Knock.shared.environment.getSafeUserId()
     }
 
     func makeRequest<T:Codable>(method: String, path: String, queryItems: [URLQueryItem]?, body: Encodable?) async throws -> T {
@@ -26,7 +29,7 @@ internal class KnockAPIService: NSObject {
                 
         guard var URL = URL(string: "\(apiBaseUrl)\(path)") else {
             let networkError = Knock.NetworkError(title: "Invalid URL", description: "The URL: \(apiBaseUrl)\(path) is invalid", code: 0)
-            KnockLogger.log(type: .warning, category: .networking, message: loggingMessageSummary, status: .fail, errorMessage: networkError.localizedDescription)
+            Knock.shared.log(type: .warning, category: .networking, message: loggingMessageSummary, status: .fail, errorMessage: networkError.localizedDescription)
             throw networkError
         }
         
@@ -59,17 +62,14 @@ internal class KnockAPIService: NSObject {
         let statusCode = (urlResponse as! HTTPURLResponse).statusCode
         if statusCode < 200 || statusCode > 299 {
             let networkError = Knock.NetworkError(title: "Status code error", description: String(data: responseData, encoding: .utf8) ?? "Unknown error", code: statusCode)
-            KnockLogger.log(type: .warning, category: .networking, message: loggingMessageSummary, status: .fail, errorMessage: networkError.localizedDescription)
+            Knock.shared.log(type: .warning, category: .networking, message: loggingMessageSummary, status: .fail, errorMessage: networkError.localizedDescription)
             throw networkError
         } else {
-            KnockLogger.log(type: .debug, category: .networking, message: loggingMessageSummary, status: .success)
+            Knock.shared.log(type: .debug, category: .networking, message: loggingMessageSummary, status: .success)
         }
         
         return try decodeData(responseData)
     }
-}
-
-extension KnockAPIService {
     internal func get<T:Codable>(path: String, queryItems: [URLQueryItem]?) async throws -> T {
         try await makeRequest(method: "GET", path: path, queryItems: queryItems, body: nil)
     }
@@ -103,10 +103,10 @@ extension KnockAPIService {
         } catch let error {
             if let dataString = String(data: data, encoding: .utf8) {
                 let decodeError = Knock.KnockError.runtimeError("Error decoding data: \(dataString)")
-                KnockLogger.log(type: .error, category: .networking, message: "Error decoding data: \(dataString)", status: .fail, errorMessage: decodeError.localizedDescription)
+                Knock.shared.log(type: .error, category: .networking, message: "Error decoding data: \(dataString)", status: .fail, errorMessage: decodeError.localizedDescription)
                 throw decodeError
             } else {
-                KnockLogger.log(type: .error, category: .networking, message: "Error processing undecodable data", status: .fail, errorMessage: error.localizedDescription)
+                Knock.shared.log(type: .error, category: .networking, message: "Error processing undecodable data", status: .fail, errorMessage: error.localizedDescription)
                 throw error
             }
         }
