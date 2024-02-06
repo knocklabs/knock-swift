@@ -1,26 +1,17 @@
-# Swift SDK
 
-## Features
+# Offical Knock iOS SDK
 
-* Preferences
-	* getAllUserPreferences
-	* getUserPreferences
-	* setUserPreferences
-* Channels
-	* registerTokenForAPNS
-	* getUserChannelData
-	* updateUserChannelData
-* Messages
-	* getMessage
-	* updateMessageStatus
-	* deleteMessageStatus
-	* batchUpdateStatuses
-* Users
-	* getUser
-	* updateUser
+---
+
+Knock is a flexible, reliable notifications infrastructure that's built to scale with you. Use our iOS SDK to engage users with in-app feeds, setup push notifications, and manage notification preferences.
+
+---
+
+## Documentation
+
+See the [documentation](https://docs.knock.app/notification-feeds/bring-your-own-ui) for usage examples.
 
 ## Installation
-
 You can include the SDK in a couple of ways:
 
 1. Swift Package Manager
@@ -63,6 +54,19 @@ dependencies: [
 ]
 ```
 
+### Cocoapods
+
+Add the dependency to your `Podfile`:
+
+```
+platform :ios, '16.0'
+use_frameworks!
+
+target 'MyApp' do
+  pod 'Knock', '~> 0.2.0'
+end
+```
+
 ### Carthage
 
 1. Add this line to your Cartfile:
@@ -95,19 +99,6 @@ With the debug information copied into the built products directory, Xcode will 
 
 When archiving your application for submission to the App Store or TestFlight, Xcode will also copy these files into the dSYMs subdirectory of your application’s .xcarchive bundle.
 
-### Cocoapods
-
-Add the dependency to your `Podfile`:
-
-```
-platform :ios, '16.0'
-use_frameworks!
-
-target 'MyApp' do
-  pod 'Knock', '~> 0.2.0'
-end
-```
-
 ### Manually
 
 As a last option, you could manually copy the files inside the `Sources` folder to your project.
@@ -119,47 +110,20 @@ You can now start using the SDK:
 ``` swift
 import Knock
 
-knockClient = try! Knock(publishableKey: "your-pk", userId: "user-id")
+// Setup the shared Knock instance as soon as you can. 
+try? Knock.shared.setup(publishableKey: "your-pk", pushChannelId: "user-id")
 
-knockClient.getUser{ result in
-    switch result {
-    case .success(let user):
-        print(user)
-    case .failure(let error):
-        print(error.localizedDescription)
-    }
-}
+// Once you know the Knock UserId, sign the user into the shared Knock instance.
+await Knock.shared.signIn(userId: "userid", userToken: nil)
+
 ```
 
-## Using the SDK
+## How to Contribute
 
-The functions of the sdk are encapsulated and managed in a client object. You first have to instantiate a client with your public key and a user id. If you are running on production with enhanced security turned on (recommended) you have to also pass the signed user token to the client constructor.
+Community contributions are welcome! If you'd like to contribute, please read our [contribution guide](CONTRIBUTING.md).
 
-``` swift
-import Knock
+## License
 
-knockClient = try! Knock(publishableKey: "your-pk", userId: "user-id")
+This project is licensed under the MIT license.
 
-// on prod with enhanced security turned on:
-knockClient = try! Knock(publishableKey: "your-pk", userId: "user-id", userToken: "signed-user-token")
-```
-
-## Notes for publishing
-
-When releasing a new version of this SDK, please note:
-
-* You should update the version in a couple of places:
-	* in the file `Sources/KnockAPI.swift`: `clientVersion = "..."`
-	* in the file `Knock.podspec`: `spec.version = "..."`
-	* in this `README.md`, in the installation instructions for all the package managers
-	* in git, add a tag, preferably to the commit that includes this previous changes
-
-
-
-
-
-
-
-
-
-
+See [LICENSE](LICENSE) for more information.

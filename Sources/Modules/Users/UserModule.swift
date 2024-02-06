@@ -36,6 +36,10 @@ internal class UserModule {
 
 public extension Knock {
     
+    /**
+     Retrieve the current user, including all properties previously set.
+     https://docs.knock.app/reference#get-user#get-user
+     */
     func getUser() async throws -> User {
         return try await userModule.getUser()
     }
@@ -51,6 +55,9 @@ public extension Knock {
         }
     }
     
+    /**
+     Updates the current user and returns the updated User result.
+     */
     func updateUser(user: User) async throws -> User {
         return try await userModule.updateUser(user: user)
     }

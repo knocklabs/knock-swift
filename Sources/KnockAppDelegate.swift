@@ -9,6 +9,22 @@ import Foundation
 import UIKit
 import OSLog
 
+/**
+This class serves as an optional base class designed to streamline the integration of Knock into your application. By inheriting from KnockAppDelegate in your AppDelegate, you gain automatic handling of Push Notification registration and device token management, simplifying the initial setup process for Knock's functionalities.
+
+The class also provides a set of open helper functions that are intended to facilitate the handling of different Push Notification events such as delivery in the foreground, taps, and dismissals. These helper methods offer a straightforward approach to customizing your app's response to notifications, ensuring that you can tailor the behavior to fit your specific needs.
+
+Override any of the provided methods to achieve further customization, allowing you to control how your application processes and reacts to Push Notifications. Additionally, by leveraging this class, you ensure that your app adheres to best practices for managing device tokens and interacting with the notification system on iOS, enhancing the overall reliability and user experience of your app's notification features.
+
+Key Features:
+- Automatic registration for remote notifications, ensuring your app is promptly set up to receive and handle Push Notifications.
+- Simplified device token management, with automatic storage of the device token, facilitating easier access and use in Push Notification payloads.
+- Customizable notification handling through open helper functions, allowing for bespoke responses to notification events such as foreground delivery, user taps, and dismissal actions.
+- Automatic message status updates, based on Push Notification interaction.
+
+Developers can benefit from a quick and efficient setup, focusing more on the unique aspects of their notification handling logic while relying on KnockAppDelegate for the foundational setup and management tasks.
+*/
+
 @available(iOSApplicationExtension, unavailable)
 open class KnockAppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
         
@@ -41,7 +57,7 @@ open class KnockAppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificat
     
     open func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         Task {
-            let channelId = Knock.shared.environment.pushChannelId
+            let channelId = await Knock.shared.environment.getPushChannelId()
 
             do {
                 if let id = channelId {
@@ -74,7 +90,8 @@ open class KnockAppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificat
         pushNotificationDeliveredSilently(userInfo: userInfo, completionHandler: completionHandler)
     }
     
-    // MARK: Convenience methods to make handling incoming push notifications simpler.
+    // MARK: Helper Functions
+
     open func deviceTokenDidChange(apnsToken: String) {}
     
     open func pushNotificationDeliveredInForeground(notification: UNNotification) -> UNNotificationPresentationOptions {

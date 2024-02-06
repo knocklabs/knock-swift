@@ -9,6 +9,7 @@ import Foundation
 
 public extension Knock {
     
+    // https://docs.knock.app/reference#get-feed#feeds
     struct Feed: Codable {
         public var entries: [FeedItem] = []
         public var meta: FeedMetadata = FeedMetadata()

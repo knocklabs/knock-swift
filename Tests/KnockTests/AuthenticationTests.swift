@@ -11,11 +11,13 @@ import XCTest
 final class AuthenticationTests: XCTestCase {
     
     override func setUpWithError() throws {
-        try? Knock.shared.setup(publishableKey: "pk_123", pushChannelId: "test")
+        Task {
+            try? await Knock.shared.setup(publishableKey: "pk_123", pushChannelId: "test")
+        }
     }
 
     override func tearDownWithError() throws {
-        Knock.shared = Knock()
+        Knock.shared.resetInstanceCompletely()
     }
     
 
@@ -23,22 +25,27 @@ final class AuthenticationTests: XCTestCase {
         let userName = "testUserName"
         let userToken = "testUserToken"
         await Knock.shared.signIn(userId: userName, userToken: userToken)
- 
-        XCTAssertEqual(userName, Knock.shared.environment.userId)
-        XCTAssertEqual(userToken, Knock.shared.environment.userToken)
+        
+        let knockUserName = await Knock.shared.environment.getUserId()
+        let knockUserToken = await Knock.shared.environment.getUserToken()
+        XCTAssertEqual(userName, knockUserName)
+        XCTAssertEqual(userToken, knockUserToken)
     }
     
     func testSignOut() async throws {
         await Knock.shared.signIn(userId: "testUserName", userToken: "testUserToken")
-        Knock.shared.environment.userDevicePushToken = "test"
-        Knock.shared.environment.userDevicePushToken = "test"
-        Knock.shared.environment.userDevicePushToken = "test"
+        await Knock.shared.environment.setDeviceToken("test")
         
-        Knock.shared.authenticationModule.clearDataForSignOut()
+        await Knock.shared.authenticationModule.clearDataForSignOut()
         
-        XCTAssertEqual(Knock.shared.environment.userId, nil)
-        XCTAssertEqual(Knock.shared.environment.userToken, nil)
-        XCTAssertEqual(Knock.shared.environment.publishableKey, "pk_123")
-        XCTAssertEqual(Knock.shared.environment.userDevicePushToken, "test")
+        let userId = await Knock.shared.environment.getUserId()
+        let userToken = await Knock.shared.environment.getUserToken()
+        let publishableKey = await Knock.shared.environment.getPublishableKey()
+        let deviceToken = await Knock.shared.environment.getDeviceToken()
+        
+        XCTAssertEqual(userId, nil)
+        XCTAssertEqual(userToken, nil)
+        XCTAssertEqual(publishableKey, "pk_123")
+        XCTAssertEqual(deviceToken, "test")
     }
 }

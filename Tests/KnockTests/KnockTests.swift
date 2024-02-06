@@ -10,16 +10,18 @@ import XCTest
 
 final class KnockTests: XCTestCase {
     override func setUpWithError() throws {
-        try? Knock.shared.setup(publishableKey: "pk_123", pushChannelId: "test")
+        Task {
+            try? await Knock.shared.setup(publishableKey: "pk_123", pushChannelId: "test")
+        }
     }
 
     override func tearDownWithError() throws {
-        Knock.shared = Knock()
+        Knock.shared.resetInstanceCompletely()
     }
     
-    func testPublishableKeyError() throws {
+    func testPublishableKeyError() async throws {
         do {
-            let _ = try Knock.shared.setup(publishableKey: "sk_123", pushChannelId: nil)
+            let _ = try await Knock.shared.setup(publishableKey: "sk_123", pushChannelId: nil)
             XCTFail("Expected function to throw an error, but it did not.")
         } catch let error as Knock.KnockError {
             XCTAssertEqual(error, Knock.KnockError.wrongKeyError, "The error should be wrongKeyError")
@@ -30,7 +32,7 @@ final class KnockTests: XCTestCase {
     
     func testMakingNetworkRequestBeforeKnockSetUp() async {
         try! tearDownWithError()
-        Knock.shared.environment.setUserInfo(userId: "test", userToken: nil)
+        await Knock.shared.environment.setUserInfo(userId: "test", userToken: nil)
         do {
             let _ = try await Knock.shared.getUser()
             XCTFail("Expected function to throw an error, but it did not.")

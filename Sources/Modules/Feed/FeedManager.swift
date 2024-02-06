@@ -17,8 +17,8 @@ public extension Knock {
         private var foregroundObserver: NSObjectProtocol?
         private var backgroundObserver: NSObjectProtocol?
         
-        public init(feedId: String, options: FeedClientOptions = FeedClientOptions(archived: .exclude)) throws {
-            self.feedModule = try FeedModule(feedId: feedId, options: options)
+        public init(feedId: String, options: FeedClientOptions = FeedClientOptions(archived: .exclude)) async throws {
+            self.feedModule = try await FeedModule(feedId: feedId, options: options)
             registerForAppLifecycleNotifications()
         }
         
@@ -45,11 +45,19 @@ public extension Knock {
             }
         }
         
+        private func didEnterForeground() {
+            Knock.shared.feedManager?.connectToFeed()
+        }
+
+        private func didEnterBackground() {
+            Knock.shared.feedManager?.disconnectFromFeed()
+        }
+        
         /**
          Connect to the feed via socket. This will initialize the connection. You should also call the `on(eventName, completionHandler)` function to delegate what should be executed on certain received events and the `disconnectFromFeed()` function to terminate the connection.
 
          - Parameters:
-            - options: options of type `FeedClientOptions` to merge with the default ones (set on the constructor) and scope as much as possible the results
+            - options: [optional] Options of type `FeedClientOptions` to merge with the default ones (set on the constructor) and scope as much as possible the results
          */
         public func connectToFeed(options: FeedClientOptions? = nil) {
             feedModule.connectToFeed(options: options)
@@ -64,11 +72,10 @@ public extension Knock {
         }
         
         /**
-         Gets the content of the user feed
-
+         Retrieves a feed of items in reverse chronological order
+         
          - Parameters:
-            - options: options of type `FeedClientOptions` to merge with the default ones (set on the constructor) and scope as much as possible the results
-            - completionHandler: the code to execute when the response is received
+            - options: [optional] Options of type `FeedClientOptions` to merge with the default ones (set on the constructor) and scope as much as possible the results
          */
         public func getUserFeedContent(options: FeedClientOptions? = nil) async throws -> Feed {
             try await self.feedModule.getUserFeedContent(options: options)
@@ -91,9 +98,8 @@ public extension Knock {
          - Attention: The base scope for the call should take into account all of the options currently set on the feed, as well as being scoped for the current user. We do this so that we **ONLY** make changes to the messages that are currently in view on this feed, and not all messages that exist.
 
          - Parameters:
-            - type: the kind of update
-            - options: all the options currently set on the feed to scope as much as possible the bulk update
-            - completionHandler: the code to execute when the response is received
+            - type: The kind of update
+            - options: All the options currently set on the feed to scope as much as possible the bulk update
          */
         public func makeBulkStatusUpdate(type: BulkChannelMessageStatusUpdateType, options: FeedClientOptions) async throws -> BulkOperation {
             try await feedModule.makeBulkStatusUpdate(type: type, options: options)
@@ -108,14 +114,6 @@ public extension Knock {
                     completionHandler(.failure(error))
                 }
             }
-        }
-        
-        public func didEnterForeground() {
-            Knock.shared.feedManager?.connectToFeed()
-        }
-
-        public func didEnterBackground() {
-            Knock.shared.feedManager?.disconnectFromFeed()
         }
     }
 }

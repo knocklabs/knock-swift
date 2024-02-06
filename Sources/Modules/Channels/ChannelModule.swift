@@ -38,43 +38,69 @@ internal class ChannelModule {
         }
     }
     
-    private func registerOrUpdateToken(token: String, channelId: String, existingTokens: [String]?) async throws -> Knock.ChannelData {
-        var tokens = existingTokens ?? []
-        if !tokens.contains(token) {
-            tokens.append(token)
+    private func registerOrUpdateTokenIfNeeded(
+        newToken: String,
+        newChannelId: String,
+        existingChannelData: Knock.ChannelData?
+    ) async throws -> Knock.ChannelData {
+        var tokens: [String] = []
+        if let existingChannelData = existingChannelData {
+            guard let preparedTokens = await prepareTokenDataForRegistration(newToken: newToken, newChannelId: newChannelId, existingChannelData: existingChannelData) else {
+                return existingChannelData
+            }
+            tokens = preparedTokens
+        } else {
+            tokens = [newToken]
         }
-        
+                
         let data: AnyEncodable = ["tokens": tokens]
-        let channelData = try await updateUserChannelData(channelId: channelId, data: data)
+        let channelData = try await updateUserChannelData(channelId: newChannelId, data: data)
+        
+        await Knock.shared.environment.setPushChannelId(newChannelId)
+        await Knock.shared.environment.setDeviceToken(newToken)
+        
         Knock.shared.log(type: .debug, category: .pushNotification, message: "registerOrUpdateToken", status: .success)
         return channelData
     }
     
-    func registerTokenForAPNS(channelId: String, token: String) async throws -> Knock.ChannelData {
-        Knock.shared.environment.pushChannelId = channelId
-        Knock.shared.environment.userDevicePushToken = token
+    internal func prepareTokenDataForRegistration(
+        newToken: String,
+        newChannelId: String,
+        existingChannelData: Knock.ChannelData?
+    ) async -> [String]? {
         
+        let previousToken: String? = await Knock.shared.environment.getDeviceToken()
+        let previousChannelId: String? = await Knock.shared.environment.getPushChannelId()
+        
+        // Attempt to extract existing tokens, default to an empty array if none are found
+        var existingTokens = existingChannelData?.data?["tokens"]?.value as? [String] ?? []
+        
+        // Check if the old token exists, needs to be removed, and if the channel IDs match
+        if let previousToken = previousToken, previousToken != newToken, previousChannelId == newChannelId {
+            existingTokens.removeAll { $0 == previousToken }
+        }
+        
+        // Add the new token if it's not already in the list, otherwise return nil
+        guard !existingTokens.contains(newToken) else {
+            return nil
+        }
+        
+        existingTokens.append(newToken)
+        
+        return existingTokens
+    }
+    
+    func registerTokenForAPNS(channelId: String, token: String) async throws -> Knock.ChannelData {
         do {
             let channelData = try await getUserChannelData(channelId: channelId)
-            guard let data = channelData.data, let tokens = data["tokens"]?.value as? [String] else {
-                // No valid tokens array found, register a new one
-                return try await registerOrUpdateToken(token: token, channelId: channelId, existingTokens: nil)
-            }
-            
-            if tokens.contains(token) {
-                // Token already registered
-                Knock.shared.log(type: .debug, category: .pushNotification, message: "registerTokenForAPNS", status: .success)
-                return channelData
-            } else {
-                // Register the new token
-                return try await registerOrUpdateToken(token: token, channelId: channelId, existingTokens: tokens)
-            }
+            let newData = try await registerOrUpdateTokenIfNeeded(newToken: token, newChannelId: channelId, existingChannelData: channelData)
+            return newData
         } catch let userIdError as Knock.KnockError where userIdError == Knock.KnockError.userIdNotSetError {
             Knock.shared.log(type: .warning, category: .pushNotification, message: "ChannelId and deviceToken were saved. However, we cannot register for APNS until you have have called Knock.signIn().")
             throw userIdError
-        } catch {
+        } catch let networkError as Knock.NetworkError where networkError.code == 404 {
             // No data registered on that channel for that user, we'll create a new record
-            return try await registerOrUpdateToken(token: token, channelId: channelId, existingTokens: nil)
+            return try await registerOrUpdateTokenIfNeeded(newToken: token, newChannelId: channelId, existingChannelData: nil)
         }
     }
     
@@ -116,6 +142,13 @@ internal class ChannelModule {
 
 public extension Knock {
     
+    /**
+     Retrieves the channel data for the current user on the channel specified.
+     https://docs.knock.app/reference#get-user-channel-data#get-user-channel-data
+     
+     - Parameters:
+        - channelId: The id of the Knock channel to lookup.
+     */
     func getUserChannelData(channelId: String) async throws -> ChannelData {
         try await self.channelModule.getUserChannelData(channelId: channelId)
     }
@@ -135,7 +168,7 @@ public extension Knock {
      Sets channel data for the user and the channel specified.
      
      - Parameters:
-        - channelId: the id of the channel
+        - channelId: The id of the Knock channel to lookup
         - data: the shape of the payload varies depending on the channel. You can learn more about channel data schemas [here](https://docs.knock.app/send-notifications/setting-channel-data#provider-data-requirements).
      */
     func updateUserChannelData(channelId: String, data: AnyEncodable) async throws -> ChannelData {
@@ -156,12 +189,13 @@ public extension Knock {
     // Mark: Registration of APNS device tokens
     
     /**
-     Registers an Apple Push Notification Service token so that the device can receive remote push notifications. This is a convenience method that internally gets the channel data and searches for the token. If it exists, then it's already registered and it returns. If the data does not exists or the token is missing from the array, it's added.
+     Registers an Apple Push Notification Service token so that the device can receive remote push notifications. 
+     This is a convenience method that internally gets the channel data and searches for the token. If it exists, then it's already registered and it returns.
+     If the data does not exists or the token is missing from the array, it's added.
+     If the new token differs from the last token that was used on the device, the old token will be unregistered.
      
      You can learn more about APNS [here](https://developer.apple.com/documentation/usernotifications/registering_your_app_with_apns).
-     
-     - Attention: There's a race condition because the getting/setting of the token are not made in a transaction.
-     
+          
      - Parameters:
         - channelId: the id of the APNS channel
         - token: the APNS device token as a `String`
@@ -181,17 +215,6 @@ public extension Knock {
         }
     }
     
-    /**
-     Registers an Apple Push Notification Service token so that the device can receive remote push notifications. This is a convenience method that internally gets the channel data and searches for the token. If it exists, then it's already registered and it returns. If the data does not exists or the token is missing from the array, it's added.
-     
-     You can learn more about APNS [here](https://developer.apple.com/documentation/usernotifications/registering_your_app_with_apns).
-     
-     - Attention: There's a race condition because the getting/setting of the token are not made in a transaction.
-     
-     - Parameters:
-        - channelId: the id of the APNS channel
-        - token: the APNS device token as `Data`
-     */
     func registerTokenForAPNS(channelId: String, token: Data) async throws -> ChannelData {
         // 1. Convert device token to string
         let tokenString = Knock.convertTokenToString(token: token)
@@ -212,7 +235,6 @@ public extension Knock {
         - channelId: the id of the APNS channel in Knock
         - token: the APNS device token as a `String`
      */
-    
     func unregisterTokenForAPNS(channelId: String, token: String) async throws -> ChannelData {
         return try await self.channelModule.unregisterTokenForAPNS(channelId: channelId, token: token)
     }
@@ -240,6 +262,9 @@ public extension Knock {
         unregisterTokenForAPNS(channelId: channelId, token: tokenString, completionHandler: completionHandler)
     }
     
+    /**
+     Convenience method to determine whether or not the user is allowing Push Notifications for the app.
+     */
     func getNotificationPermissionStatus(completion: @escaping (UNAuthorizationStatus) -> Void) {
         channelModule.userNotificationCenter.getNotificationSettings(completionHandler: { settings in
             completion(settings.authorizationStatus)
@@ -251,6 +276,9 @@ public extension Knock {
         return settings.authorizationStatus
     }
     
+    /**
+     Convenience method to request Push Notification permissions for the app.
+     */
     func requestNotificationPermission(options: UNAuthorizationOptions = [.sound, .badge, .alert], completion: @escaping (UNAuthorizationStatus) -> Void) {
         channelModule.userNotificationCenter.requestAuthorization(
             options: options,
