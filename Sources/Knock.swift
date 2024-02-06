@@ -6,64 +6,66 @@
 //
 
 import SwiftUI
+import OSLog
 
 // Knock client SDK.
 public class Knock {
     internal static let clientVersion = "1.0.0"
-    internal static let loggingSubsytem = "knock-swift"
     
-    internal var api: KnockAPI
+    public static var shared: Knock = Knock()
     
-    public internal(set) var feedManager: FeedManager?
-    public internal(set) var userId: String?
-    public internal(set) var pushChannelId: String?
-    public internal(set) var userDeviceToken: String?
-
+    public var feedManager: FeedManager?
+    
+    internal let environment = KnockEnvironment()
+    internal lazy var authenticationModule = AuthenticationModule()
+    internal lazy var userModule = UserModule()
+    internal lazy var preferenceModule = PreferenceModule()
+    internal lazy var messageModule = MessageModule()
+    internal lazy var channelModule = ChannelModule()
+    internal lazy var logger = KnockLogger()
+    
     /**
      Returns a new instance of the Knock Client
 
      - Parameters:
         - publishableKey: your public API key
-        - userId: the user-id that will be used in the subsequent method calls
-        - userToken: [optional] user token. Used in production when enhanced security is enabled
         - options: [optional] Options for customizing the Knock instance.
      */
-    public init(publishableKey: String, options: KnockOptions? = nil) {
-        self.api = KnockAPI(publishableKey: publishableKey, hostname: options?.host)
+    public func setup(publishableKey: String, pushChannelId: String?, options: Knock.KnockStartupOptions? = nil) throws {
+        logger.loggingDebugOptions = options?.debuggingType ?? .errorsOnly
+        try environment.setPublishableKey(key: publishableKey)
+        environment.setBaseUrl(baseUrl: options?.hostname)
+        environment.pushChannelId = pushChannelId
     }
     
-    internal func resetInstance() {
-        self.userId = nil
-        self.feedManager = nil
-        self.userDeviceToken = nil
-        self.pushChannelId = nil
-        self.api.userToken = nil
+    public func resetInstanceCompletely() {
+        Knock.shared = Knock()
     }
 }
 
 public extension Knock {
-    // Configuration options for the Knock client SDK.
-    struct KnockOptions {
-        var host: String?
-        
-        public init(host: String? = nil) {
-            self.host = host
+    struct KnockStartupOptions {
+        public init(hostname: String? = nil, debuggingType: DebugOptions = .errorsOnly) {
+            self.hostname = hostname
+            self.debuggingType = debuggingType
         }
+        var hostname: String?
+        var debuggingType: DebugOptions
     }
     
-    enum KnockError: Error {
-        case runtimeError(String)
-        case userIdError
+    enum DebugOptions {
+        case errorsOnly
+        case verbose
+        case none
     }
 }
 
-extension Knock.KnockError: LocalizedError {
-    public var errorDescription: String? {
-        switch self {
-        case .runtimeError(let message):
-            return message
-        case .userIdError:
-            return "UserId not found. Please authenticate your userId with Knock.authenticate()."
-        }
+public extension Knock {
+    var userId: String? {
+       get { return environment.userId }
+    }
+    
+    var apnsDeviceToken: String? {
+        get { return environment.userId }
     }
 }

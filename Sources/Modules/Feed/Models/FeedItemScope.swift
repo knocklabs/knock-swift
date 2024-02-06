@@ -8,7 +8,7 @@
 import Foundation
 
 
-extension Knock.FeedManager {
+extension Knock {
     public enum FeedItemScope: String, Codable {
         // TODO: check engagement_status in https://docs.knock.app/reference#bulk-update-channel-message-status
         // extras:

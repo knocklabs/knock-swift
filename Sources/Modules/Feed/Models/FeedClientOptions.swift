@@ -7,7 +7,7 @@
 
 import Foundation
 
-extension Knock.FeedManager {
+extension Knock {
     public struct FeedClientOptions: Codable {
         public var before: String?
         public var after: String?
@@ -20,16 +20,16 @@ extension Knock.FeedManager {
         public var trigger_data: [String: AnyCodable]? // GenericData
         
         public init(from decoder: Decoder) throws {
-            let container: KeyedDecodingContainer<Knock.FeedManager.FeedClientOptions.CodingKeys> = try decoder.container(keyedBy: Knock.FeedManager.FeedClientOptions.CodingKeys.self)
-            self.before = try container.decodeIfPresent(String.self, forKey: Knock.FeedManager.FeedClientOptions.CodingKeys.before)
-            self.after = try container.decodeIfPresent(String.self, forKey: Knock.FeedManager.FeedClientOptions.CodingKeys.after)
-            self.page_size = try container.decodeIfPresent(Int.self, forKey: Knock.FeedManager.FeedClientOptions.CodingKeys.page_size)
-            self.status = try container.decodeIfPresent(Knock.FeedManager.FeedItemScope.self, forKey: Knock.FeedManager.FeedClientOptions.CodingKeys.status)
-            self.source = try container.decodeIfPresent(String.self, forKey: Knock.FeedManager.FeedClientOptions.CodingKeys.source)
-            self.tenant = try container.decodeIfPresent(String.self, forKey: Knock.FeedManager.FeedClientOptions.CodingKeys.tenant)
-            self.has_tenant = try container.decodeIfPresent(Bool.self, forKey: Knock.FeedManager.FeedClientOptions.CodingKeys.has_tenant)
-            self.archived = try container.decodeIfPresent(Knock.FeedManager.FeedItemArchivedScope.self, forKey: Knock.FeedManager.FeedClientOptions.CodingKeys.archived)
-            self.trigger_data = try container.decodeIfPresent([String : AnyCodable].self, forKey: Knock.FeedManager.FeedClientOptions.CodingKeys.trigger_data)
+            let container: KeyedDecodingContainer<FeedClientOptions.CodingKeys> = try decoder.container(keyedBy: FeedClientOptions.CodingKeys.self)
+            self.before = try container.decodeIfPresent(String.self, forKey: FeedClientOptions.CodingKeys.before)
+            self.after = try container.decodeIfPresent(String.self, forKey: FeedClientOptions.CodingKeys.after)
+            self.page_size = try container.decodeIfPresent(Int.self, forKey: FeedClientOptions.CodingKeys.page_size)
+            self.status = try container.decodeIfPresent(Knock.FeedItemScope.self, forKey: FeedClientOptions.CodingKeys.status)
+            self.source = try container.decodeIfPresent(String.self, forKey: FeedClientOptions.CodingKeys.source)
+            self.tenant = try container.decodeIfPresent(String.self, forKey: FeedClientOptions.CodingKeys.tenant)
+            self.has_tenant = try container.decodeIfPresent(Bool.self, forKey: FeedClientOptions.CodingKeys.has_tenant)
+            self.archived = try container.decodeIfPresent(Knock.FeedItemArchivedScope.self, forKey: FeedClientOptions.CodingKeys.archived)
+            self.trigger_data = try container.decodeIfPresent([String : AnyCodable].self, forKey: FeedClientOptions.CodingKeys.trigger_data)
         }
         
         public init(before: String? = nil, after: String? = nil, page_size: Int? = nil, status: FeedItemScope? = nil, source: String? = nil, tenant: String? = nil, has_tenant: Bool? = nil, archived: FeedItemArchivedScope? = nil, trigger_data: [String : AnyCodable]? = nil) {
