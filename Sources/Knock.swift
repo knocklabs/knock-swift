@@ -12,7 +12,7 @@ import OSLog
 public class Knock {
     internal static let clientVersion = "1.0.0"
     
-    public static let shared: Knock = Knock()
+    public static var shared: Knock = Knock()
     
     public var feedManager: FeedManager?
     
@@ -37,10 +37,9 @@ public class Knock {
         environment.setBaseUrl(baseUrl: options?.hostname)
         environment.pushChannelId = pushChannelId
     }
-
-    public func resetInstance() async throws {
-        try await self.environment.resetInstance()
-        self.feedManager = nil
+    
+    public func resetInstanceCompletely() {
+        Knock.shared = Knock()
     }
 }
 

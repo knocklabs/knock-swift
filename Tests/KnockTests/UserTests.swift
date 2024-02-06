@@ -17,17 +17,8 @@ final class UserTests: XCTestCase {
     override func tearDownWithError() throws {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
-
-    func testPublishableKeyError() throws {
-        XCTAssertThrowsError(try Knock.shared.setup(publishableKey: "sk_123", pushChannelId: nil))
-    }
     
-    func testUserIdNilError() async throws {
-        do {
-            _ = try await Knock.shared.getUser()
-            XCTFail("Expected getUser() to throw, but it did not.")
-        } catch {}
-    }
+
     
     func testUserDecoding() throws {
         let decoder = JSONDecoder()

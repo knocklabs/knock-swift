@@ -15,22 +15,30 @@ final class AuthenticationTests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
-        Task {
-            try? await Knock.shared.resetInstance()
-        }
-    }
-
-    func testSignIn() throws {
-        let userName = "testUserName"
-        let userToken = "testUserToken"
-        Task {
-            try! await Knock.shared.signIn(userId: userName, userToken: userToken)
-        }
-        XCTAssertTrue(Knock.shared.environment.userId == userName && Knock.shared.environment.userToken == userToken)
+        Knock.shared = Knock()
     }
     
-    func testSignOut() throws {
-//        XCTAssertTrue(Knock.shared.environment.userId == userName && Knock.shared.environment.userToken == userToken)
-//        XCTAssertThrowsError(try Knock.shared.setup(publishableKey: "sk_123", pushChannelId: nil))
+
+    func testSignIn() async throws {
+        let userName = "testUserName"
+        let userToken = "testUserToken"
+        await Knock.shared.signIn(userId: userName, userToken: userToken)
+ 
+        XCTAssertEqual(userName, Knock.shared.environment.userId)
+        XCTAssertEqual(userToken, Knock.shared.environment.userToken)
+    }
+    
+    func testSignOut() async throws {
+        await Knock.shared.signIn(userId: "testUserName", userToken: "testUserToken")
+        Knock.shared.environment.userDevicePushToken = "test"
+        Knock.shared.environment.userDevicePushToken = "test"
+        Knock.shared.environment.userDevicePushToken = "test"
+        
+        Knock.shared.authenticationModule.clearDataForSignOut()
+        
+        XCTAssertEqual(Knock.shared.environment.userId, nil)
+        XCTAssertEqual(Knock.shared.environment.userToken, nil)
+        XCTAssertEqual(Knock.shared.environment.publishableKey, "pk_123")
+        XCTAssertEqual(Knock.shared.environment.userDevicePushToken, "test")
     }
 }

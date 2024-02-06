@@ -14,7 +14,7 @@ internal class AuthenticationModule {
         
         if let token = Knock.shared.environment.userDevicePushToken, let channelId = Knock.shared.environment.pushChannelId {
             do {
-                try await Knock.shared.channelModule.registerTokenForAPNS(channelId: channelId, token: token)
+                let _ = try await Knock.shared.channelModule.registerTokenForAPNS(channelId: channelId, token: token)
             } catch {
                 Knock.shared.logger.log(type: .warning, category: .user, message: "signIn", description: "Successfully set user, however, unable to registerTokenForAPNS as this time.")
             }
@@ -25,12 +25,17 @@ internal class AuthenticationModule {
     
     func signOut() async throws {
         guard let channelId = Knock.shared.environment.pushChannelId, let token = Knock.shared.environment.userDevicePushToken else {
-            Knock.shared.environment.setUserInfo(userId: nil, userToken: nil)
+            clearDataForSignOut()
             return
         }
+        
         let _ = try await Knock.shared.channelModule.unregisterTokenForAPNS(channelId: channelId, token: token)
-        Knock.shared.environment.setUserInfo(userId: nil, userToken: nil)
+        clearDataForSignOut()
         return
+    }
+    
+    func clearDataForSignOut() {
+        Knock.shared.environment.setUserInfo(userId: nil, userToken: nil)
     }
 }
 

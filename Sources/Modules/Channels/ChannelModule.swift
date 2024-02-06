@@ -19,6 +19,7 @@ internal class ChannelModule {
     func getUserChannelData(channelId: String) async throws -> Knock.ChannelData {
         do {
             let data = try await channelService.getUserChannelData(userId: Knock.shared.environment.getSafeUserId(), channelId: channelId)
+            Knock.shared.log(type: .debug, category: .channel, message: "getUserChannelData", status: .success)
             return data
         } catch let error {
             Knock.shared.log(type: .warning, category: .channel, message: "getUserChannelData", status: .fail, errorMessage: error.localizedDescription)
@@ -68,7 +69,7 @@ internal class ChannelModule {
                 // Register the new token
                 return try await registerOrUpdateToken(token: token, channelId: channelId, existingTokens: tokens)
             }
-        } catch let userIdError as Knock.KnockError where userIdError == Knock.KnockError.userIdError {
+        } catch let userIdError as Knock.KnockError where userIdError == Knock.KnockError.userIdNotSetError {
             Knock.shared.log(type: .warning, category: .pushNotification, message: "ChannelId and deviceToken were saved. However, we cannot register for APNS until you have have called Knock.signIn().")
             throw userIdError
         } catch {
@@ -116,13 +117,7 @@ internal class ChannelModule {
 public extension Knock {
     
     func getUserChannelData(channelId: String) async throws -> ChannelData {
-        do {
-            try await self.channelModule.getUserChannelData(channelId: channelId)
-            Knock.shared.log(type: .debug, category: .channel, message: "getUserChannelData", status: .success)
-        } catch let error {
-            Knock.shared.log(type: .warning, category: .channel, message: "getUserChannelData", status: .fail, errorMessage: error.localizedDescription)
-            throw error
-        }
+        try await self.channelModule.getUserChannelData(channelId: channelId)
     }
 
     func getUserChannelData(channelId: String, completionHandler: @escaping ((Result<ChannelData, Error>) -> Void)) {

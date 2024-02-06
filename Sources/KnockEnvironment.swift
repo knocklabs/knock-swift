@@ -18,13 +18,6 @@ internal class KnockEnvironment {
     private(set) var publishableKey: String?
     private(set) var baseUrl: String = defaultBaseUrl
     
-    internal func resetInstance() async throws {
-        try await Knock.shared.authenticationModule.signOut()
-        setBaseUrl(baseUrl: nil)
-        publishableKey = nil
-        pushChannelId = nil
-    }
-    
     var userDevicePushToken: String? {
         get {
             defaults.string(forKey: userDevicePushTokenKey)
@@ -45,7 +38,7 @@ internal class KnockEnvironment {
 
     func setPublishableKey(key: String) throws {
         guard key.hasPrefix("sk_") == false else {
-            let error = Knock.KnockError.publishableKeyError("You are using your secret API key on the client. Please use the public key.")
+            let error = Knock.KnockError.wrongKeyError
             Knock.shared.log(type: .error, category: .general, message: "setPublishableKey", status: .fail, errorMessage: error.localizedDescription)
             throw error
         }
@@ -63,14 +56,14 @@ internal class KnockEnvironment {
     
     func getSafeUserId() throws -> String {
         guard let id = userId else {
-            throw Knock.KnockError.userIdError
+            throw Knock.KnockError.userIdNotSetError
         }
         return id
     }
     
     func getSafePublishableKey() throws -> String {
         guard let id = publishableKey else {
-            throw Knock.KnockError.publishableKeyError("You are trying to perform an action that requires you to first run Knock.shared.setup()")
+            throw Knock.KnockError.knockNotSetup
         }
         return id
     }
