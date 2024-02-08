@@ -20,49 +20,47 @@ final class ChannelTests: XCTestCase {
         Knock.shared.resetInstanceCompletely()
     }
     
-    func testPrepareTokensWithNoChannelData() async {
+    func testPrepareTokensWithNoChannelData() {
         let newToken = "newToken"
-        let tokens = await Knock.shared.channelModule.prepareTokenDataForRegistration(newToken: newToken, newChannelId: "newChannelId", existingChannelData: nil)
+        let previousTokens = [newToken]
+        let tokens = Knock.shared.channelModule.getTokenDataForServer(newToken: newToken, previousTokens: previousTokens, channelDataTokens: [], forDeregistration: false)
         XCTAssertEqual(tokens, [newToken])
     }
     
     func testPrepareTokensWithDuplicateToken() async {
-        let newToken = "123"
-        let channelData = Knock.ChannelData(channel_id: "newChannelId", data: ["tokens": [newToken]])
-        let tokens = await Knock.shared.channelModule.prepareTokenDataForRegistration(newToken: newToken, newChannelId: "newChannelId", existingChannelData: channelData)
-        XCTAssertEqual(tokens, nil)
-    }
-    
-    func testPrepareTokensWithOldTokenNeedingToBeRemoved() async {
-        let newToken = "123"
-        let oldToken = "1234"
-        let channelId = "test"
-        await Knock.shared.environment.setDeviceToken(oldToken)
-        try! await Knock.shared.setup(publishableKey: "pk_123", pushChannelId: channelId)
+        let newToken = "newToken"
+        let previousTokens = [newToken]
+        let channelTokens = [newToken]
 
-        let channelData = Knock.ChannelData(channel_id: channelId, data: ["tokens": [oldToken]])
-        let tokens = await Knock.shared.channelModule.prepareTokenDataForRegistration(newToken: newToken, newChannelId: channelId, existingChannelData: channelData)
+        let tokens = Knock.shared.channelModule.getTokenDataForServer(newToken: newToken, previousTokens: previousTokens, channelDataTokens: channelTokens, forDeregistration: false)
         XCTAssertEqual(tokens, [newToken])
     }
     
-    func testPrepareTokensWithOldTokenNotNeedingToBeRemoved() async {
-        let newToken = "123"
-        let oldToken = "1234"
-        let oldChannelId = "oldChannelId"
-        let channelId = "newChannelId"
-        await Knock.shared.environment.setDeviceToken(oldToken)
-        await Knock.shared.environment.setPushChannelId(oldChannelId)
+    func testPrepareTokensWithOldTokensNeedingToBeRemoved() {
+        let newToken = "newToken"
+        let previousTokens = ["1234", newToken]
+        let channelTokens = ["1234", "12345"]
 
-        let channelData = Knock.ChannelData(channel_id: channelId, data: ["tokens": [oldToken]])
-        let tokens = await Knock.shared.channelModule.prepareTokenDataForRegistration(newToken: newToken, newChannelId: channelId, existingChannelData: channelData)
-        XCTAssertEqual(tokens, [oldToken, newToken])
+        let tokens = Knock.shared.channelModule.getTokenDataForServer(newToken: newToken, previousTokens: previousTokens, channelDataTokens: channelTokens, forDeregistration: false)
+        XCTAssertEqual(tokens, ["12345", newToken])
     }
     
     func testPrepareTokensWithFirstTimeToken() async {
         let newToken = "newToken"
-        let channelData = Knock.ChannelData(channel_id: "newChannelId", data: ["tokens": []])
-        let tokens = await Knock.shared.channelModule.prepareTokenDataForRegistration(newToken: newToken, newChannelId: "newChannelId", existingChannelData: channelData)
-        XCTAssertEqual(tokens, [newToken])
+        let previousTokens = ["1234", newToken, "1"]
+        let channelTokens = ["1234", "12345"]
+
+        let tokens = Knock.shared.channelModule.getTokenDataForServer(newToken: newToken, previousTokens: previousTokens, channelDataTokens: channelTokens, forDeregistration: false)
+        XCTAssertEqual(tokens, ["12345", newToken])
+    }
+    
+    func testPrepareTokensForDeregistration() async {
+        let newToken = "newToken"
+        let previousTokens = ["1234", newToken, "1"]
+        let channelTokens = ["1234", "12345", newToken]
+
+        let tokens = Knock.shared.channelModule.getTokenDataForServer(newToken: newToken, previousTokens: previousTokens, channelDataTokens: channelTokens, forDeregistration: true)
+        XCTAssertEqual(tokens, ["12345"])
     }
 
 }

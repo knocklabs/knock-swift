@@ -12,21 +12,13 @@ internal actor KnockEnvironment {
     
     private let defaults = UserDefaults.standard
     private let userDevicePushTokenKey = "knock_push_device_token"
+    private let previousPushTokensKey = "knock_previous_push_token"
 
     private var userId: String?
     private var userToken: String?
     private var publishableKey: String?
     private var pushChannelId: String?
     private var baseUrl: String = defaultBaseUrl
-    
-    private var userDevicePushToken: String? {
-        get {
-            defaults.string(forKey: userDevicePushTokenKey)
-        }
-        set {
-            defaults.set(newValue, forKey: userDevicePushTokenKey)
-        }
-    }
     
     // BaseURL
     
@@ -105,18 +97,50 @@ internal actor KnockEnvironment {
     }
     
     // APNS Device Token
-    func setDeviceToken(_ token: String) {
-        userDevicePushToken = token
+    
+//    public func setDeviceToken(_ token: String?) async {
+//        let currentToken = getDeviceToken()
+//        if currentToken != token {
+//            var previousTokens = await getPreviousPushTokens()
+//            var tokenSet: Set<String> = Set(previousTokens)
+//            if let currentToken = currentToken {
+//                tokenSet.insert(currentToken)
+//            }
+//            if let token = token {
+//                tokenSet.insert(token)
+//            }
+//            setPreviousPushTokens(tokens: Array(tokenSet))
+//            defaults.set(token, forKey: userDevicePushTokenKey)
+//        }
+//    }
+    
+    public func setDeviceToken(_ token: String?) async {
+        let previousTokens = getPreviousPushTokens()
+        if let token = token, !previousTokens.contains(token) {
+            // Append new token to the list of previous tokens only if it's unique
+            // We are storing these old tokens so that we can ensure they get unregestired.
+            setPreviousPushTokens(tokens: previousTokens + [token])
+        }
+        
+        // Update the current device token
+        defaults.set(token, forKey: userDevicePushTokenKey)
     }
     
     func getDeviceToken() -> String? {
-        userDevicePushToken
+        defaults.string(forKey: userDevicePushTokenKey)
     }
     
     func getSafeDeviceToken() throws -> String {
-        guard let token = userDevicePushToken else {
+        guard let token = getDeviceToken() else {
             throw Knock.KnockError.devicePushTokenNotSet
         }
         return token
+    }
+    
+    func setPreviousPushTokens(tokens: [String]) {
+        defaults.set(tokens, forKey: previousPushTokensKey)
+    }
+    func getPreviousPushTokens() -> [String] {
+        defaults.array(forKey: previousPushTokensKey) as? [String] ?? []
     }
 }

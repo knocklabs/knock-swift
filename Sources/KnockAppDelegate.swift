@@ -27,19 +27,15 @@ Developers can benefit from a quick and efficient setup, focusing more on the un
 
 @available(iOSApplicationExtension, unavailable)
 open class KnockAppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
-        
-    // MARK: Init
-    
-    public override init() {
-        super.init()
-        UIApplication.shared.registerForRemoteNotifications()
-        UNUserNotificationCenter.current().delegate = self
-    }
+            
     
     // MARK: Launching
-    
+    /// - NOTE: If overriding this function in your AppDelegate, make sure to call super on this to get the default functionality as well.
     open func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-        // Check if launched from a notification
+        UNUserNotificationCenter.current().delegate = self
+        Knock.shared.requestAndRegisterForPushNotifications()
+        
+        // Check if launched from the tap of a notification
         if let launchOptions = launchOptions,
            let userInfo = launchOptions[.remoteNotification] as? [String: AnyObject] {
             Knock.shared.log(type: .error, category: .pushNotification, message: "pushNotificationTapped")
@@ -60,11 +56,7 @@ open class KnockAppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificat
             let channelId = await Knock.shared.environment.getPushChannelId()
 
             do {
-                if let id = channelId {
-                    let _ = try await Knock.shared.registerTokenForAPNS(channelId: id, token: deviceToken)
-                } else {
-                    Knock.shared.log(type: .error, category: .pushNotification, message: "didRegisterForRemoteNotificationsWithDeviceToken", status: .fail, errorMessage: "Unable to find pushChannelId. Please set the pushChannelId with Knock.shared.setup")
-                }
+                let _ = try await Knock.shared.channelModule.registerTokenForAPNS(channelId: channelId, token: Knock.convertTokenToString(token: deviceToken))
             } catch let error {
                 Knock.shared.log(type: .error, category: .pushNotification, message: "didRegisterForRemoteNotificationsWithDeviceToken", description: "Unable to register for push notification at this time", status: .fail, errorMessage: error.localizedDescription)
             }
@@ -91,14 +83,29 @@ open class KnockAppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificat
     }
     
     // MARK: Helper Functions
+    /**
+     Override these functions in your own AppDelegate to simplify push notification handling.
+     If you want to retain the default logic we provide in these methods, be sure to call the super first.
+    */
+    
+    public func getMessageId(userInfo: [AnyHashable : Any]) -> String? {
+        return userInfo["knock_message_id"] as? String
+    }
 
     open func deviceTokenDidChange(apnsToken: String) {}
     
     open func pushNotificationDeliveredInForeground(notification: UNNotification) -> UNNotificationPresentationOptions {
+        if let messageId = getMessageId(userInfo: notification.request.content.userInfo) {
+            Knock.shared.updateMessageStatus(messageId: messageId, status: .read) { _ in }
+        }
         return [.sound, .badge, .banner]
     }
     
-    open func pushNotificationTapped(userInfo: [AnyHashable : Any]) {}
+    open func pushNotificationTapped(userInfo: [AnyHashable : Any]) {
+        if let messageId = getMessageId(userInfo: userInfo) {
+            Knock.shared.updateMessageStatus(messageId: messageId, status: .interacted) { _ in }
+        }
+    }
         
     open func pushNotificationDeliveredSilently(userInfo: [AnyHashable : Any], completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
         completionHandler(.noData)

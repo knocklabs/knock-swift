@@ -134,7 +134,6 @@ internal class FeedModule {
             }
         }
         
-        // TODO: Determine the level of logging we want from SwiftPhoenixClient. Currently this produces a lot of noise.
         socket.logger = { msg in
             Knock.shared.log(type: .debug, category: .feed, message: "SwiftPhoenixClient", description: msg)
         }

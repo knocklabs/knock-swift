@@ -19,6 +19,10 @@ internal class KnockLogger {
             if type != .error {
                 return
             }
+        case .errorsAndWarningsOnly:
+            if type != .error || type != .warning {
+                return
+            }
         case .verbose:
             break
         case .none:

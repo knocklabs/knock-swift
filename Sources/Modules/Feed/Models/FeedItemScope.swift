@@ -10,12 +10,9 @@ import Foundation
 
 extension Knock {
     public enum FeedItemScope: String, Codable {
-        // TODO: check engagement_status in https://docs.knock.app/reference#bulk-update-channel-message-status
-        // extras:
-        // case archived
-        // case unarchived
-        // case interacted
-        // minus "all"
+        case archived
+        case unarchived
+        case interacted
         case all
         case unread
         case read

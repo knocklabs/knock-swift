@@ -52,6 +52,12 @@ public extension Knock {
         return isUser
     }
     
+    func isAuthenticated(checkUserToken: Bool = false, completionHandler: @escaping ((Bool) -> Void)) {
+        Task {
+            completionHandler(await isAuthenticated(checkUserToken: checkUserToken))
+        }
+    }
+    
     /**
      Sets the userId and userToken for the current Knock instance.
      If the device token and pushChannelId were set previously, this will also attempt to register the token to the user that is being signed in.

@@ -38,7 +38,7 @@ public class Knock {
         await environment.setPushChannelId(pushChannelId)
     }
     
-    @available(*, deprecated, message: "Use async setup() method instead")
+    @available(*, deprecated, message: "Use async setup() method instead for safer handling.")
     public func setup(publishableKey: String, pushChannelId: String?, options: Knock.KnockStartupOptions? = nil) throws {
         logger.loggingDebugOptions = options?.loggingOptions ?? .errorsOnly
         Task {
@@ -69,22 +69,8 @@ public extension Knock {
     
     enum LoggingOptions {
         case errorsOnly
+        case errorsAndWarningsOnly
         case verbose
         case none
-    }
-}
-
-public extension Knock {
-    /// Returns the userId that was set from the Knock.shared.signIn method.
-    func getUserId() async -> String? {
-        await environment.getUserId()
-    }
-    
-    /**
-    Returns the apnsDeviceToekn that was set from the Knock.shared.registerTokenForAPNS.
-    If you use our KnockAppDelegate, the token registration will be handled for you automatically.
-    */
-    func apnsDeviceToken() async -> String? {
-        await environment.getDeviceToken()
     }
 }

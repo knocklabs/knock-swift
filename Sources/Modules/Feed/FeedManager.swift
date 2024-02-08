@@ -13,13 +13,20 @@ import UIKit
 public extension Knock {
 
     class FeedManager {
-        private let feedModule: FeedModule
+        private var feedModule: FeedModule!
         private var foregroundObserver: NSObjectProtocol?
         private var backgroundObserver: NSObjectProtocol?
         
         public init(feedId: String, options: FeedClientOptions = FeedClientOptions(archived: .exclude)) async throws {
             self.feedModule = try await FeedModule(feedId: feedId, options: options)
             registerForAppLifecycleNotifications()
+        }
+        
+        public init(feedId: String, options: FeedClientOptions = FeedClientOptions(archived: .exclude)) throws {
+            Task {
+                self.feedModule = try await FeedModule(feedId: feedId, options: options)
+                registerForAppLifecycleNotifications()
+            }
         }
         
         deinit {
