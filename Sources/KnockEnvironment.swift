@@ -7,51 +7,38 @@
 
 import Foundation
 
-internal class KnockEnvironment {
+internal actor KnockEnvironment {
     static let defaultBaseUrl: String = "https://api.knock.app"
+    
     private let defaults = UserDefaults.standard
     private let userDevicePushTokenKey = "knock_push_device_token"
-    private let pushChannelIdKey = "knock_push_channel_id"
+    private let previousPushTokensKey = "knock_previous_push_token"
 
-    private(set) var userId: String?
-    private(set) var userToken: String?
-    private(set) var publishableKey: String?
-    private(set) var baseUrl: String = defaultBaseUrl
+    private var userId: String?
+    private var userToken: String?
+    private var publishableKey: String?
+    private var pushChannelId: String?
+    private var baseUrl: String = defaultBaseUrl
     
-    var userDevicePushToken: String? {
-        get {
-            defaults.string(forKey: userDevicePushTokenKey)
-        }
-        set {
-            defaults.set(newValue, forKey: userDevicePushTokenKey)
-        }
+    // BaseURL
+    
+    func getBaseUrl() -> String {
+        baseUrl
     }
     
-    var pushChannelId: String? {
-        get {
-            defaults.string(forKey: pushChannelIdKey)
-        }
-        set {
-            defaults.set(newValue, forKey: pushChannelIdKey)
-        }
+    func setBaseUrl(baseUrl: String?) {
+        self.baseUrl = "\(baseUrl ?? KnockEnvironment.defaultBaseUrl)"
     }
-
-    func setPublishableKey(key: String) throws {
-        guard key.hasPrefix("sk_") == false else {
-            let error = Knock.KnockError.wrongKeyError
-            Knock.shared.log(type: .error, category: .general, message: "setPublishableKey", status: .fail, errorMessage: error.localizedDescription)
-            throw error
-        }
-        self.publishableKey = key
-    }
+    
+    //UserId
     
     func setUserInfo(userId: String?, userToken: String?) {
         self.userId = userId
         self.userToken = userToken
     }
     
-    func setBaseUrl(baseUrl: String?) {
-        self.baseUrl = "\(baseUrl ?? KnockEnvironment.defaultBaseUrl)"
+    func getUserId() -> String? {
+        userId
     }
     
     func getSafeUserId() throws -> String {
@@ -61,10 +48,99 @@ internal class KnockEnvironment {
         return id
     }
     
+    func getUserToken() -> String? {
+        userToken
+    }
+    
+    func getSafeUserToken() throws -> String? {
+        guard let token = userToken else {
+            throw Knock.KnockError.userTokenNotSet
+        }
+        return token
+    }
+    
+    // Publishable Key
+    func setPublishableKey(key: String) throws {
+        guard key.hasPrefix("sk_") == false else {
+            let error = Knock.KnockError.wrongKeyError
+            Knock.shared.log(type: .error, category: .general, message: "setPublishableKey", status: .fail, errorMessage: error.localizedDescription)
+            throw error
+        }
+        self.publishableKey = key
+    }
+    
+    func getPublishableKey() -> String? {
+        publishableKey
+    }
+    
     func getSafePublishableKey() throws -> String {
         guard let id = publishableKey else {
             throw Knock.KnockError.knockNotSetup
         }
         return id
+    }
+    
+    // PushChannelId
+    func setPushChannelId(_ newChannelId: String?) {
+        self.pushChannelId = newChannelId
+    }
+    
+    func getPushChannelId() -> String? {
+        self.pushChannelId
+    }
+    
+    func getSafePushChannelId() throws -> String {
+        guard let id = pushChannelId else {
+            throw Knock.KnockError.pushChannelIdNotSetError
+        }
+        return id
+    }
+    
+    // APNS Device Token
+    
+//    public func setDeviceToken(_ token: String?) async {
+//        let currentToken = getDeviceToken()
+//        if currentToken != token {
+//            var previousTokens = await getPreviousPushTokens()
+//            var tokenSet: Set<String> = Set(previousTokens)
+//            if let currentToken = currentToken {
+//                tokenSet.insert(currentToken)
+//            }
+//            if let token = token {
+//                tokenSet.insert(token)
+//            }
+//            setPreviousPushTokens(tokens: Array(tokenSet))
+//            defaults.set(token, forKey: userDevicePushTokenKey)
+//        }
+//    }
+    
+    public func setDeviceToken(_ token: String?) async {
+        let previousTokens = getPreviousPushTokens()
+        if let token = token, !previousTokens.contains(token) {
+            // Append new token to the list of previous tokens only if it's unique
+            // We are storing these old tokens so that we can ensure they get unregestired.
+            setPreviousPushTokens(tokens: previousTokens + [token])
+        }
+        
+        // Update the current device token
+        defaults.set(token, forKey: userDevicePushTokenKey)
+    }
+    
+    func getDeviceToken() -> String? {
+        defaults.string(forKey: userDevicePushTokenKey)
+    }
+    
+    func getSafeDeviceToken() throws -> String {
+        guard let token = getDeviceToken() else {
+            throw Knock.KnockError.devicePushTokenNotSet
+        }
+        return token
+    }
+    
+    func setPreviousPushTokens(tokens: [String]) {
+        defaults.set(tokens, forKey: previousPushTokensKey)
+    }
+    func getPreviousPushTokens() -> [String] {
+        defaults.array(forKey: previousPushTokensKey) as? [String] ?? []
     }
 }

@@ -8,6 +8,7 @@
 import Foundation
 
 public extension Knock {
+    // https://docs.knock.app/reference#messages#feeds
     
     // Named `KnockMessage` and not only `Message` to avoid a name colission to the type in `SwiftPhoenixClient`
     struct KnockMessage: Codable {
@@ -37,8 +38,8 @@ public extension Knock {
         public let interacted_at: Date?
         public let link_clicked_at: Date?
         public let archived_at: Date?
-        //        public let inserted_at: Date? // check datetime format, it differs from the others
-        //        public let updated_at: Date? // check datetime format, it differs from the others
+        public let inserted_at: Date?
+        public let updated_at: Date?
         public let source: WorkflowSource
         public let data: [String: AnyCodable]? // GenericData
     }

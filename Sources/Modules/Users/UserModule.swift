@@ -36,6 +36,21 @@ internal class UserModule {
 
 public extension Knock {
     
+    /// Returns the userId that was set from the Knock.shared.signIn method.
+    func getUserId() async -> String? {
+        await environment.getUserId()
+    }
+    
+    func getUserId(completion: @escaping (String?) -> Void) {
+        Task {
+            completion(await environment.getUserId())
+        }
+    }
+    
+    /**
+     Retrieve the current user, including all properties previously set.
+     https://docs.knock.app/reference#get-user#get-user
+     */
     func getUser() async throws -> User {
         return try await userModule.getUser()
     }
@@ -51,6 +66,9 @@ public extension Knock {
         }
     }
     
+    /**
+     Updates the current user and returns the updated User result.
+     */
     func updateUser(user: User) async throws -> User {
         return try await userModule.updateUser(user: user)
     }

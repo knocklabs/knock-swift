@@ -46,6 +46,12 @@ internal class PreferenceModule {
 }
 
 public extension Knock {
+    
+    /**
+     Retrieve all user's preference sets. Will always return an empty preference set object, even if it does not currently exist for the user.
+     https://docs.knock.app/reference#get-preferences-user#get-preferences-user
+
+     */
     func getAllUserPreferences() async throws -> [Knock.PreferenceSet] {
         try await self.preferenceModule.getAllUserPreferences()
     }
@@ -61,6 +67,13 @@ public extension Knock {
         }
     }
     
+    /**
+     Retrieve a user's preference set. Will always return an empty preference set object, even if it does not currently exist for the user.
+     https://docs.knock.app/reference#get-preferences-user#get-preferences-user
+
+     - Parameters:
+        - preferenceId: The preferenceId for the PreferenceSet.
+     */
     func getUserPreferences(preferenceId: String) async throws -> Knock.PreferenceSet {
         try await self.preferenceModule.getUserPreferences(preferenceId: preferenceId)
     }
@@ -76,6 +89,19 @@ public extension Knock {
         }
     }
     
+    /**
+     Sets preferences within the given preference set. This is a destructive operation and will replace any existing preferences with the preferences given.
+
+     If no user exists in the current environment for the current user, Knock will create the user entry as part of this request.
+
+     The preference set :id can be either "default" or a tenant.id. Learn more about per-tenant preference sets in our preferences guide.
+     https://docs.knock.app/send-and-manage-data/preferences#preference-sets
+     https://docs.knock.app/reference#get-preferences-user#set-preferences-user
+     
+     - Parameters:
+        - preferenceId: The preferenceId for the PreferenceSet.
+        - preferenceSet: PreferenceSet with updated properties.
+     */
     func setUserPreferences(preferenceId: String, preferenceSet: PreferenceSet) async throws -> Knock.PreferenceSet {
         try await self.preferenceModule.setUserPreferences(preferenceId: preferenceId, preferenceSet: preferenceSet)
     }

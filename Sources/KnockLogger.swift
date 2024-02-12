@@ -11,12 +11,16 @@ import os.log
 internal class KnockLogger {
     private static let loggingSubsytem = "knock-swift"
     
-    internal var loggingDebugOptions: Knock.DebugOptions = .errorsOnly
+    internal var loggingDebugOptions: Knock.LoggingOptions = .errorsOnly
 
     internal func log(type: LogType, category: LogCategory, message: String, description: String? = nil, status: LogStatus? = nil, errorMessage: String? = nil, additionalInfo: [String: String]? = nil) {
         switch loggingDebugOptions {
         case .errorsOnly:
             if type != .error {
+                return
+            }
+        case .errorsAndWarningsOnly:
+            if type != .error || type != .warning {
                 return
             }
         case .verbose:

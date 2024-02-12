@@ -57,6 +57,13 @@ internal class MessageModule {
 
 public extension Knock {
     
+    /**
+     Returns the KnockMessage for the associated messageId.
+     https://docs.knock.app/reference#get-a-message
+     
+     - Parameters:
+        - messageId: The messageId for the KnockMessage.
+     */
     func getMessage(messageId: String) async throws -> KnockMessage {
         try await self.messageModule.getMessage(messageId: messageId)
     }
@@ -72,6 +79,14 @@ public extension Knock {
         }
     }
     
+    /**
+     Marks the given message with the provided status, recording an event in the process.
+     https://docs.knock.app/reference#update-message-status
+     
+     - Parameters:
+        - message: The KnockMessage that you want to update.
+        - status: The new status to be associated with the KnockMessage.
+     */
     func updateMessageStatus(message: KnockMessage, status: KnockMessageStatusUpdateType) async throws -> KnockMessage {
         try await self.messageModule.updateMessageStatus(messageId: message.id, status: status)
     }
@@ -87,6 +102,14 @@ public extension Knock {
         }
     }
     
+    /**
+     Marks the given message with the provided status, recording an event in the process.
+     https://docs.knock.app/reference#update-message-status
+
+     - Parameters:
+        - messageId: The id for the KnockMessage that you want to update.
+        - status: The new status to be associated with the KnockMessage.
+     */
     func updateMessageStatus(messageId: String, status: KnockMessageStatusUpdateType) async throws -> KnockMessage {
         try await self.messageModule.updateMessageStatus(messageId: messageId, status: status)
     }
@@ -102,6 +125,14 @@ public extension Knock {
         }
     }
     
+    /**
+     Un-marks the given status on a message, recording an event in the process.
+     https://docs.knock.app/reference#undo-message-status
+     
+     - Parameters:
+        - message: The KnockMessage that you want to update.
+        - status: The new status to be associated with the KnockMessage.
+     */
     func deleteMessageStatus(message: KnockMessage, status: KnockMessageStatusUpdateType) async throws -> KnockMessage {
         try await self.messageModule.deleteMessageStatus(messageId: message.id, status: status)
     }
@@ -117,8 +148,16 @@ public extension Knock {
         }
     }
     
+    /**
+     Un-marks the given status on a message, recording an event in the process.
+     https://docs.knock.app/reference#undo-message-status
+     
+     - Parameters:
+        - preferenceId: The preferenceId for the PreferenceSet.
+        - preferenceSet: PreferenceSet with updated properties.
+     */
     func deleteMessageStatus(messageId: String, status: KnockMessageStatusUpdateType) async throws -> KnockMessage {
-        try await self.messageModule.updateMessageStatus(messageId: messageId, status: status)
+        try await self.messageModule.deleteMessageStatus(messageId: messageId, status: status)
     }
     
     func deleteMessageStatus(messageId: String, status: KnockMessageStatusUpdateType, completionHandler: @escaping ((Result<KnockMessage, Error>) -> Void)) {
@@ -135,11 +174,13 @@ public extension Knock {
     
     /**
      Batch status update for a list of messages
+     https://docs.knock.app/reference#batch-update-message-status
      
      - Parameters:
         - messageIds: the list of message ids: `[String]` to be updated
         - status: the new `Status`
-        - completionHandler: the code to execute when the response is received
+     
+     *Note:* Knock scopes this batch rate limit by message_ids and status. This allows for 1 update per second per message per status.
      */
     func batchUpdateStatuses(messageIds: [String], status: KnockMessageStatusBatchUpdateType) async throws -> [KnockMessage] {
         try await self.messageModule.batchUpdateStatuses(messageIds: messageIds, status: status)
@@ -158,11 +199,13 @@ public extension Knock {
     
     /**
      Batch status update for a list of messages
+     https://docs.knock.app/reference#batch-update-message-status
      
      - Parameters:
         - messages: the list of messages `[KnockMessage]` to be updated
         - status: the new `Status`
-        - completionHandler: the code to execute when the response is received
+     
+     *Note:* Knock scopes this batch rate limit by message_ids and status. This allows for 1 update per second per message per status.
      */
     func batchUpdateStatuses(messages: [KnockMessage], status: KnockMessageStatusBatchUpdateType) async throws -> [KnockMessage] {
         let messageIds = messages.map{$0.id}

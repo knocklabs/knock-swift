@@ -16,12 +16,7 @@ public extension Knock {
         case delivery_attempted
         case undelivered
         case seen
-//        case read
-//        case interacted
-//        case archived
         case unseen
-//        case unread
-//        case unarchived
     }
     
     enum KnockMessageEngagementStatus: String, Codable {

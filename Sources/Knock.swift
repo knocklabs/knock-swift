@@ -28,16 +28,30 @@ public class Knock {
      Returns a new instance of the Knock Client
 
      - Parameters:
-        - publishableKey: your public API key
+        - publishableKey: Your public API key
         - options: [optional] Options for customizing the Knock instance.
      */
-    public func setup(publishableKey: String, pushChannelId: String?, options: Knock.KnockStartupOptions? = nil) throws {
-        logger.loggingDebugOptions = options?.debuggingType ?? .errorsOnly
-        try environment.setPublishableKey(key: publishableKey)
-        environment.setBaseUrl(baseUrl: options?.hostname)
-        environment.pushChannelId = pushChannelId
+    public func setup(publishableKey: String, pushChannelId: String?, options: Knock.KnockStartupOptions? = nil) async throws {
+        logger.loggingDebugOptions = options?.loggingOptions ?? .errorsOnly
+        try await environment.setPublishableKey(key: publishableKey)
+        await environment.setBaseUrl(baseUrl: options?.hostname)
+        await environment.setPushChannelId(pushChannelId)
     }
     
+    @available(*, deprecated, message: "Use async setup() method instead for safer handling.")
+    public func setup(publishableKey: String, pushChannelId: String?, options: Knock.KnockStartupOptions? = nil) throws {
+        logger.loggingDebugOptions = options?.loggingOptions ?? .errorsOnly
+        Task {
+            try await environment.setPublishableKey(key: publishableKey)
+            await environment.setBaseUrl(baseUrl: options?.hostname)
+            await environment.setPushChannelId(pushChannelId)
+        }
+    }
+    
+    /**
+     Reset the current Knock instance entirely.
+     After calling this, you will need to setup and signin again.
+     */
     public func resetInstanceCompletely() {
         Knock.shared = Knock()
     }
@@ -45,27 +59,18 @@ public class Knock {
 
 public extension Knock {
     struct KnockStartupOptions {
-        public init(hostname: String? = nil, debuggingType: DebugOptions = .errorsOnly) {
+        public init(hostname: String? = nil, loggingOptions: LoggingOptions = .errorsOnly) {
             self.hostname = hostname
-            self.debuggingType = debuggingType
+            self.loggingOptions = loggingOptions
         }
         var hostname: String?
-        var debuggingType: DebugOptions
+        var loggingOptions: LoggingOptions
     }
     
-    enum DebugOptions {
+    enum LoggingOptions {
         case errorsOnly
+        case errorsAndWarningsOnly
         case verbose
         case none
-    }
-}
-
-public extension Knock {
-    var userId: String? {
-       get { return environment.userId }
-    }
-    
-    var apnsDeviceToken: String? {
-        get { return environment.userId }
     }
 }

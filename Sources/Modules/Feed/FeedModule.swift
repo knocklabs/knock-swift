@@ -17,19 +17,22 @@ internal class FeedModule {
     private var feedOptions: Knock.FeedClientOptions
     private let feedService = FeedService()
     
-    internal init(feedId: String, options: Knock.FeedClientOptions) throws {
+    internal init(feedId: String, options: Knock.FeedClientOptions) async throws {
         // use regex and circumflex accent to mark only the starting http to be replaced and not any others
-        let websocketHostname = Knock.shared.environment.baseUrl.replacingOccurrences(of: "^http", with: "ws", options: .regularExpression) // default: wss://api.knock.app
+        let base = await Knock.shared.environment.getBaseUrl()
+        let websocketHostname = base.replacingOccurrences(of: "^http", with: "ws", options: .regularExpression) // default: wss://api.knock.app
         let websocketPath = "\(websocketHostname)/ws/v1/websocket" // default: wss://api.knock.app/ws/v1/websocket
         var userId = ""
         do {
-            userId = try Knock.shared.environment.getSafeUserId()
+            userId = try await Knock.shared.environment.getSafeUserId()
         } catch let error {
             Knock.shared.log(type: .error, category: .feed, message: "FeedManager", status: .fail, errorMessage: "Must sign user in before initializing the FeedManager")
             throw error
         }
         
-        self.socket = Socket(websocketPath, params: ["vsn": "2.0.0", "api_key": try Knock.shared.environment.getSafePublishableKey(), "user_token": Knock.shared.environment.userToken ?? ""])
+        let userToken = await Knock.shared.environment.getUserToken()
+        let publishableKey = try await Knock.shared.environment.getSafePublishableKey()
+        self.socket = Socket(websocketPath, params: ["vsn": "2.0.0", "api_key": publishableKey, "user_token": userToken ?? ""])
         self.feedId = feedId
         self.feedTopic = "feeds:\(feedId):\(userId)"
         self.feedOptions = options
@@ -70,7 +73,7 @@ internal class FeedModule {
         // delivery_status: one of `queued`, `sent`, `delivered`, `delivery_attempted`, `undelivered`, `not_sent`
         // engagement_status: one of `seen`, `unseen`, `read`, `unread`, `archived`, `unarchived`, `interacted`
         // Also check if the parameters sent here are valid
-        let userId = try Knock.shared.environment.getSafeUserId()
+        let userId = try await Knock.shared.environment.getSafeUserId()
         let body: AnyEncodable = [
             "user_ids": [userId],
             "engagement_status": options.status != nil && options.status != .all ? options.status!.rawValue : "",
@@ -131,7 +134,6 @@ internal class FeedModule {
             }
         }
         
-        // TODO: Determine the level of logging we want from SwiftPhoenixClient. Currently this produces a lot of noise.
         socket.logger = { msg in
             Knock.shared.log(type: .debug, category: .feed, message: "SwiftPhoenixClient", description: msg)
         }

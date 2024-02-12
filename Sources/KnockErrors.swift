@@ -11,6 +11,9 @@ public extension Knock {
     enum KnockError: Error, Equatable {
         case runtimeError(String)
         case userIdNotSetError
+        case userTokenNotSet
+        case devicePushTokenNotSet
+        case pushChannelIdNotSetError
         case knockNotSetup
         case wrongKeyError
     }
@@ -37,7 +40,13 @@ extension Knock.KnockError: LocalizedError {
         case .runtimeError(let message):
             return message
         case .userIdNotSetError:
-            return "UserId not found. Please authenticate your userId with Knock.signIn()."
+            return "UserId not found. Please authenticate your userId with Knock.shared.signIn()."
+        case .userTokenNotSet:
+            return "User token must be set for production environments. Please authenticate your user toekn with Knock.shared.signIn()."
+        case .pushChannelIdNotSetError:
+            return "PushChannelId not found. Please setup with Knock.shared.setup() or Knock.shared.registerTokenForAPNS()."
+        case .devicePushTokenNotSet:
+            return "Device Push Notification token not found. Please setup with Knock.shared.registerTokenForAPNS()."
         case .knockNotSetup:
             return "Knock instance still needs to be setup. Please setup with Knock.shared.setup()."
         case .wrongKeyError:

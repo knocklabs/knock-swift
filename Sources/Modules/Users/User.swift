@@ -10,6 +10,8 @@ import Foundation
 public extension Knock {
     // MARK: Users
     
+    // https://docs.knock.app/reference#users#users
+    
     struct User: Codable {
         public let id: String
         public let name: String?

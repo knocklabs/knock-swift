@@ -11,14 +11,14 @@ import XCTest
 final class UserTests: XCTestCase {
     
     override func setUpWithError() throws {
-        try? Knock.shared.setup(publishableKey: "pk_123", pushChannelId: "test")
+        Task {
+            try? await Knock.shared.setup(publishableKey: "pk_123", pushChannelId: "test")
+        }
     }
 
     override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
+        Knock.shared.resetInstanceCompletely()
     }
-    
-
     
     func testUserDecoding() throws {
         let decoder = JSONDecoder()

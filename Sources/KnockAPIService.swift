@@ -17,18 +17,22 @@ internal protocol KnockAPIService {
 }
 
 extension KnockAPIService {
-    private var apiBaseUrl: String {
-        return "\(Knock.shared.environment.baseUrl)/v1"
+    
+    func apiBaseUrl() async -> String {
+        let base = await Knock.shared.environment.getBaseUrl()
+        return "\(base)/v1"
     }
 
     func makeRequest<T:Codable>(method: String, path: String, queryItems: [URLQueryItem]?, body: Encodable?) async throws -> T {
         let sessionConfig = URLSessionConfiguration.default
         let session = URLSession(configuration: sessionConfig, delegate: nil, delegateQueue: nil)
         
-        let loggingMessageSummary = "\(method) \(apiBaseUrl)\(path)"
+        let baseUrl = await apiBaseUrl()
+        
+        let loggingMessageSummary = "\(method) \(baseUrl)\(path)"
                 
-        guard var URL = URL(string: "\(apiBaseUrl)\(path)") else {
-            let networkError = Knock.NetworkError(title: "Invalid URL", description: "The URL: \(apiBaseUrl)\(path) is invalid", code: 0)
+        guard var URL = URL(string: "\(baseUrl)\(path)") else {
+            let networkError = Knock.NetworkError(title: "Invalid URL", description: "The URL: \(baseUrl)\(path) is invalid", code: 0)
             Knock.shared.log(type: .warning, category: .networking, message: loggingMessageSummary, status: .fail, errorMessage: networkError.localizedDescription)
             throw networkError
         }
@@ -52,8 +56,10 @@ extension KnockAPIService {
         
         request.addValue("knock-swift@\(Knock.clientVersion)", forHTTPHeaderField: "User-Agent")
         
-        request.addValue("Bearer \(try Knock.shared.environment.getSafePublishableKey())", forHTTPHeaderField: "Authorization")
-        if let userToken = Knock.shared.environment.userToken {
+        let publishableKey = try await Knock.shared.environment.getSafePublishableKey()
+        request.addValue("Bearer \(publishableKey)", forHTTPHeaderField: "Authorization")
+        
+        if let userToken = await Knock.shared.environment.getUserToken() {
             request.addValue(userToken, forHTTPHeaderField: "X-Knock-User-Token")
         }
         
