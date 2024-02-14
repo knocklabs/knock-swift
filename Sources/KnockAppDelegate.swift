@@ -33,6 +33,7 @@ open class KnockAppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificat
     /// - NOTE: If overriding this function in your AppDelegate, make sure to call super on this to get the default functionality as well.
     open func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        // Will request push notification permissions, and will automatically register if perms are granted.
         Knock.shared.requestAndRegisterForPushNotifications()
         
         // Check if launched from the tap of a notification
