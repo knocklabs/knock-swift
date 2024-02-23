@@ -41,7 +41,7 @@ public extension Knock {
         //        public let link_clicked_at: Date?
         public var read_at: Date?
         public var seen_at: Date?
-        public let tenant: String
+        public let tenant: String?
         public let total_activities: Int
         public let total_actors: Int
         public let updated_at: Date?
@@ -55,13 +55,13 @@ public extension Knock {
             self.inserted_at = try container.decodeIfPresent(Date.self, forKey: Knock.FeedItem.CodingKeys.inserted_at)
             self.read_at = try container.decodeIfPresent(Date.self, forKey: Knock.FeedItem.CodingKeys.read_at)
             self.seen_at = try container.decodeIfPresent(Date.self, forKey: Knock.FeedItem.CodingKeys.seen_at)
-            self.tenant = try container.decode(String.self, forKey: Knock.FeedItem.CodingKeys.tenant)
+            self.tenant = try container.decodeIfPresent(String.self, forKey: Knock.FeedItem.CodingKeys.tenant)
             self.total_activities = try container.decode(Int.self, forKey: Knock.FeedItem.CodingKeys.total_activities)
             self.total_actors = try container.decode(Int.self, forKey: Knock.FeedItem.CodingKeys.total_actors)
             self.updated_at = try container.decodeIfPresent(Date.self, forKey: Knock.FeedItem.CodingKeys.updated_at)
         }
         
-        public init(__cursor: String, blocks: [Block], data: [String : AnyCodable]?, id: String, inserted_at: Date?, read_at: Date? = nil, seen_at: Date? = nil, tenant: String, total_activities: Int, total_actors: Int, updated_at: Date?) {
+        public init(__cursor: String, blocks: [Block], data: [String : AnyCodable]?, id: String, inserted_at: Date?, read_at: Date? = nil, seen_at: Date? = nil, tenant: String?, total_activities: Int, total_actors: Int, updated_at: Date?) {
             self.__cursor = __cursor
             self.blocks = blocks
             self.data = data
