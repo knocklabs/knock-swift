@@ -73,13 +73,15 @@ internal class FeedModule {
         // delivery_status: one of `queued`, `sent`, `delivered`, `delivery_attempted`, `undelivered`, `not_sent`
         // engagement_status: one of `seen`, `unseen`, `read`, `unread`, `archived`, `unarchived`, `interacted`
         // Also check if the parameters sent here are valid
+        let mergedOptions = feedOptions.mergeOptions(options: options)
+
         let userId = try await Knock.shared.environment.getSafeUserId()
         let body: AnyEncodable = [
             "user_ids": [userId],
-            "engagement_status": options.status != nil && options.status != .all ? options.status!.rawValue : "",
-            "archived": options.archived ?? "",
-            "has_tenant": options.has_tenant ?? "",
-            "tenants": (options.tenant != nil) ? [options.tenant!] : ""
+            "engagement_status": mergedOptions.status != nil && mergedOptions.status != .all ? mergedOptions.status!.rawValue : "",
+            "archived": mergedOptions.archived ?? "",
+            "has_tenant": mergedOptions.has_tenant ?? "",
+            "tenants": (mergedOptions.tenant != nil) ? [mergedOptions.tenant!] : ""
         ]
         do {
             let op = try await feedService.makeBulkStatusUpdate(feedId: feedId, type: type, body: body)
