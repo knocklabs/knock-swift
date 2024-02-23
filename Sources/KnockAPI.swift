@@ -15,7 +15,7 @@ class KnockAPI {
         "\(hostname)/v1"
     }
     
-    static let clientVersion = "0.2.0"
+    static let clientVersion = "0.2.1"
     
     init(publishableKey: String, userToken: String? = nil, hostname: String? = nil) {
         self.publishableKey = publishableKey
