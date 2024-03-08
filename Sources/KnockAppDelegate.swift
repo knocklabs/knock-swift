@@ -92,8 +92,6 @@ open class KnockAppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificat
     public func getMessageId(userInfo: [AnyHashable : Any]) -> String? {
         return userInfo["knock_message_id"] as? String
     }
-
-    open func deviceTokenDidChange(apnsToken: String) {}
     
     open func pushNotificationDeliveredInForeground(notification: UNNotification) -> UNNotificationPresentationOptions {
         if let messageId = getMessageId(userInfo: notification.request.content.userInfo) {
