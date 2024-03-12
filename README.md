@@ -20,11 +20,15 @@ Knock is a flexible, reliable notifications infrastructure that's built to scale
 
 ## Documentation
 
-See the [documentation](https://docs.knock.app/notification-feeds/bring-your-own-ui) for usage examples.
+See the [documentation](https://docs.knock.app/sdks/ios/overview) for full documentation.
 
 ## Migrations
 
 See the [Migration Guide](https://github.com/knocklabs/knock-swift/blob/main/MIGRATIONS.md) if upgrading from a previous version.
+
+## Example App
+
+See the [iOS Example App](https://github.com/knocklabs/ios-example-app) for more examples.
 
 ## Installation
 

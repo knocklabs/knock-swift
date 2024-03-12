@@ -25,10 +25,11 @@ public class Knock {
     internal lazy var logger = KnockLogger()
     
     /**
-     Returns a new instance of the Knock Client
+    Sets up the shared Knock instance. Make sure to call this as soon as you can. Preferrably in your AppDelegate.
 
      - Parameters:
         - publishableKey: Your public API key
+        - pushChannelId:
         - options: [optional] Options for customizing the Knock instance.
      */
     public func setup(publishableKey: String, pushChannelId: String?, options: Knock.KnockStartupOptions? = nil) async throws {

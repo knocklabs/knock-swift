@@ -49,7 +49,7 @@ public extension Knock {
     
     /**
      Retrieve the current user, including all properties previously set.
-     https://docs.knock.app/reference#get-user#get-user
+     https://docs.knock.app/reference#get-user
      */
     func getUser() async throws -> User {
         return try await userModule.getUser()

@@ -49,7 +49,7 @@ public extension Knock {
     
     /**
      Retrieve all user's preference sets. Will always return an empty preference set object, even if it does not currently exist for the user.
-     https://docs.knock.app/reference#get-preferences-user#get-preferences-user
+     https://docs.knock.app/reference#get-preferences-user
 
      */
     func getAllUserPreferences() async throws -> [Knock.PreferenceSet] {
@@ -69,7 +69,7 @@ public extension Knock {
     
     /**
      Retrieve a user's preference set. Will always return an empty preference set object, even if it does not currently exist for the user.
-     https://docs.knock.app/reference#get-preferences-user#get-preferences-user
+     https://docs.knock.app/reference#get-preferences-user
 
      - Parameters:
         - preferenceId: The preferenceId for the PreferenceSet.
@@ -96,7 +96,7 @@ public extension Knock {
 
      The preference set :id can be either "default" or a tenant.id. Learn more about per-tenant preference sets in our preferences guide.
      https://docs.knock.app/send-and-manage-data/preferences#preference-sets
-     https://docs.knock.app/reference#get-preferences-user#set-preferences-user
+     https://docs.knock.app/reference#get-preferences-user
      
      - Parameters:
         - preferenceId: The preferenceId for the PreferenceSet.

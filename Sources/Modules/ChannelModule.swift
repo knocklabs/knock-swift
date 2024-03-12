@@ -176,7 +176,7 @@ public extension Knock {
     
     /**
      Retrieves the channel data for the current user on the channel specified.
-     https://docs.knock.app/reference#get-user-channel-data#get-user-channel-data
+     https://docs.knock.app/reference#get-user-channel-data
      
      - Parameters:
         - channelId: The id of the Knock channel to lookup.
