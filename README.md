@@ -1,5 +1,5 @@
 
-# Offical Knock iOS SDK
+# Official Knock iOS SDK
 
 [![GitHub Release](https://img.shields.io/github/v/release/knocklabs/knock-swift?style=flat)](https://github.com/knocklabs/knock-swift/releases/latest)
 [![CocoaPods](https://img.shields.io/cocoapods/v/Knock.svg?style=flat)](https://cocoapods.org/)
