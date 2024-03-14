@@ -92,8 +92,12 @@ You can now start using the SDK:
 ``` swift
 import Knock
 
-// Setup the shared Knock instance as soon as you can. 
-try? Knock.shared.setup(publishableKey: "your-pk", pushChannelId: "user-id")
+/* 
+ Setup the shared Knock instance as soon as you can. 
+ Note: pushChannelId is required if you want to use our KnockAppDelegate helper. 
+ Otherwise, this field is optional.
+*/
+try? Knock.shared.setup(publishableKey: "your-pk", pushChannelId: "apns-push-channel-id")
 
 // Once you know the Knock UserId, sign the user into the shared Knock instance.
 await Knock.shared.signIn(userId: "userid", userToken: nil)

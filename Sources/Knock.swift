@@ -29,8 +29,8 @@ public class Knock {
 
      - Parameters:
         - publishableKey: Your public API key
-        - pushChannelId:
-        - options: [optional] Options for customizing the Knock instance.
+        - pushChannelId: [optional] The Knock APNS channel id that you plan to use within your app
+        - options: [optional] Options for customizing the Knock instance
      */
     public func setup(publishableKey: String, pushChannelId: String?, options: Knock.KnockStartupOptions? = nil) async throws {
         logger.loggingDebugOptions = options?.loggingOptions ?? .errorsOnly

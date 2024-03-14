@@ -30,7 +30,7 @@ public extension Knock {
         }
         
         deinit {
-            unregisterFromAppLifecycleNotifications()
+            deregisterFromAppLifecycleNotifications()
         }
         
         private func registerForAppLifecycleNotifications() {
@@ -43,7 +43,7 @@ public extension Knock {
             }
         }
 
-        private func unregisterFromAppLifecycleNotifications() {
+        private func deregisterFromAppLifecycleNotifications() {
             if let observer = foregroundObserver {
                 NotificationCenter.default.removeObserver(observer)
             }
