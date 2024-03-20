@@ -23,7 +23,10 @@ let package = Package(
         .target(
             name: "Knock",
             dependencies: ["SwiftPhoenixClient"],
-            path: "Sources"
-        ),
+            path: "Sources"),
+        
+        .testTarget(
+            name: "KnockTests",
+            dependencies: ["Knock"]),
     ]
 )

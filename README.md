@@ -1,32 +1,36 @@
-# Swift SDK
 
-## Features
+# Official Knock iOS SDK
 
-* Preferences
-	* getAllUserPreferences
-	* getUserPreferences
-	* setUserPreferences
-* Channels
-	* registerTokenForAPNS
-	* getUserChannelData
-	* updateUserChannelData
-* Messages
-	* getMessage
-	* updateMessageStatus
-	* deleteMessageStatus
-	* batchUpdateStatuses
-* Users
-	* getUser
-	* updateUser
+[![GitHub Release](https://img.shields.io/github/v/release/knocklabs/knock-swift?style=flat)](https://github.com/knocklabs/knock-swift/releases/latest)
+[![CocoaPods](https://img.shields.io/cocoapods/v/Knock.svg?style=flat)](https://cocoapods.org/)
+[![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
+[![Swift Package Manager compatible](https://img.shields.io/badge/Swift%20Package%20Manager-compatible-4BC51D.svg?style=flat)](https://swift.org/package-manager/)
+
+![min swift version is 5.3](https://img.shields.io/badge/min%20Swift%20version-5.3-orange)
+![min ios version is 16](https://img.shields.io/badge/min%20iOS%20version-16-blue)
+[![GitHub license](https://img.shields.io/badge/license-MIT-lightgrey.svg?style=flat)](https://github.com/knocklabs/ios-example-app/blob/main/LICENSE)
+
+
+
+---
+
+Knock is a flexible, reliable notifications infrastructure that's built to scale with you. Use our iOS SDK to engage users with in-app feeds, setup push notifications, and manage notification preferences.
+
+---
+
+## Documentation
+
+See the [documentation](https://docs.knock.app/sdks/ios/overview) for full documentation.
+
+## Migrations
+
+See the [Migration Guide](https://github.com/knocklabs/knock-swift/blob/main/MIGRATIONS.md) if upgrading from a previous version.
+
+## Example App
+
+See the [iOS Example App](https://github.com/knocklabs/ios-example-app) for more examples.
 
 ## Installation
-
-You can include the SDK in a couple of ways:
-
-1. Swift Package Manager
-2. Carthage
-3. Cocoapods
-4. Manually
 
 ### Swift Package Manager
 
@@ -42,16 +46,9 @@ There are two ways to add this as a dependency using the Swift Package Manager:
 <img width="422" alt="Screenshot 2023-06-27 at 19 41 32" src="https://github.com/knocklabs/knock-swift/assets/952873/31bb67de-5272-445a-a5c4-5df3bcfa3c8b">
 
 2. Search for `https://github.com/knocklabs/knock-swift.git` and then click `Add Package`
+*Note: We recommend that you set the Dependency Rule to Up to Next Major Version. While we encourage you to keep your app up to date with the latest SDK, major versions can include breaking changes or new features that require your attention.*
 
 <img width="900" alt="Screenshot 2023-06-27 at 19 42 09" src="https://github.com/knocklabs/knock-swift/assets/952873/d947cc7f-8da6-4814-aa75-3e41ffe72ff4">
-
-3. Ensure that the Package is selected and click `Add Package`
-
-<img width="900" alt="Screenshot 2023-06-27 at 19 42 23" src="https://github.com/knocklabs/knock-swift/assets/952873/c6053b06-73dc-43c8-8a68-40fbc2298f7c">
-
-4. Wait for Xcode to fetch the dependencies and you should see the SDK on your Package Dependencies on the sidebar
-
-<img width="505" alt="Screenshot 2023-06-27 at 19 42 45" src="https://github.com/knocklabs/knock-swift/assets/952873/9f314c9d-2525-4357-8da0-6ce4508b6db0">
 
 #### Manually via `Package.swift`
 
@@ -59,41 +56,9 @@ If you are managing dependencies using the `Package.swift` file, just add this t
 
 ``` swift
 dependencies: [
-    .package(url: "https://github.com/knocklabs/knock-swift.git", .upToNextMajor(from: "0.2.1"))
+    .package(url: "https://github.com/knocklabs/knock-swift.git", .upToNextMajor(from: "1.0.0"))
 ]
 ```
-
-### Carthage
-
-1. Add this line to your Cartfile:
-
-```
-github "knocklabs/knock-swift" ~> 0.2.0
-```
-
-2. Run `carthage update`. This will fetch dependencies into a Carthage/Checkouts folder, then build each one or download a pre-compiled framework.
-3. Open your application targets’ General settings tab. For Xcode 11.0 and higher, in the "Frameworks, Libraries, and Embedded Content" section, drag and drop each framework you want to use from the Carthage/Build folder on disk. Then, in the "Embed" section, select "Do Not Embed" from the pulldown menu for each item added. For Xcode 10.x and lower, in the "Linked Frameworks and Libraries" section, drag and drop each framework you want to use from the Carthage/Build folder on disk.
-4. On your application targets’ Build Phases settings tab, click the + icon and choose New Run Script Phase. Create a Run Script in which you specify your shell (ex: /bin/sh), add the following contents to the script area below the shell:
-```
-/usr/local/bin/carthage copy-frameworks
-```
-5. Create a file named `input.xcfilelist` and a file named output.xcfilelist
-6. Add the paths to the frameworks you want to use to your input.xcfilelist. For example:
-```
-$(SRCROOT)/Carthage/Build/iOS/Knock.framework
-```
-7. Add the paths to the copied frameworks to the `output.xcfilelist`. For example:
-```
-$(BUILT_PRODUCTS_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Result.framework
-```
-8. Add the `input.xcfilelist` to the "Input File Lists" section of the Carthage run script phase
-9. Add the `output.xcfilelist` to the "Output File Lists" section of the Carthage run script phase
-
-This script works around an [App Store submission bug](http://www.openradar.me/radar?id=6409498411401216) triggered by universal binaries and ensures that necessary bitcode-related files and dSYMs are copied when archiving.
-
-With the debug information copied into the built products directory, Xcode will be able to symbolicate the stack trace whenever you stop at a breakpoint. This will also enable you to step through third-party code in the debugger.
-
-When archiving your application for submission to the App Store or TestFlight, Xcode will also copy these files into the dSYMs subdirectory of your application’s .xcarchive bundle.
 
 ### Cocoapods
 
@@ -108,6 +73,14 @@ target 'MyApp' do
 end
 ```
 
+### Carthage
+
+1. Add this line to your Cartfile:
+
+```
+github "knocklabs/knock-swift" ~> 0.2.0
+```
+
 ### Manually
 
 As a last option, you could manually copy the files inside the `Sources` folder to your project.
@@ -119,47 +92,24 @@ You can now start using the SDK:
 ``` swift
 import Knock
 
-knockClient = try! Knock(publishableKey: "your-pk", userId: "user-id")
+/* 
+ Setup the shared Knock instance as soon as you can. 
+ Note: pushChannelId is required if you want to use our KnockAppDelegate helper. 
+ Otherwise, this field is optional.
+*/
+try? Knock.shared.setup(publishableKey: "your-pk", pushChannelId: "apns-push-channel-id")
 
-knockClient.getUser{ result in
-    switch result {
-    case .success(let user):
-        print(user)
-    case .failure(let error):
-        print(error.localizedDescription)
-    }
-}
+// Once you know the Knock UserId, sign the user into the shared Knock instance.
+await Knock.shared.signIn(userId: "userid", userToken: nil)
+
 ```
 
-## Using the SDK
+## How to Contribute
 
-The functions of the sdk are encapsulated and managed in a client object. You first have to instantiate a client with your public key and a user id. If you are running on production with enhanced security turned on (recommended) you have to also pass the signed user token to the client constructor.
+Community contributions are welcome! If you'd like to contribute, please read our [contribution guide](CONTRIBUTING.md).
 
-``` swift
-import Knock
+## License
 
-knockClient = try! Knock(publishableKey: "your-pk", userId: "user-id")
+This project is licensed under the MIT license.
 
-// on prod with enhanced security turned on:
-knockClient = try! Knock(publishableKey: "your-pk", userId: "user-id", userToken: "signed-user-token")
-```
-
-## Notes for publishing
-
-When releasing a new version of this SDK, please note:
-
-* You should update the version in a couple of places:
-	* in the file `Sources/KnockAPI.swift`: `clientVersion = "..."`
-	* in the file `Knock.podspec`: `spec.version = "..."`
-	* in this `README.md`, in the installation instructions for all the package managers
-	* in git, add a tag, preferably to the commit that includes this previous changes
-
-
-
-
-
-
-
-
-
-
+See [LICENSE](LICENSE) for more information.

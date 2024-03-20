@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name         = "Knock"
-  spec.version      = "0.2.1"
+  spec.version      = "1.0.0"
   spec.summary      = "An SDK to build in-app notifications experiences in Swift with Knock.."
 
   spec.description  = <<-DESC
@@ -16,6 +16,6 @@ Pod::Spec.new do |spec|
   spec.author       = { "Knock" => "support@knock.app" }
   spec.source       = { :git => "https://github.com/knocklabs/knock-swift.git", :tag => "#{spec.version}" }
   spec.ios.deployment_target = '16.0'
-  spec.swift_version = '5.0'
+  spec.swift_version = '5.3'
   spec.source_files  = "Sources/**/*"
 end
