@@ -68,6 +68,7 @@ final class FeedItemTests: XCTestCase {
          
         XCTAssertTrue(item.blocks.count == 2)
         XCTAssertTrue(item.blocks[0] is Knock.MarkdownContentBlock)
+        XCTAssertTrue(item.blocks[1] is Knock.ButtonSetContentBlock)
 
         
         let encoder = JSONEncoder()
