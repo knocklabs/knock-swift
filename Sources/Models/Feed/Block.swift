@@ -47,22 +47,26 @@ public extension Knock {
         public let name: String
         public let type: ContentBlockType = .text
         public let content: String
+        public let rendered: String
         
         enum CodingKeys: String, CodingKey {
             case name
             case type
             case content
+            case rendered
         }
 
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             self.name = try container.decode(String.self, forKey: .name)
             self.content = try container.decode(String.self, forKey: .content)
+            self.rendered = try container.decode(String.self, forKey: .rendered)
         }
         
-        public init(name: String, content: String) {
+        public init(name: String, content: String, rendered: String) {
             self.name = name
             self.content = content
+            self.rendered = rendered
         }
     }
 
@@ -93,7 +97,7 @@ public extension Knock {
         }
     }
     
-    struct BlockActionButton: Codable {
+    struct BlockActionButton: Codable, Equatable {
         public let label: String
         public let name: String
         public let action: String

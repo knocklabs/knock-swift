@@ -30,6 +30,12 @@ final class FeedItemTests: XCTestCase {
                     "type": "markdown"
                 },
                 {
+                    "content": "asdf",
+                    "name": "action",
+                    "rendered": "asdf",
+                    "type": "text"
+                },
+                {
                     "buttons": [
                         {
                             "action": "/action-url",
@@ -66,10 +72,15 @@ final class FeedItemTests: XCTestCase {
         
         let item = try decoder.decode(Knock.FeedItem.self, from: jsonData)
          
-        XCTAssertTrue(item.blocks.count == 2)
+        XCTAssertTrue(item.blocks.count == 3)
         XCTAssertTrue(item.blocks[0] is Knock.MarkdownContentBlock)
-        XCTAssertTrue(item.blocks[1] is Knock.ButtonSetContentBlock)
-
+        XCTAssertTrue(item.blocks[1] is Knock.TextContentBlock)
+        XCTAssertTrue(item.blocks[2] is Knock.ButtonSetContentBlock)
+        
+        let buttonSet = item.blocks[2] as! Knock.ButtonSetContentBlock
+        let button = buttonSet.buttons.first!
+        let expectedButton = Knock.BlockActionButton(label: "Primary", name: "primary", action: "/action-url")
+        XCTAssertEqual(button, expectedButton)
         
         let encoder = JSONEncoder()
         let reencodedJSON = try encoder.encode(item)
