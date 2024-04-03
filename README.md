@@ -69,7 +69,7 @@ platform :ios, '16.0'
 use_frameworks!
 
 target 'MyApp' do
-  pod 'Knock', '~> 0.2.0'
+  pod 'Knock', '~> 1.1.0'
 end
 ```
 
@@ -78,7 +78,7 @@ end
 1. Add this line to your Cartfile:
 
 ```
-github "knocklabs/knock-swift" ~> 0.2.0
+github "knocklabs/knock-swift" ~> 1.1.0
 ```
 
 ### Manually
