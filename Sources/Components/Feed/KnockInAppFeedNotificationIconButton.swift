@@ -7,12 +7,17 @@
 
 import SwiftUI
 
-struct KnockInAppFeedNotificationIconButton: View {
-    @EnvironmentObject var viewModel: KnockInAppFeedViewModel
-    var theme = KnockInAppFeedNotificationIconButtonTheme()
-    var action: () -> Void
+public struct KnockInAppFeedNotificationIconButton: View {
+    @EnvironmentObject public var viewModel: KnockInAppFeedViewModel
+    public var theme = KnockInAppFeedNotificationIconButtonTheme()
+    public var action: () -> Void
     
-    var body: some View {
+    public init(theme: KnockInAppFeedNotificationIconButtonTheme = KnockInAppFeedNotificationIconButtonTheme(), action: @escaping () -> Void) {
+        self.theme = theme
+        self.action = action
+    }
+    
+    public var body: some View {
         Button(action: action) {
             getBellIcon(unseenCount: viewModel.feed.meta.unseen_count)
         }

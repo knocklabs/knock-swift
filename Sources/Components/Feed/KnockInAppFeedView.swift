@@ -7,11 +7,15 @@
 
 import SwiftUI
 
-struct KnockInAppFeedView: View {
-    @EnvironmentObject var viewModel: KnockInAppFeedViewModel
-    var theme: KnockInAppFeedTheme = .init()
+public struct KnockInAppFeedView: View {
+    @EnvironmentObject public var viewModel: KnockInAppFeedViewModel
+    public var theme: KnockInAppFeedTheme = .init()
     
-    var body: some View {
+    public init(theme: KnockInAppFeedTheme = .init()) {
+        self.theme = theme
+    }
+    
+    public var body: some View {
         VStack(alignment: .leading, spacing: .zero) {
             VStack(alignment: .leading, spacing: 15) {
                 Text(theme.titleString)
@@ -58,7 +62,7 @@ struct KnockInAppFeedView: View {
                 } else {
                     List {
                         ForEach(viewModel.feed.entries, id: \.id) { item in
-                            FeedNotificationRow(item: item, theme: .init()) { buttonTapString in
+                            KnockFeedNotificationRow(item: item, theme: .init()) { buttonTapString in
                                 print("didTapRowButton")
                                 viewModel.feedItemButtonTapped(item: item, actionString: buttonTapString)
                             }

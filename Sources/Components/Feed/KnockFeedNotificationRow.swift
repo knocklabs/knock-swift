@@ -1,5 +1,5 @@
 //
-//  FeedNotificationRow.swift
+//  KnockFeedNotificationRow.swift
 //
 //
 //  Created by Matt Gardner on 4/12/24.
@@ -7,12 +7,22 @@
 
 import SwiftUI
 
-struct FeedNotificationRow: View {
-    var item: Knock.FeedItem
-    var theme: FeedNotificationRowTheme = .init()
-    var buttonTapAction: (String) -> Void
+public struct KnockFeedNotificationRow: View {
+    public var item: Knock.FeedItem
+    public var theme: FeedNotificationRowTheme = .init()
+    public var buttonTapAction: (String) -> Void
+    
+    public init(
+        item: Knock.FeedItem,
+        theme: FeedNotificationRowTheme = .init(),
+        buttonTapAction: @escaping (String) -> Void
+    ) {
+        self.item = item
+        self.theme = theme
+        self.buttonTapAction = buttonTapAction
+    }
 
-    var body: some View {
+    public var body: some View {
         VStack() {
             HStack(alignment: .top) {
                 if theme.showAvatarView {
@@ -93,11 +103,11 @@ struct FeedNotificationRow_Previews: PreviewProvider {
         
         
         List {
-            FeedNotificationRow(item: item, theme: .init()) { _ in }
+            KnockFeedNotificationRow(item: item, theme: .init()) { _ in }
                 .listRowInsets(EdgeInsets())
                 .listRowSeparator(.hidden)
 
-            FeedNotificationRow(item: item, theme: .init()) { _ in }
+            KnockFeedNotificationRow(item: item, theme: .init()) { _ in }
                 .listRowInsets(EdgeInsets())
                 .listRowSeparator(.hidden)
         }

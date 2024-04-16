@@ -9,21 +9,21 @@ import Foundation
 import SwiftUI
 import Combine
 
-class KnockInAppFeedViewModel: ObservableObject {
-    @Published var feed: Knock.Feed = Knock.Feed()
-    @Published var tenantId: String?
-    @Published var hasTenant: Bool?
-    @Published var currentFilter: Knock.FeedItemScope = .all
-    @Published var filterOptions: [Knock.FeedItemScope] = [.all, .unread, .read]
-    @Published var defaultMessageStatusUpdate: Knock.BulkChannelMessageStatusUpdateType = .read
+public class KnockInAppFeedViewModel: ObservableObject {
+    @Published public var feed: Knock.Feed = Knock.Feed()
+    @Published public var tenantId: String?
+    @Published public var hasTenant: Bool?
+    @Published public var currentFilter: Knock.FeedItemScope = .all
+    @Published public var filterOptions: [Knock.FeedItemScope] = [.all, .unread, .read]
+    @Published public var defaultMessageStatusUpdate: Knock.BulkChannelMessageStatusUpdateType = .read
     
-    let didTapFeedItemButtonPublisher = PassthroughSubject<String, Never>()
-    let didTapFeedItemRowPublisher = PassthroughSubject<Knock.FeedItem, Never>()
+    public let didTapFeedItemButtonPublisher = PassthroughSubject<String, Never>()
+    public let didTapFeedItemRowPublisher = PassthroughSubject<Knock.FeedItem, Never>()
 
-    var feedClientOptions: Knock.FeedClientOptions
+    public var feedClientOptions: Knock.FeedClientOptions
     private var _feedClientOptions: Knock.FeedClientOptions
     
-    init(feedClientOptions: Knock.FeedClientOptions = .init(), tenantId: String? = nil, hasTenant: Bool? = nil) {
+    public init(feedClientOptions: Knock.FeedClientOptions = .init(), tenantId: String? = nil, hasTenant: Bool? = nil) {
         self.feedClientOptions = feedClientOptions
         self._feedClientOptions = feedClientOptions
 
@@ -37,7 +37,7 @@ class KnockInAppFeedViewModel: ObservableObject {
         self._feedClientOptions = self.feedClientOptions
     }
     
-    func refreshFeed() async {
+    public func refreshFeed() async {
         do {
             self.feedClientOptions.tenant = tenantId
             self._feedClientOptions = feedClientOptions
@@ -51,7 +51,7 @@ class KnockInAppFeedViewModel: ObservableObject {
         }
     }
 
-    func initializeFeed() async {
+    public func initializeFeed() async {
         await refreshFeed()
         Knock.shared.feedManager?.connectToFeed()
         Knock.shared.feedManager?.on(eventName: "new-message") { [weak self] _ in
@@ -70,7 +70,7 @@ class KnockInAppFeedViewModel: ObservableObject {
         }
     }
     
-    func archiveItem(_ item: Knock.FeedItem) async {
+    public func archiveItem(_ item: Knock.FeedItem) async {
         do {
             let message = try await Knock.shared.updateMessageStatus(messageId: item.id, status: .archive)
             
@@ -92,7 +92,7 @@ class KnockInAppFeedViewModel: ObservableObject {
     }
     
     @MainActor
-    func markAllAsSeen() async {
+    public func markAllAsSeen() async {
         if feed.meta.unseen_count > 0 {
             let feedOptions = Knock.FeedClientOptions(status: .all, tenant: tenantId, has_tenant: true, archived: nil)
             do {
@@ -113,15 +113,15 @@ class KnockInAppFeedViewModel: ObservableObject {
         }
     }
     
-    func feedItemButtonTapped(item: Knock.FeedItem, actionString: String) {
+    public func feedItemButtonTapped(item: Knock.FeedItem, actionString: String) {
         didTapFeedItemButtonPublisher.send(actionString)
     }
     
-    func feedItemRowTapped(item: Knock.FeedItem) {
+    public func feedItemRowTapped(item: Knock.FeedItem) {
         didTapFeedItemRowPublisher.send(item)
     }
     
-    func didSwipeRow(item: Knock.FeedItem, swipeAction: FeedNotificationRowSwipeAction) {
+    public func didSwipeRow(item: Knock.FeedItem, swipeAction: FeedNotificationRowSwipeAction) {
         switch swipeAction {
         case .archive:
             Task {

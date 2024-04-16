@@ -8,21 +8,37 @@
 import Foundation
 import SwiftUI
 
-struct FeedNotificationRowTheme {
-    var showAvatarView: Bool = true
-    var htmlFont: String = "-apple-system, sans-serif"
-    var htmlFontSize: Int = 20
-    var backgroundColor: Color = .clear
-    var swipeRightConfig: FeedNotificationRowSwipeConfig? = .init(action: .archive)
-    var swipeLeftConfig: FeedNotificationRowSwipeConfig? = .init(action: .markAsRead)
+public struct FeedNotificationRowTheme {
+    public var showAvatarView: Bool = true
+    public var htmlFont: String = "-apple-system, sans-serif"
+    public var htmlFontSize: Int = 20
+    public var backgroundColor: Color = .clear
+    public var swipeRightConfig: FeedNotificationRowSwipeConfig? = .init(action: .archive)
+    public var swipeLeftConfig: FeedNotificationRowSwipeConfig? = .init(action: .markAsRead)
+    
+    public init(
+        showAvatarView: Bool = true,
+        htmlFont: String = "-apple-system, sans-serif",
+        htmlFontSize: Int = 20,
+        backgroundColor: Color = .clear,
+        swipeRightConfig: FeedNotificationRowSwipeConfig? = .init(action: .archive),
+        swipeLeftConfig: FeedNotificationRowSwipeConfig? = .init(action: .markAsRead)
+    ) {
+        self.showAvatarView = showAvatarView
+        self.htmlFont = htmlFont
+        self.htmlFontSize = htmlFontSize
+        self.backgroundColor = backgroundColor
+        self.swipeRightConfig = swipeRightConfig
+        self.swipeLeftConfig = swipeLeftConfig
+    }
 }
 
-enum FeedNotificationRowSwipeAction {
+public enum FeedNotificationRowSwipeAction {
     case archive
     case markAsRead
     case markAsSeen
     
-    var defaultTitle: String {
+    public var defaultTitle: String {
         switch self {
         case .archive: return "Archive"
         case .markAsRead: return "Mark As Read"
@@ -30,7 +46,7 @@ enum FeedNotificationRowSwipeAction {
         }
     }
     
-    var defaultSystemImage: String {
+    public var defaultSystemImage: String {
         switch self {
         case .archive: return "trash"
         case .markAsRead: return "eye"
@@ -38,7 +54,7 @@ enum FeedNotificationRowSwipeAction {
         }
     }
     
-    var defaultSwipeColor: Color {
+    public var defaultSwipeColor: Color {
         switch self {
         case .archive: return .red
         case .markAsRead: return .blue
@@ -47,14 +63,20 @@ enum FeedNotificationRowSwipeAction {
     }
 }
 
-struct FeedNotificationRowSwipeConfig {
-    var action: FeedNotificationRowSwipeAction
-    var title: String
-    var systemImage: String
-    var swipeColor: Color
-    var showIcon: Bool
+public struct FeedNotificationRowSwipeConfig {
+    public var action: FeedNotificationRowSwipeAction
+    public var title: String
+    public var systemImage: String
+    public var swipeColor: Color
+    public var showIcon: Bool
     
-    init(action: FeedNotificationRowSwipeAction, title: String? = nil, systemImage: String? = nil, swipeColor: Color? = nil, showIcon: Bool = true) {
+    public init(
+        action: FeedNotificationRowSwipeAction,
+        title: String? = nil,
+        systemImage: String? = nil,
+        swipeColor: Color? = nil,
+        showIcon: Bool = true
+    ) {
         self.action = action
         self.title = title ?? action.defaultTitle
         self.systemImage = systemImage ?? action.defaultSystemImage

@@ -8,16 +8,16 @@
 import Foundation
 import SwiftUI
 
-struct KnockInAppFeedNotificationIconButtonTheme {
-    var buttonImage: Image
-    var buttonImageForeground: Color
-    var buttonImageFont: Font
-    var showBadgeWithCount: Bool
-    var badgeCountFont: Font
-    var badgeColor: Color
-    var badgeCountColor: Color
+public struct KnockInAppFeedNotificationIconButtonTheme {
+    public var buttonImage: Image
+    public var buttonImageForeground: Color
+    public var buttonImageFont: Font
+    public var showBadgeWithCount: Bool
+    public var badgeCountFont: Font
+    public var badgeColor: Color
+    public var badgeCountColor: Color
     
-    init(buttonImage: Image = Image(systemName: "bell"),
+    public init(buttonImage: Image = Image(systemName: "bell"),
          buttonImageForeground: Color = .gray,
          buttonImageFont: Font = .title2,
          showBadgeWithCount: Bool = true,
