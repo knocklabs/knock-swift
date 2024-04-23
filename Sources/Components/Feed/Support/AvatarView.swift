@@ -10,11 +10,10 @@ import SwiftUI
 struct AvatarView: View {
     let imageURLString: String?
     let name: String?
-    var size: CGFloat? = nil
-    
-    private var _size: CGFloat {
-        return size ?? 50
-    }
+    var backgroundColor: Color = KnockColor.Gray.gray5
+    var font: Font = .knock1.weight(.medium)
+    var textColor: Color = KnockColor.Gray.gray11
+    var size: CGFloat = 32
     
     var body: some View {
         Group {
@@ -37,23 +36,19 @@ struct AvatarView: View {
                 initialsView()
             }
         }
-        .frame(width: _size, height: _size)
-        .background(Color.gray.opacity(0.1))
-        .foregroundColor(.primary)
-        .font(.headline)
+        .frame(width: size, height: size)
+        .background(backgroundColor)
         .clipShape(Circle())
-        .overlay(Circle().stroke(Color.gray, lineWidth: 1))
     }
     
     @ViewBuilder
     private func initialsView() -> some View {
         if let initials = generateInitials() {
             Text(initials)
-                .fontWeight(.bold)
+                .font(font)
+                .foregroundColor(textColor)
         } else {
-            Image(systemName: "person")
-                .resizable()
-                .padding()
+            EmptyView()
         }
     }
     

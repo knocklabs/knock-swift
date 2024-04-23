@@ -9,78 +9,72 @@ import Foundation
 import SwiftUI
 
 public struct FeedNotificationRowTheme {
-    public var showAvatarView: Bool = true
-    public var htmlFont: String = "-apple-system, sans-serif"
-    public var htmlFontSize: Int = 20
-    public var backgroundColor: Color = .clear
-    public var swipeRightConfig: FeedNotificationRowSwipeConfig? = .init(action: .archive)
-    public var swipeLeftConfig: FeedNotificationRowSwipeConfig? = .init(action: .markAsRead)
+    public var showAvatarView: Bool // Show or hide the avatar/initials view in the upper left corner of the row
+    public var avatarViewTheme: AvatarViewTheme // Customize styling of avatarview
+    public var notificationContentCSS: String? // Customize the css of the markdown html of the notification body
+    public var backgroundColor: Color // Background color of the FeedNoticationRow
+    public var swipeRightConfig: SwipeButtonConfig? // Set this to nil to remove the right swipe action
+    public var swipeLeftConfig: SwipeButtonConfig? // Set this to nil to remove the left swipe action
+    public var unreadNotificationCircleColor: Color // Color of the unread circle indicator in the top left of the row
+    public var sentAtDateFormatter: DateFormatter // DateFormatter for the sent timestamp at the bottom of the row
+    public var sentAtDateFont: Font // Font for sent timestamp
+    public var sentAtDateTextColor: Color // Color for sent timestamp
+    public var primaryActionButtonConfig: ActionButtonConfig // Styling for primary action buttons
+    public var secondaryActionButtonConfig: ActionButtonConfig // Styling for secondary action buttons
+    public var tertiaryActionButtonConfig: ActionButtonConfig // Styling for tertiary action buttons
     
     public init(
-        showAvatarView: Bool = true,
-        htmlFont: String = "-apple-system, sans-serif",
-        htmlFontSize: Int = 20,
-        backgroundColor: Color = .clear,
-        swipeRightConfig: FeedNotificationRowSwipeConfig? = .init(action: .archive),
-        swipeLeftConfig: FeedNotificationRowSwipeConfig? = .init(action: .markAsRead)
+        showAvatarView: Bool? = nil,
+        avatarViewTheme: AvatarViewTheme? = nil,
+        notificationContentCSS: String? = nil,
+        backgroundColor: Color? = nil,
+        swipeRightConfig: SwipeButtonConfig? = FeedNotificationRowSwipeAction.markAsRead.defaultConfig,
+        swipeLeftConfig: SwipeButtonConfig? = FeedNotificationRowSwipeAction.archive.defaultConfig,
+        unreadNotificationCircleColor: Color? = nil,
+        sentAtDateFormatter: DateFormatter? = nil,
+        sentAtDateFont: Font? = nil,
+        sentAtDateTextColor: Color? = nil,
+        primaryActionButtonConfig: ActionButtonConfig? = nil,
+        secondaryActionButtonConfig: ActionButtonConfig? = nil,
+        tertiaryActionButtonConfig: ActionButtonConfig? = nil
     ) {
-        self.showAvatarView = showAvatarView
-        self.htmlFont = htmlFont
-        self.htmlFontSize = htmlFontSize
-        self.backgroundColor = backgroundColor
+        self.showAvatarView = showAvatarView ?? true
+        self.avatarViewTheme = avatarViewTheme ?? .init()
+        self.notificationContentCSS = notificationContentCSS
+        self.backgroundColor = backgroundColor ?? KnockColor.Surface.surface1
         self.swipeRightConfig = swipeRightConfig
         self.swipeLeftConfig = swipeLeftConfig
+        self.unreadNotificationCircleColor = unreadNotificationCircleColor ?? KnockColor.Blue.blue9
+        self.sentAtDateFormatter = sentAtDateFormatter ?? defaultDateFormatter
+        self.sentAtDateFont = sentAtDateFont ?? .knock2.weight(.medium)
+        self.sentAtDateTextColor = sentAtDateTextColor ?? KnockColor.Gray.gray9
+        self.primaryActionButtonConfig = primaryActionButtonConfig ?? ActionButton.Style.primary.defaultConfig
+        self.secondaryActionButtonConfig = secondaryActionButtonConfig ?? ActionButton.Style.secondary.defaultConfig
+        self.tertiaryActionButtonConfig = tertiaryActionButtonConfig ?? ActionButton.Style.tertiary.defaultConfig
     }
+    
+    private var defaultDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d 'at' h:mm a"
+        return formatter
+    }()
 }
 
-public enum FeedNotificationRowSwipeAction {
-    case archive
-    case markAsRead
-    case markAsSeen
-    
-    public var defaultTitle: String {
-        switch self {
-        case .archive: return "Archive"
-        case .markAsRead: return "Mark As Read"
-        case .markAsSeen: return "Mark As Seen"
-        }
-    }
-    
-    public var defaultSystemImage: String {
-        switch self {
-        case .archive: return "trash"
-        case .markAsRead: return "eye"
-        case .markAsSeen: return "eye"
-        }
-    }
-    
-    public var defaultSwipeColor: Color {
-        switch self {
-        case .archive: return .red
-        case .markAsRead: return .blue
-        case .markAsSeen: return .blue
-        }
-    }
-}
-
-public struct FeedNotificationRowSwipeConfig {
-    public var action: FeedNotificationRowSwipeAction
-    public var title: String
-    public var systemImage: String
-    public var swipeColor: Color
-    public var showIcon: Bool
+public struct AvatarViewTheme {
+    public var avatarViewBackgroundColor: Color
+    public var avatarViewInitialsFont: Font
+    public var avatarViewInitialsColor: Color
+    public var avatarViewSize: CGFloat
     
     public init(
-        action: FeedNotificationRowSwipeAction,
-        title: String? = nil,
-        systemImage: String? = nil,
-        swipeColor: Color? = nil,
-        showIcon: Bool = true
+        avatarViewBackgroundColor: Color? = nil,
+        avatarViewInitialsFont: Font? = nil,
+        avatarViewInitialsColor: Color? = nil,
+        avatarViewSize: CGFloat? = nil
     ) {
-        self.action = action
-        self.title = title ?? action.defaultTitle
-        self.systemImage = systemImage ?? action.defaultSystemImage
-        self.swipeColor = swipeColor ?? action.defaultSwipeColor
-        self.showIcon = showIcon
+        self.avatarViewBackgroundColor = avatarViewBackgroundColor ?? KnockColor.Gray.gray5
+        self.avatarViewInitialsFont = avatarViewInitialsFont ?? .knock1.weight(.medium)
+        self.avatarViewInitialsColor = avatarViewInitialsColor ?? KnockColor.Gray.gray11
+        self.avatarViewSize = avatarViewSize ?? 32
     }
 }

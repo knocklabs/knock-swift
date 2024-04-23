@@ -6,6 +6,8 @@
 //
 
 import Foundation
+import UIKit
+import SwiftUI
 
 public extension Encodable {
     /**
@@ -118,5 +120,39 @@ public extension Array<Knock.ChannelTypePreferenceItem> {
         }
 
         return result
+    }
+}
+
+extension Date {
+    func formattedAsString() -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "MMM d 'at' h:mm a" // "May 1 at 9:41 AM"
+        return dateFormatter.string(from: self)
+    }
+}
+
+extension UIColor {
+    var toHexString: String {
+        var r: CGFloat = 0
+        var g: CGFloat = 0
+        var b: CGFloat = 0
+        var a: CGFloat = 0
+        getRed(&r, green: &g, blue: &b, alpha: &a)
+        
+        let rgb: Int = (Int)(r * 255) << 16 | (Int)(g * 255) << 8 | (Int)(b * 255) << 0
+        
+        return String(format: "#%06x", rgb)
+    }
+}
+
+extension Color {
+    var toHexString: String {
+        UIColor(self).toHexString
+    }
+}
+
+extension EnvironmentValues {
+    var isDarkMode: Bool {
+        self.colorScheme == .dark
     }
 }

@@ -19,36 +19,32 @@ public struct KnockInAppFeedNotificationIconButton: View {
     
     public var body: some View {
         Button(action: action) {
-            getBellIcon(unseenCount: viewModel.feed.meta.unseen_count)
-        }
-    }
-    
-    @ViewBuilder
-    private func getBellIcon(unseenCount: Int) -> some View {
-        ZStack {
-            Image(systemName: (unseenCount > 0 && !theme.showBadgeWithCount) ? "bell.badge" : "bell")
-                .font(theme.buttonImageFont)
-                .foregroundColor(theme.buttonImageForeground) // Use foregroundColor for consistency
+            ZStack {
+                Image(systemName: (viewModel.unreadCount() > 0 && !theme.showBadgeWithCount) ? "bell.badge" : "bell")
+                    .font(theme.buttonImageFont)
+                    .foregroundColor(theme.buttonImageForeground)
 
-            if unseenCount > 0 && theme.showBadgeWithCount {
-                // Position the badge number at the top-right of the bell icon
-                Text("\(unseenCount)")
-                    .font(.caption2) // Smaller font size for the count
-                    .fontWeight(.bold)
-                    .foregroundColor(theme.badgeCountColor)
-                    .frame(width: 15, height: 15)
-                    .background(theme.badgeColor)
-                    .clipShape(Circle())
-                    .offset(x: 8, y: -10)
+                if viewModel.unreadCount() > 0 && theme.showBadgeWithCount {
+                    Text("\(viewModel.unreadCount())")
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .foregroundColor(theme.badgeCountColor)
+                        .frame(width: 10, height: 10)
+                        .background(theme.badgeColor)
+                        .clipShape(Circle())
+                        .offset(x: 8, y: -10)
+                }
             }
         }
     }
+    
+    
 }
 
 struct KnockInAppFeedNotificationIconButton_Previews: PreviewProvider {
     static var previews: some View {
         let viewModel = KnockInAppFeedViewModel()
-        viewModel.feed.meta.unseen_count = 3
+        viewModel.feed.meta.unseenCount = 67
         
         return KnockInAppFeedNotificationIconButton(action: {}).environmentObject(viewModel)
     }

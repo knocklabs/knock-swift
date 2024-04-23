@@ -14,76 +14,78 @@ public struct KnockInAppFeedView: View {
     public init(theme: KnockInAppFeedTheme = .init()) {
         self.theme = theme
     }
-    
+    @State private var selectedItemId: String? = nil
+
     public var body: some View {
         VStack(alignment: .leading, spacing: .zero) {
-            VStack(alignment: .leading, spacing: 15) {
-                Text(theme.titleString)
-                    .font(theme.titleFont)
-                    .foregroundStyle(theme.titleColor)
-                    .padding(.horizontal, 24)
+            VStack(alignment: .leading, spacing: .zero) {
+                if let title = theme.titleString {
+                    Text(title)
+                        .font(theme.titleFont)
+                        .foregroundStyle(theme.titleColor)
+                        .padding(.horizontal, 24)
+                }
                 
                 if viewModel.filterOptions.count > 1 {
-                    Picker("Filter", selection: $viewModel.currentFilter) {
-                        ForEach(viewModel.filterOptions, id: \.self) { filter in
-                            Text(filter.rawValue.capitalized)
-                        }
-                    }
-                    .pickerStyle(SegmentedPickerStyle())
-                    .padding(.horizontal, 24)
+                    filterTabView()
+                        .padding(.bottom, 12)
                 }
-                Divider()
+                
+                if !viewModel.topButtonActions.isEmpty {
+                    topActionButtonsView()
+                        .padding(.bottom, 12)
+                    Divider()
+                }
             }
             .background(theme.upperBackgroundColor)
             
-            
             Group {
                 if viewModel.feed.entries.isEmpty {
-                    VStack(alignment: .center, spacing: 12) {
-                        
-                        if let title = theme.emptyViewTitle {
-                            Text(title)
-                                .font(theme.emptyViewTitleFont)
-                                .foregroundStyle(theme.emptyViewTitleColor)
-                                .multilineTextAlignment(.center)
+                    EmptyFeedView(config: viewModel.currentFilter.emptyViewConfig) {
+                        Task {
+                            await viewModel.refreshFeed()
                         }
-                        
-                        if let subtitle = theme.emptyViewSubtitle {
-                            Text(subtitle)
-                                .font(theme.emptyViewSubtitleFont)
-                                .foregroundStyle(theme.emptyViewSubtitleColor)
-                                .multilineTextAlignment(.center)
-                        }
-               
-                        Spacer()
                     }
-                    .padding(24)
+                    .frame(maxWidth: .infinity)
+                    .padding(48)
                     
                 } else {
                     List {
                         ForEach(viewModel.feed.entries, id: \.id) { item in
-                            KnockFeedNotificationRow(item: item, theme: .init()) { buttonTapString in
-                                print("didTapRowButton")
+                            KnockFeedNotificationRow(item: item, isRead: viewModel.itemIsSeen(item: item), theme: .init()) { buttonTapString in
                                 viewModel.feedItemButtonTapped(item: item, actionString: buttonTapString)
                             }
                             .listRowInsets(EdgeInsets())
                             .listRowSeparator(.hidden)
+                            .listRowBackground(theme.rowTheme.backgroundColor)
                             .contentShape(Rectangle()) // Make the entire row tappable
+                            .background(self.selectedItemId == item.id ? Color.gray.opacity(0.4) : .clear)
+                            .animation(.easeInOut, value: self.selectedItemId)
                             .onTapGesture {
-                                print("Row tapped")
+                                self.selectedItemId = item.id
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                                    self.selectedItemId = nil
+                                }
                                 viewModel.feedItemRowTapped(item: item)
                             }
-                            .listRowBackground(theme.rowTheme.backgroundColor)
                             .swipeActions(edge: .trailing) {
                                 if let config = theme.rowTheme.swipeLeftConfig {
-                                    swipeButton(item: item, config: config)
+                                    SwipeButton(config: config) {
+                                        viewModel.didSwipeRow(item: item, swipeAction: config.action)
+                                    }
                                 }
                             }
                             .swipeActions(edge: .leading) {
                                 if let config = theme.rowTheme.swipeRightConfig {
-                                    swipeButton(item: item, config: config)
+                                    SwipeButton(config: config) {
+                                        viewModel.didSwipeRow(item: item, swipeAction: config.action)
+                                    }
                                 }
                             }
+                        }
+                        
+                        if viewModel.isMoreContentAvailable() {
+                            lastRowView()
                         }
                     }
                     .listStyle(PlainListStyle())
@@ -94,29 +96,86 @@ public struct KnockInAppFeedView: View {
             }
             .background(theme.lowerBackgroundColor)
         }
+        .task {
+            await viewModel.refreshFeed()
+        }
         .onDisappear {
-            Task {
-                await viewModel.markAllAsSeen()
+            if viewModel.markAllAsReadOnClose {
+                Task {
+                    await viewModel.markAllAsRead()
+                }
             }
         }
     }
     
     @ViewBuilder
-    private func swipeButton(item: Knock.FeedItem, config: FeedNotificationRowSwipeConfig) -> some View {
-        Button {
-            viewModel.didSwipeRow(item: item, swipeAction: config.action)
-        } label: {
-            Label(config.title, systemImage: config.showIcon ? config.systemImage : "")
+    private func lastRowView() -> some View {
+        HStack {
+            Spacer()
+            ProgressView()
+            Spacer()
         }
-        .tint(config.swipeColor)
+        .listRowInsets(EdgeInsets())
+        .listRowSeparator(.hidden)
+        .contentShape(Rectangle())
+        .listRowBackground(theme.rowTheme.backgroundColor)
+        .frame(height: 50)
+        .padding(.bottom, 24)
+        .task {
+            await viewModel.fetchNewPageOfFeedItems()
+        }
+    }
+    
+    @ViewBuilder
+    private func filterTabView() -> some View {
+        ZStack(alignment: .bottom) {
+            Divider()
+                .frame(height: 1)
+                .background(KnockColor.Gray.gray4)
+
+            HStack(spacing: .zero
+            ) {
+                ForEach(viewModel.filterOptions, id: \.self) { option in
+                    Text(option.title)
+                        .font(.knock2.weight(.medium))
+                        .foregroundColor(option == viewModel.currentFilter ? KnockColor.Accent.accent11 : KnockColor.Gray.gray11)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 16)
+                        .overlay(
+                            Rectangle()
+                                .frame(height: 1)
+                                .foregroundColor(option == viewModel.currentFilter ? KnockColor.Accent.accent9 : .clear),
+                            alignment: .bottom
+                        )
+                        .onTapGesture {
+                            withAnimation {
+                                viewModel.currentFilter = option
+                            }
+                        }
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 24)
+        }
+        
+    }
+    
+    @ViewBuilder
+    private func topActionButtonsView() -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            ForEach(viewModel.topButtonActions, id: \.self) { option in
+                ActionButton(title: option.title, config: theme.rowTheme.tertiaryActionButtonConfig) {
+                    
+                }
+            }
+        }
+        .padding(.horizontal, 24)
     }
 }
 
 struct KnockInAppFeedView_Previews: PreviewProvider {
     static var previews: some View {
-        let viewModel = KnockInAppFeedViewModel()
-        viewModel.feed.meta.unseen_count = 3
-        
+        let viewModel = KnockInAppFeedViewModel()        
         let markdown = Knock.MarkdownContentBlock(name: "markdown", content: "", rendered: "<p>Hey <strong>Dennis</strong> 👋 - Alan Grant completed an activity.</p>")
                 
         let buttons = Knock.ButtonSetContentBlock(name: "buttons", buttons: [Knock.BlockActionButton(label: "Primary", name: "primary", action: ""), Knock.BlockActionButton(label: "Secondary", name: "secondary", action: "")])
@@ -124,7 +183,11 @@ struct KnockInAppFeedView_Previews: PreviewProvider {
         let item = Knock.FeedItem(__cursor: "", actors: [], activities: [], blocks: [markdown, buttons], data: [:], id: "", inserted_at: nil, interacted_at: nil, clicked_at: nil, link_clicked_at: nil, total_activities: 0, total_actors: 0, updated_at: nil)
         
         viewModel.feed.entries = [item, item, item, item]
+        viewModel.feed.entries = []
         
-        return KnockInAppFeedView().environmentObject(viewModel)
+        let theme = KnockInAppFeedTheme(titleString: "Notifications")
+        
+        return KnockInAppFeedView(theme: theme)
+            .environmentObject(viewModel)
     }
 }

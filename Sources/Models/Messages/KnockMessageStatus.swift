@@ -32,7 +32,9 @@ public extension Knock {
         case seen
         case read
         case interacted
-        case archive
+        case archived
+        case unread
+        case unseen
     }
     
     enum KnockMessageStatusBatchUpdateType: String, Codable {

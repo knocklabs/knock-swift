@@ -108,11 +108,11 @@ public extension Knock {
             - type: The kind of update
             - options: All the options currently set on the feed to scope as much as possible the bulk update
          */
-        public func makeBulkStatusUpdate(type: BulkChannelMessageStatusUpdateType, options: FeedClientOptions) async throws -> BulkOperation {
+        public func makeBulkStatusUpdate(type: KnockMessageStatusBatchUpdateType, options: FeedClientOptions) async throws -> BulkOperation {
             try await feedModule.makeBulkStatusUpdate(type: type, options: options)
         }
         
-        public func makeBulkStatusUpdate(type: BulkChannelMessageStatusUpdateType, options: FeedClientOptions, completionHandler: @escaping ((Result<BulkOperation, Error>) -> Void)) {
+        public func makeBulkStatusUpdate(type: KnockMessageStatusBatchUpdateType, options: FeedClientOptions, completionHandler: @escaping ((Result<BulkOperation, Error>) -> Void)) {
             Task {
                 do {
                     let operation = try await makeBulkStatusUpdate(type: type, options: options)

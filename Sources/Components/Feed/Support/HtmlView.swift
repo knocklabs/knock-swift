@@ -8,37 +8,68 @@
 import Foundation
 import SwiftUI
 import UIKit
+import WebKit
 
 struct HtmlView: UIViewRepresentable {
+    @Environment(\.colorScheme) var colorScheme
+    
     let html: String
+    var css: String? = nil
+    
+    var _css: String {
+        css ?? """
+            * {
+                font-family: -apple-system, sans-serif;
+                font-size: 16px;
+                color: \(colorScheme == .dark ? "edeef0" : "1c2024");
+            }
+            p {
+                margin-top: 0px;
+                margin-bottom: 12px;
+            }
+            blockquote p {
+                color: \(colorScheme == .dark ? "b0b4ba" : "60646c");
+                margin-top: 0px;
+                margin-bottom: 4px;
+            }
+        """
+    }
     
     func updateUIView(_ uiView: UITextView, context: UIViewRepresentableContext<Self>) {
-        DispatchQueue.main.async {
-            let data = Data(self.html.utf8)
-            let options: [NSAttributedString.DocumentReadingOptionKey: Any] = [
-                .documentType: NSAttributedString.DocumentType.html,
-                .characterEncoding: String.Encoding.utf8.rawValue
-            ]
-            
-            if let attributedString = try? NSAttributedString(data: data, options: options, documentAttributes: nil) {
-                // For text visualisation only, no editing.
-                uiView.isEditable = false
-                uiView.backgroundColor = .clear
-                
-                // Make UITextView flex to available width, but require height to fit its content.
-                // Also disable scrolling so the UITextView will set its `intrinsicContentSize` to match its text content.
-                uiView.isScrollEnabled = false
-                uiView.setContentHuggingPriority(.defaultLow, for: .vertical)
-                uiView.setContentHuggingPriority(.defaultLow, for: .horizontal)
-                uiView.setContentCompressionResistancePriority(.required, for: .vertical)
-                uiView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-                uiView.attributedText = attributedString
-            }
+        let options: [NSAttributedString.DocumentReadingOptionKey: Any] = [
+            .documentType: NSAttributedString.DocumentType.html,
+            .characterEncoding: String.Encoding.utf8.rawValue
+        ]
+        
+        let htmlStart = """
+            <head>
+                <style>
+                    \(_css)
+                </style>
+            </head>
+        """
+        
+        let full = "\(htmlStart)\(html)"
+        
+        if let data = full.data(using: .utf8),
+           let attributedString = try? NSAttributedString(data: data, options: options, documentAttributes: nil) {
+            uiView.attributedText = attributedString
         }
     }
     
     func makeUIView(context: UIViewRepresentableContext<Self>) -> UITextView {
-        let label = UITextView()
-        return label
+        let textView = UITextView()
+        textView.textContainerInset = .zero
+        textView.textContainer.lineFragmentPadding = 0
+        
+        textView.isEditable = false
+        textView.backgroundColor = .clear
+        textView.isScrollEnabled = false
+        textView.setContentHuggingPriority(.defaultLow, for: .vertical)
+        textView.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        textView.setContentCompressionResistancePriority(.required, for: .vertical)
+        textView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        
+        return textView
     }
 }

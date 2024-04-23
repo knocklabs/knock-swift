@@ -10,24 +10,37 @@ import Foundation
 public extension Knock {
     
     // https://docs.knock.app/reference#get-feed#feeds
-    struct Feed: Codable {
+    struct Feed {
         public var entries: [Knock.FeedItem] = []
         public var meta: FeedMetadata = FeedMetadata()
-        public var page_info: PageInfo = PageInfo()
+        public var pageInfo: PageInfo = PageInfo()
         
-        public init(from decoder: Decoder) throws {
-            let container: KeyedDecodingContainer<Knock.Feed.CodingKeys> = try decoder.container(keyedBy: Knock.Feed.CodingKeys.self)
-            self.entries = try container.decode([Knock.FeedItem].self, forKey: Knock.Feed.CodingKeys.entries)
-            self.meta = try container.decode(Knock.FeedMetadata.self, forKey: Knock.Feed.CodingKeys.meta)
-            self.page_info = try container.decode(Knock.PageInfo.self, forKey: Knock.Feed.CodingKeys.page_info)
-        }
-        
-        public init(entries: [FeedItem], meta: FeedMetadata, page_info: PageInfo) {
+        public init(entries: [FeedItem] = [], meta: FeedMetadata = FeedMetadata(), pageInfo: PageInfo = PageInfo()) {
             self.entries = entries
             self.meta = meta
-            self.page_info = page_info
+            self.pageInfo = pageInfo
         }
-        
-        public init() {}
+    }
+}
+
+extension Knock.Feed: Codable {
+    enum CodingKeys: String, CodingKey {
+        case entries
+        case meta
+        case pageInfo = "page_info"
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container: KeyedDecodingContainer<CodingKeys> = try decoder.container(keyedBy: CodingKeys.self)
+        self.entries = try container.decodeIfPresent([Knock.FeedItem].self, forKey: .entries) ?? []
+        self.meta = try container.decodeIfPresent(Knock.FeedMetadata.self, forKey: .meta) ?? Knock.FeedMetadata()
+        self.pageInfo = try container.decodeIfPresent(Knock.PageInfo.self, forKey: .pageInfo) ?? Knock.PageInfo()
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(entries, forKey: .entries)
+        try container.encode(meta, forKey: .meta)
+        try container.encode(pageInfo, forKey: .pageInfo)
     }
 }

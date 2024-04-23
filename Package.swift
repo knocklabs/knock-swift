@@ -23,7 +23,10 @@ let package = Package(
         .target(
             name: "Knock",
             dependencies: ["SwiftPhoenixClient"],
-            path: "Sources"),
+            path: "Sources",
+            resources: [
+                .process("Resources/Colors.xcassets")
+            ]),
         
         .testTarget(
             name: "KnockTests",

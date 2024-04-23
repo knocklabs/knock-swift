@@ -26,6 +26,7 @@ extension Knock {
         case only
     }
     
+    @available(*, deprecated, renamed: "KnockMessageStatusBatchUpdateType", message: "To remove redundency, we will be removing BulkChannelMessageStatusUpdateType. Please use KnockMessageStatusBatchUpdateType instead")
     public enum BulkChannelMessageStatusUpdateType: String {
         case seen
         case read
