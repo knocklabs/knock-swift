@@ -1,5 +1,5 @@
 //
-//  KnockInAppFeedFilter.swift
+//  InAppFeedFilter.swift
 //
 //
 //  Created by Matt Gardner on 4/24/24.
@@ -9,7 +9,7 @@ import Foundation
 import SwiftUI
 
 extension Knock {
-    public struct KnockInAppFeedFilter: Hashable {
+    public struct InAppFeedFilter: Hashable {
         public var scope: Knock.FeedItemScope
         public var title: String
         public var emptyViewConfig: EmptyFeedViewConfig
@@ -17,7 +17,7 @@ extension Knock {
         public init(scope: Knock.FeedItemScope, title: String? = nil, emptyViewConfig: EmptyFeedViewConfig? = nil) {
             self.scope = scope
             self.title = title ?? scope.rawValue.capitalized
-            self.emptyViewConfig = emptyViewConfig ?? KnockInAppFeedFilter.defaultEmptyViewConfig(scope: scope)
+            self.emptyViewConfig = emptyViewConfig ?? InAppFeedFilter.defaultEmptyViewConfig(scope: scope)
         }
         
         private static func defaultEmptyViewConfig(scope: Knock.FeedItemScope) -> EmptyFeedViewConfig {
@@ -34,7 +34,7 @@ extension Knock {
             }
         }
         
-        public static func == (lhs: KnockInAppFeedFilter, rhs: KnockInAppFeedFilter) -> Bool {
+        public static func == (lhs: InAppFeedFilter, rhs: InAppFeedFilter) -> Bool {
             return lhs.scope == rhs.scope
         }
         

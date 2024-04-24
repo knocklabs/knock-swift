@@ -162,7 +162,7 @@ extension Knock {
         }
         
         @ViewBuilder
-        private func topActionButtonsView(topButtons: [Knock.KnockFeedTopActionButtonType]) -> some View {
+        private func topActionButtonsView(topButtons: [Knock.FeedTopActionButtonType]) -> some View {
             HStack(alignment: .center, spacing: 12) {
                 ForEach(topButtons, id: \.self) { action in
                     ActionButton(title: action.title, config: theme.rowTheme.tertiaryActionButtonConfig) {

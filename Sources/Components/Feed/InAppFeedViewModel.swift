@@ -13,12 +13,12 @@ extension Knock {
     public class InAppFeedViewModel: ObservableObject {
         @Published public var feed: Knock.Feed = Knock.Feed()
         @Published public var tenantId: String?
-        @Published public var currentFilter: KnockInAppFeedFilter
+        @Published public var currentFilter: InAppFeedFilter
         
         public let hasTenant: Bool?
-        public let filterOptions: [KnockInAppFeedFilter]
+        public let filterOptions: [InAppFeedFilter]
         public let seenStatusType: ReadStatusType
-        public let topButtonActions: [Knock.KnockFeedTopActionButtonType]?
+        public let topButtonActions: [Knock.FeedTopActionButtonType]?
         public let markAllAsReadOnClose: Bool
         
         public let didTapFeedItemButtonPublisher = PassthroughSubject<String, Never>()
@@ -39,11 +39,11 @@ extension Knock {
             feedClientOptions: Knock.FeedClientOptions = .init(),
             tenantId: String? = nil,
             hasTenant: Bool? = nil,
-            currentFilter: KnockInAppFeedFilter? = nil,
-            filterOptions: [KnockInAppFeedFilter]? = nil,
+            currentFilter: InAppFeedFilter? = nil,
+            filterOptions: [InAppFeedFilter]? = nil,
             seenStatusType: ReadStatusType = .read,
             markAllAsReadOnClose: Bool = true,
-            topButtonActions: [Knock.KnockFeedTopActionButtonType]? = [.markAllAsRead(), .archiveRead()]
+            topButtonActions: [Knock.FeedTopActionButtonType]? = [.markAllAsRead(), .archiveRead()]
         ) {
             self.feedClientOptions = feedClientOptions
             
@@ -119,7 +119,7 @@ extension Knock {
             return feed.pageInfo.after != nil
         }
         
-        public func topActionButtonTapped(action: Knock.KnockFeedTopActionButtonType) async {
+        public func topActionButtonTapped(action: Knock.FeedTopActionButtonType) async {
             switch action {
             case .archiveAll(_):
                 await archiveAll(scope: .all)

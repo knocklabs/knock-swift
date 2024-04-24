@@ -73,6 +73,6 @@ extension Knock {
 }
 
 #Preview {
-    let filter = Knock.KnockInAppFeedFilter(scope: .archived)
+    let filter = Knock.InAppFeedFilter(scope: .archived)
     return Knock.EmptyFeedView(config: filter.emptyViewConfig) {}
 }
