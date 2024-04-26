@@ -42,10 +42,17 @@ extension Knock {
                 
                 ZStack(alignment: .bottom) {
                     Group {
-                        if viewModel.feed.entries.isEmpty {
+                        if viewModel.feedIsLoading {
+                            VStack(alignment: .center) {
+                                ProgressView()
+                                    .padding(.top, 48)
+                                Spacer()
+                            }
+                            .frame(maxWidth: .infinity)
+                        } else if viewModel.feed.entries.isEmpty {
                             Knock.EmptyFeedView(config: viewModel.currentFilter.emptyViewConfig) {
                                 Task {
-                                    await viewModel.refreshFeed()
+                                    await viewModel.refreshFeed(showLoadingIndicator: false)
                                 }
                             }
                             .frame(maxWidth: .infinity)
@@ -89,21 +96,29 @@ extension Knock {
                                 if viewModel.isMoreContentAvailable() {
                                     lastRowView()
                                 }
+                                
+                                Spacer()
+                                    .frame(height: 40)
+                                    .listRowSeparator(.hidden)
                             }
                             .listStyle(PlainListStyle())
                             .refreshable {
-                                await viewModel.refreshFeed()
+                                await viewModel.refreshFeed(showLoadingIndicator: false)
                             }
                         }
                     }
                     .background(theme.lowerBackgroundColor)
                     
-                    KnockImages.poweredByKnockIcon
-                        .shadow(radius: 3)
+                    if viewModel.shouldShowKnockIcon {
+                        KnockImages.poweredByKnockIcon
+                            .shadow(radius: 3)
+                    }
                 }
             }
-            .task {
-                await viewModel.refreshFeed()
+            .onAppear {
+                Task {
+                    await viewModel.refreshFeed(showLoadingIndicator: true)
+                }
             }
             .onDisappear {
                 Task {
@@ -124,7 +139,6 @@ extension Knock {
             .contentShape(Rectangle())
             .listRowBackground(theme.rowTheme.backgroundColor)
             .frame(height: 50)
-            .padding(.bottom, 24)
             .task {
                 await viewModel.fetchNewPageOfFeedItems()
             }
@@ -189,7 +203,8 @@ struct InAppFeedView_Previews: PreviewProvider {
         
         let item = Knock.FeedItem(__cursor: "", actors: [], activities: [], blocks: [markdown, buttons], data: [:], id: "", inserted_at: nil, interacted_at: nil, clicked_at: nil, link_clicked_at: nil, total_activities: 0, total_actors: 0, updated_at: nil)
         
-        viewModel.feed.entries = [item, item, item, item]
+        viewModel.feed.entries = [item, item, item, item, item, item, item, item, item]
+        viewModel.feedIsLoading = true
         
         let theme = Knock.InAppFeedTheme(titleString: "Notifications")
         
