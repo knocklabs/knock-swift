@@ -19,6 +19,7 @@ Pod::Spec.new do |spec|
   spec.swift_version = '5.3'
   spec.source_files  = "Sources/**/*"
     spec.resource_bundles = {
-    'Media' => ['Sources/Resources/Colors.xcassets']
+    'Colors' => ['Sources/Resources/Colors.xcassets']
+    'Media' => ['Sources/Resources/Media.xcassets']
   }
 end

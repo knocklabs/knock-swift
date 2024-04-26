@@ -17,9 +17,7 @@ extension Knock {
         
         public let hasTenant: Bool?
         public let filterOptions: [InAppFeedFilter]
-        public let seenStatusType: ReadStatusType
         public let topButtonActions: [Knock.FeedTopActionButtonType]?
-        public let markAllAsReadOnClose: Bool
         
         public let didTapFeedItemButtonPublisher = PassthroughSubject<String, Never>()
         public let didTapFeedItemRowPublisher = PassthroughSubject<Knock.FeedItem, Never>()
@@ -41,8 +39,6 @@ extension Knock {
             hasTenant: Bool? = nil,
             currentFilter: InAppFeedFilter? = nil,
             filterOptions: [InAppFeedFilter]? = nil,
-            seenStatusType: ReadStatusType = .read,
-            markAllAsReadOnClose: Bool = true,
             topButtonActions: [Knock.FeedTopActionButtonType]? = [.markAllAsRead(), .archiveRead()]
         ) {
             self.feedClientOptions = feedClientOptions
@@ -51,8 +47,6 @@ extension Knock {
             self.hasTenant = hasTenant ?? feedClientOptions.has_tenant
             self.filterOptions = filterOptions ?? [.init(scope: .all), .init(scope: .unread), .init(scope: .archived)]
             self.currentFilter = filterOptions?.first ?? .init(scope: .all)
-            self.seenStatusType = seenStatusType
-            self.markAllAsReadOnClose = markAllAsReadOnClose
             self.topButtonActions = topButtonActions
             
             self.feedClientOptions.status = self.currentFilter.scope
@@ -62,7 +56,7 @@ extension Knock {
             
             $currentFilter
                 .sink { [weak self] _ in
-                    self?.updateFilter()
+                    self?.filterDidChange()
                 }
                 .store(in: &cancellables)
         }
@@ -157,36 +151,23 @@ extension Knock {
         }
         
         public func markAllAsRead() async {
-            switch seenStatusType {
-            case .seen:
-                guard feed.meta.unseenCount > 0 else { return }
-            case .read:
-                guard feed.meta.unreadCount > 0 else { return }
-            }
-            guard let type = seenStatusType.toKnockBulkMessageStatusUpdateType() else { return }
+            guard feed.meta.unreadCount > 0 else { return }
             
             let feedOptions = Knock.FeedClientOptions(status: .all, tenant: tenantId, has_tenant: false, archived: nil)
             do {
-                let result = try await Knock.shared.feedManager?.makeBulkStatusUpdate(type: type, options: feedOptions)
+                let result = try await Knock.shared.feedManager?.makeBulkStatusUpdate(type: .read, options: feedOptions)
                 
-    //            await MainActor.run {
-    ////                switch readStatusType {
-    ////                case .seen: feed.meta.unseen_count = 0
-    ////                case .read: feed.meta.unread_count = 0
-    ////                }
-    //                let date = Date()
-    //                feed.entries = feed.entries.map { item in
-    //                    var newItem = item
-    //                    switch type {
-    //                    case .seen:
-    //                        newItem.seen_at = date
-    //                    case .read:
-    //                        newItem.read_at = date
-    //                    default: break
-    //                    }
-    //                    return newItem
-    //                }
-    //            }
+                await MainActor.run {
+                    feed.meta.unreadCount = 0
+                    let date = Date()
+                    feed.entries = feed.entries.map { item in
+                        var newItem = item
+                        if newItem.read_at == nil {
+                            newItem.read_at = date
+                        }
+                        return newItem
+                    }
+                }
                 await fetchNewMetaData()
             } catch {
                 Knock.shared.log(type: .error, category: .feed, message: "error in markAllAsRead: \(error.localizedDescription)")
@@ -206,17 +187,13 @@ extension Knock {
         }
         
         public func markAsRead(_ item: Knock.FeedItem) async {
-            guard let status = seenStatusType.toKnockMessageStatusUpdateType(), !itemIsSeen(item: item) else { return }
+            guard item.read_at == nil else { return }
             do {
-                let _ = try await Knock.shared.messageModule.updateMessageStatus(messageId: item.id, status: status)
+                let _ = try await Knock.shared.messageModule.updateMessageStatus(messageId: item.id, status: .read)
                 
                 if let index = feed.entries.firstIndex(where: { $0.id == item.id }) {
                     await MainActor.run {
-                        switch status {
-                        case .read: feed.entries[index].read_at = Date()
-                        case .seen: feed.entries[index].seen_at = Date()
-                        default: break
-                        }
+                        feed.entries[index].read_at = Date()
                     }
                 }
                 
@@ -227,17 +204,13 @@ extension Knock {
         }
         
         public func markAsUnread(_ item: Knock.FeedItem) async {
-            guard let status = seenStatusType.toKnockMessageStatusUpdateType(getInverse: true), itemIsSeen(item: item) else { return }
+            guard item.read_at != nil else { return }
             do {
-                let _ = try await Knock.shared.messageModule.updateMessageStatus(messageId: item.id, status: status)
+                let _ = try await Knock.shared.messageModule.updateMessageStatus(messageId: item.id, status: .unread)
                 
                 if let index = feed.entries.firstIndex(where: { $0.id == item.id }) {
                     await MainActor.run {
-                        switch status {
-                        case .unread: feed.entries[index].read_at = nil
-                        case .unseen: feed.entries[index].seen_at = nil
-                        default: break
-                        }
+                        feed.entries[index].read_at = nil
                     }
                 }
                 
@@ -285,23 +258,9 @@ extension Knock {
             }
         }
         
-        public func itemIsSeen(item: Knock.FeedItem) -> Bool {
-            switch seenStatusType {
-            case .seen: item.seen_at != nil
-            case .read: item.read_at != nil
-            }
-        }
-        
-        public func unreadCount() -> Int {
-            switch seenStatusType {
-            case .read: return feed.meta.unreadCount
-            case .seen: return feed.meta.unseenCount
-            }
-        }
-        
         // MARK: Private Methods
         
-        private func updateFilter() {
+        private func filterDidChange() {
             Task { [weak self] in
                 self?.feedClientOptions.status = self?.currentFilter.scope
                 self?._feedClientOptions.status = self?.currentFilter.scope
@@ -334,27 +293,5 @@ extension Knock {
             self.feed.pageInfo.after = feed.pageInfo.after
         }
         
-        // MARK: Nested Enums
-        
-        public enum ReadStatusType {
-            case read
-            case seen
-            
-            func toKnockBulkMessageStatusUpdateType(getInverse: Bool = false) -> Knock.KnockMessageStatusBatchUpdateType? {
-                switch self {
-                case .seen: return getInverse ? .unseen : .seen
-                case .read: return getInverse ? .unread : .read
-                }
-            }
-            
-            func toKnockMessageStatusUpdateType(getInverse: Bool = false) -> Knock.KnockMessageStatusUpdateType? {
-                switch self {
-                case .seen: return getInverse ? .unseen : .seen
-                case .read: return getInverse ? .unread : .read
-                }
-            }
-        }
-           
     }
-
 }

@@ -17,14 +17,17 @@ extension Knock {
         public var badgeCountFont: Font
         public var badgeColor: Color
         public var badgeCountColor: Color
+        public var notificationCountType: ReadStatusType
         
-        public init(buttonImage: Image = Image(systemName: "bell"),
-             buttonImageForeground: Color = .gray,
-             buttonImageFont: Font = .title2,
-             showBadgeWithCount: Bool = true,
-             badgeCountFont: Font = .caption2,
-             badgeColor: Color = .red,
-             badgeCountColor: Color = .white
+        public init(
+            buttonImage: Image = Image(systemName: "bell"),
+            buttonImageForeground: Color = .gray,
+            buttonImageFont: Font = .title2,
+            showBadgeWithCount: Bool = true,
+            badgeCountFont: Font = .caption2,
+            badgeColor: Color = .red,
+            badgeCountColor: Color = .white,
+            notificationCountType: ReadStatusType = .unread
         ) {
             self.buttonImage = buttonImage
             self.buttonImageForeground = buttonImageForeground
@@ -33,6 +36,12 @@ extension Knock {
             self.badgeCountFont = badgeCountFont
             self.badgeColor = badgeColor
             self.badgeCountColor = badgeCountColor
+            self.notificationCountType = notificationCountType
         }
+    }
+        
+    public enum ReadStatusType {
+        case unread
+        case unseen
     }
 }

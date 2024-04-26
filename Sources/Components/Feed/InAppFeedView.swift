@@ -40,71 +40,74 @@ extension Knock {
                 }
                 .background(theme.upperBackgroundColor)
                 
-                Group {
-                    if viewModel.feed.entries.isEmpty {
-                        EmptyFeedView(config: viewModel.currentFilter.emptyViewConfig) {
-                            Task {
+                ZStack(alignment: .bottom) {
+                    Group {
+                        if viewModel.feed.entries.isEmpty {
+                            Knock.EmptyFeedView(config: viewModel.currentFilter.emptyViewConfig) {
+                                Task {
+                                    await viewModel.refreshFeed()
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(48)
+                            
+                        } else {
+                            List {
+                                ForEach(viewModel.feed.entries, id: \.id) { item in
+                                    Knock.FeedNotificationRow(item: item) { buttonTapString in
+                                        viewModel.feedItemButtonTapped(item: item, actionString: buttonTapString)
+                                    }
+                                    .listRowInsets(EdgeInsets())
+                                    .listRowSeparator(.hidden)
+                                    .listRowBackground(theme.rowTheme.backgroundColor)
+                                    .contentShape(Rectangle()) // Make the entire row tappable
+                                    .background(self.selectedItemId == item.id ? Color.gray.opacity(0.4) : .clear)
+                                    .animation(.easeInOut, value: self.selectedItemId)
+                                    .onTapGesture {
+                                        self.selectedItemId = item.id
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                                            self.selectedItemId = nil
+                                        }
+                                        viewModel.feedItemRowTapped(item: item)
+                                    }
+                                    .swipeActions(edge: .trailing) {
+                                        if let config = theme.rowTheme.swipeLeftConfig {
+                                            Knock.SwipeButton(config: config) {
+                                                viewModel.didSwipeRow(item: item, swipeAction: config.action)
+                                            }
+                                        }
+                                    }
+                                    .swipeActions(edge: .leading) {
+                                        if let config = theme.rowTheme.swipeRightConfig {
+                                            Knock.SwipeButton(config: config) {
+                                                viewModel.didSwipeRow(item: item, swipeAction: config.action)
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                if viewModel.isMoreContentAvailable() {
+                                    lastRowView()
+                                }
+                            }
+                            .listStyle(PlainListStyle())
+                            .refreshable {
                                 await viewModel.refreshFeed()
                             }
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(48)
-                        
-                    } else {
-                        List {
-                            ForEach(viewModel.feed.entries, id: \.id) { item in
-                                FeedNotificationRow(item: item, isRead: viewModel.itemIsSeen(item: item), theme: .init()) { buttonTapString in
-                                    viewModel.feedItemButtonTapped(item: item, actionString: buttonTapString)
-                                }
-                                .listRowInsets(EdgeInsets())
-                                .listRowSeparator(.hidden)
-                                .listRowBackground(theme.rowTheme.backgroundColor)
-                                .contentShape(Rectangle()) // Make the entire row tappable
-                                .background(self.selectedItemId == item.id ? Color.gray.opacity(0.4) : .clear)
-                                .animation(.easeInOut, value: self.selectedItemId)
-                                .onTapGesture {
-                                    self.selectedItemId = item.id
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                                        self.selectedItemId = nil
-                                    }
-                                    viewModel.feedItemRowTapped(item: item)
-                                }
-                                .swipeActions(edge: .trailing) {
-                                    if let config = theme.rowTheme.swipeLeftConfig {
-                                        SwipeButton(config: config) {
-                                            viewModel.didSwipeRow(item: item, swipeAction: config.action)
-                                        }
-                                    }
-                                }
-                                .swipeActions(edge: .leading) {
-                                    if let config = theme.rowTheme.swipeRightConfig {
-                                        SwipeButton(config: config) {
-                                            viewModel.didSwipeRow(item: item, swipeAction: config.action)
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            if viewModel.isMoreContentAvailable() {
-                                lastRowView()
-                            }
-                        }
-                        .listStyle(PlainListStyle())
-                        .refreshable {
-                            await viewModel.refreshFeed()
-                        }
                     }
+                    .background(theme.lowerBackgroundColor)
+                    
+                    KnockImages.poweredByKnockIcon
+                        .shadow(radius: 3)
                 }
-                .background(theme.lowerBackgroundColor)
             }
             .task {
                 await viewModel.refreshFeed()
             }
             .onDisappear {
-                if viewModel.markAllAsReadOnClose {
-                    Task {
-                        await viewModel.markAllAsRead()
-                    }
+                Task {
+                    await viewModel.markAllAsRead()
                 }
             }
         }
@@ -165,7 +168,7 @@ extension Knock {
         private func topActionButtonsView(topButtons: [Knock.FeedTopActionButtonType]) -> some View {
             HStack(alignment: .center, spacing: 12) {
                 ForEach(topButtons, id: \.self) { action in
-                    ActionButton(title: action.title, config: theme.rowTheme.tertiaryActionButtonConfig) {
+                    Knock.ActionButton(title: action.title, config: theme.rowTheme.tertiaryActionButtonConfig) {
                         Task {
                             await viewModel.topActionButtonTapped(action: action)
                         }
@@ -187,7 +190,6 @@ struct InAppFeedView_Previews: PreviewProvider {
         let item = Knock.FeedItem(__cursor: "", actors: [], activities: [], blocks: [markdown, buttons], data: [:], id: "", inserted_at: nil, interacted_at: nil, clicked_at: nil, link_clicked_at: nil, total_activities: 0, total_actors: 0, updated_at: nil)
         
         viewModel.feed.entries = [item, item, item, item]
-        viewModel.feed.entries = []
         
         let theme = Knock.InAppFeedTheme(titleString: "Notifications")
         

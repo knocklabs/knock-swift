@@ -25,7 +25,8 @@ let package = Package(
             dependencies: ["SwiftPhoenixClient"],
             path: "Sources",
             resources: [
-                .process("Resources/Colors.xcassets")
+                .process("Resources/Colors.xcassets"),
+                .process("Resources/Media.xcassets")
             ]),
         
         .testTarget(

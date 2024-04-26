@@ -13,20 +13,21 @@ import UIKit
 extension Knock {
     public struct FeedNotificationRow: View {
         public var item: Knock.FeedItem
-        public var isRead: Bool
         public var theme: FeedNotificationRowTheme = .init()
         public var buttonTapAction: (String) -> Void
         
         @State private var dynamicHeight: CGFloat = .zero
         
+        private var isRead: Bool {
+            return item.read_at != nil
+        }
+        
         public init(
             item: Knock.FeedItem,
-            isRead: Bool,
             theme: FeedNotificationRowTheme = .init(),
             buttonTapAction: @escaping (String) -> Void
         ) {
             self.item = item
-            self.isRead = isRead
             self.theme = theme
             self.buttonTapAction = buttonTapAction
         }
@@ -125,19 +126,19 @@ struct FeedNotificationRow_Previews: PreviewProvider {
         let item4 = Knock.FeedItem(__cursor: "", actors: [], activities: [], blocks: [markdown2, buttons], data: [:], id: "", inserted_at: Date(), interacted_at: nil, clicked_at: nil, link_clicked_at: nil, total_activities: 0, total_actors: 0, updated_at: nil)
         
         List {
-            Knock.FeedNotificationRow(item: item1, isRead: false, theme: .init()) { _ in }
+            Knock.FeedNotificationRow(item: item1) { _ in }
                 .listRowInsets(EdgeInsets())
                 .listRowSeparator(.hidden)
 
-            Knock.FeedNotificationRow(item: item2, isRead: false, theme: .init()) { _ in }
+            Knock.FeedNotificationRow(item: item2) { _ in }
                 .listRowInsets(EdgeInsets())
                 .listRowSeparator(.hidden)
             
-            Knock.FeedNotificationRow(item: item3, isRead: false, theme: .init()) { _ in }
+            Knock.FeedNotificationRow(item: item3) { _ in }
                 .listRowInsets(EdgeInsets())
                 .listRowSeparator(.hidden)
 
-            Knock.FeedNotificationRow(item: item4, isRead: false, theme: .init()) { _ in }
+            Knock.FeedNotificationRow(item: item4) { _ in }
                 .listRowInsets(EdgeInsets())
                 .listRowSeparator(.hidden)
         }
