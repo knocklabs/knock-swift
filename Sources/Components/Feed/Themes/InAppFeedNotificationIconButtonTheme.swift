@@ -12,7 +12,7 @@ extension Knock {
     public struct InAppFeedNotificationIconButtonTheme {
         public var buttonImage: Image
         public var buttonImageForeground: Color
-        public var buttonImageFont: Font
+        public var buttonImageSize: CGSize
         public var showBadgeWithCount: Bool
         public var badgeCountFont: Font
         public var badgeColor: Color
@@ -20,23 +20,23 @@ extension Knock {
         public var notificationCountType: ReadStatusType
         
         public init(
-            buttonImage: Image = Image(systemName: "bell"),
-            buttonImageForeground: Color = .gray,
-            buttonImageFont: Font = .title2,
-            showBadgeWithCount: Bool = true,
-            badgeCountFont: Font = .caption2,
-            badgeColor: Color = .red,
-            badgeCountColor: Color = .white,
-            notificationCountType: ReadStatusType = .unread
+            buttonImage: Image? = nil,
+            buttonImageForeground: Color? = nil,
+            buttonImageSize: CGSize? = nil,
+            showBadgeWithCount: Bool? = nil,
+            badgeCountFont: Font? = nil,
+            badgeColor: Color? = nil,
+            badgeCountColor: Color? = nil,
+            notificationCountType: ReadStatusType? = nil
         ) {
-            self.buttonImage = buttonImage
-            self.buttonImageForeground = buttonImageForeground
-            self.buttonImageFont = buttonImageFont
-            self.showBadgeWithCount = showBadgeWithCount
-            self.badgeCountFont = badgeCountFont
-            self.badgeColor = badgeColor
-            self.badgeCountColor = badgeCountColor
-            self.notificationCountType = notificationCountType
+            self.buttonImage = buttonImage ?? Image(systemName: "bell")
+            self.buttonImageForeground = buttonImageForeground ?? KnockColor.Gray.gray12
+            self.buttonImageSize = buttonImageSize ?? .init(width: 24, height: 24)
+            self.showBadgeWithCount = showBadgeWithCount ?? true
+            self.badgeCountFont = badgeCountFont ?? .knock0.weight(.medium)
+            self.badgeColor = badgeColor ?? KnockColor.Accent.accent9
+            self.badgeCountColor = badgeCountColor ?? .white
+            self.notificationCountType = notificationCountType ?? .unread
         }
     }
         

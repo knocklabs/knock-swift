@@ -13,7 +13,7 @@ import UIKit
 public extension Knock {
 
     class FeedManager {
-        private var feedModule: FeedModule!
+        internal var feedModule: FeedModule!
         private var foregroundObserver: NSObjectProtocol?
         private var backgroundObserver: NSObjectProtocol?
         

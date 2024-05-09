@@ -11,51 +11,40 @@ import Combine
 extension Knock {
     public class InAppFeedViewModel: ObservableObject {
         @Published public var feed: Knock.Feed = Knock.Feed() /// The current feed data.
-        @Published public var tenantId: String? /// The tenant ID associated with the current feed.
-        @Published public var currentFilter: InAppFeedFilter /// The currently selected filter for displaying feed items.
-        @Published public var hasTenant: Bool? /// Flag indicating whether the feed is associated with a specific tenant.
+        @Published public var currentTenantId: String? /// The tenant ID associated with the current feed.
         @Published public var filterOptions: [InAppFeedFilter] /// Available filter options for the feed.
         @Published public var topButtonActions: [Knock.FeedTopActionButtonType]? /// Actions available at the top of the feed interface.
-        @Published public var feedIsLoading: Bool = false /// Whether or not to display the main loading indicator in the view
 
-        @Published internal var shouldShowKnockIcon: Bool = true /// Controls whether to show the Knock icon on the feed interface.
+        @Published internal var brandingRequired: Bool = true /// Controls whether to show the Knock icon on the feed interface.
+        @Published var showRefreshIndicator: Bool = false
+        @Published public var currentFilter: InAppFeedFilter { /// The currently selected filter for displaying feed items.
+            didSet {
+                filterDidChange()
+            }
+        }
         
+        public var feedClientOptions: Knock.FeedClientOptions /// Configuration options for feed.
         public let didTapFeedItemButtonPublisher = PassthroughSubject<String, Never>() /// Publisher for feed item button tap events.
         public let didTapFeedItemRowPublisher = PassthroughSubject<Knock.FeedItem, Never>() /// Publisher for feed item row tap events.
-        
-        public var feedClientOptions: Knock.FeedClientOptions /// Configuration options for feed client interactions.
-        private var _feedClientOptions: Knock.FeedClientOptions = .init() /// Temporary configuration options for modifying feed query without losing initial settings.
-        
-        private var cancellables = Set<AnyCancellable>() /// Subscription cancellables for Combine.
         
         // MARK: Initialization
         
         public init(
             feedClientOptions: Knock.FeedClientOptions = .init(),
-            tenantId: String? = nil,
-            hasTenant: Bool? = nil,
+            currentTenantId: String? = nil,
             currentFilter: InAppFeedFilter? = nil,
             filterOptions: [InAppFeedFilter]? = nil,
             topButtonActions: [Knock.FeedTopActionButtonType]? = [.markAllAsRead(), .archiveRead()]
         ) {
             self.feedClientOptions = feedClientOptions
-            self.tenantId = tenantId ?? feedClientOptions.tenant
-            self.hasTenant = hasTenant ?? feedClientOptions.has_tenant
+            self.currentTenantId = currentTenantId ?? feedClientOptions.tenant
             self.filterOptions = filterOptions ?? [.init(scope: .all), .init(scope: .unread), .init(scope: .archived)]
             self.currentFilter = currentFilter ?? filterOptions?.first ?? .init(scope: .all)
             self.topButtonActions = topButtonActions
             
             // Assign initial settings to _feedClientOptions to be used in API calls
             self.feedClientOptions.status = self.currentFilter.scope
-            self.feedClientOptions.tenant = self.tenantId
-            self.feedClientOptions.has_tenant = self.hasTenant
-            self._feedClientOptions = self.feedClientOptions
-            
-            $currentFilter
-                .sink { [weak self] _ in
-                    self?.filterDidChange()
-                }
-                .store(in: &cancellables)
+            self.feedClientOptions.tenant = self.currentTenantId
         }
         
         /// Sets up feed manager connection and subscribes to new message events.
@@ -63,8 +52,8 @@ extension Knock {
             Knock.shared.feedManager?.connectToFeed()
             Knock.shared.feedManager?.on(eventName: "new-message") { [weak self] _ in
                 guard let self = self else { return }
-                _feedClientOptions.before = self.feed.pageInfo.before
-                Knock.shared.feedManager?.getUserFeedContent(options: _feedClientOptions) { result in
+                feedClientOptions.before = self.feed.pageInfo.before
+                Knock.shared.feedManager?.getUserFeedContent(options: feedClientOptions) { result in
                     DispatchQueue.main.async {
                         switch result {
                         case .success(let feed):
@@ -75,34 +64,36 @@ extension Knock {
                     }
                 }
             }
-            await refreshFeed(showLoadingIndicator: true)
-            await getUserSettings()
+            await refreshFeed(showRefreshIndicator: true)
+            let branding = await getBrandingRequired()
+            DispatchQueue.main.async {
+                self.brandingRequired = branding
+            }
         }
         
         /// Refreshes the feed by fetching the latest items based on the current settings.
-        public func refreshFeed(showLoadingIndicator: Bool) async {
+        public func refreshFeed(showRefreshIndicator: Bool = false) async {
             do {
-//                if showLoadingIndicator {
-//                    // Update loading state immediately, but ensure any subsequent updates are deferred until after any asynchronous operations.
-//                    DispatchQueue.main.async {
-//                        self.feedIsLoading = true
-//                    }
-//                }
+                if showRefreshIndicator {
+                    DispatchQueue.main.async {
+                        self.showRefreshIndicator = true
+                    }
+                }
+                let originalStatus = feedClientOptions.status
                 let archived: Knock.FeedItemArchivedScope? = feedClientOptions.status == .archived ? .only : nil
-                let scope = feedClientOptions.status == .archived ? .all : feedClientOptions.status
+                let status = feedClientOptions.status == .archived ? .all : feedClientOptions.status
                 self.feedClientOptions.archived = archived
-                self._feedClientOptions.archived = archived
-                self.feedClientOptions.status = scope
-                self._feedClientOptions.status = scope
-
-                self.feedClientOptions.tenant = tenantId
-                self._feedClientOptions = feedClientOptions
+                self.feedClientOptions.status = status
+                self.feedClientOptions.before = nil
+                self.feedClientOptions.after = nil
                 guard let userFeed = try await Knock.shared.feedManager?.getUserFeedContent(options: feedClientOptions) else { return }
                 DispatchQueue.main.async {
-                    // Ensure this update is done completely outside of the view update cycle
                     self.feed = userFeed
                     self.feed.pageInfo.before = self.feed.entries.first?.__cursor
-//                    self.feedIsLoading = false
+                    self.feedClientOptions.status = originalStatus
+                    if self.showRefreshIndicator {
+                        self.showRefreshIndicator = false
+                    }
                 }
             } catch {
                 handleFeedError(error)
@@ -112,8 +103,8 @@ extension Knock {
         /// Fetches a new page of feed items when the user scrolls to the bottom of the feed.
         public func fetchNewPageOfFeedItems() async {
             guard let after = self.feed.pageInfo.after else { return }
-            _feedClientOptions.after = after
-            Knock.shared.feedManager?.getUserFeedContent(options: _feedClientOptions) { result in
+            feedClientOptions.after = after
+            Knock.shared.feedManager?.getUserFeedContent(options: feedClientOptions) { result in
                 DispatchQueue.main.async {
                     switch result {
                     case .success(let feed):
@@ -132,6 +123,7 @@ extension Knock {
         
         // MARK: Message Update Methods
         
+        /// Archives a specific feed item.
         public func archiveItem(_ item: Knock.FeedItem) async {
             do {
                 let message = try await Knock.shared.updateMessageStatus(messageId: item.id, status: .archived)
@@ -146,20 +138,22 @@ extension Knock {
             }
         }
         
+        /// Archives all items within the specified scope.
         public func archiveAll(scope: Knock.FeedItemScope) async {
-            let feedOptions = Knock.FeedClientOptions(status: scope, tenant: tenantId, has_tenant: false, archived: nil)
+            let feedOptions = Knock.FeedClientOptions(status: scope, tenant: currentTenantId, has_tenant: false, archived: nil)
             do {
                 _ = try await Knock.shared.feedManager?.makeBulkStatusUpdate(type: .archived, options: feedOptions)
-                await refreshFeed(showLoadingIndicator: false)
+                await refreshFeed()
             } catch {
                 Knock.shared.log(type: .error, category: .feed, message: "error in archiveAll: \(error.localizedDescription)")
             }
         }
         
+        /// Marks all items in the feed as read.
         public func markAllAsRead() async {
             guard feed.meta.unreadCount > 0 else { return }
             
-            let feedOptions = Knock.FeedClientOptions(status: .all, tenant: tenantId, has_tenant: false, archived: nil)
+            let feedOptions = Knock.FeedClientOptions(status: .all, tenant: currentTenantId, has_tenant: false, archived: nil)
             do {
                 _ = try await Knock.shared.feedManager?.makeBulkStatusUpdate(type: .read, options: feedOptions)
                 DispatchQueue.main.async {
@@ -179,10 +173,11 @@ extension Knock {
             }
         }
         
+        /// Marks all unseen items as seen.
         public func markAllAsSeen() async {
             guard feed.meta.unseenCount > 0 else { return }
             
-            let feedOptions = Knock.FeedClientOptions(status: .all, tenant: tenantId, has_tenant: false, archived: nil)
+            let feedOptions = Knock.FeedClientOptions(status: .all, tenant: currentTenantId, has_tenant: false, archived: nil)
             do {
                 _ = try await Knock.shared.feedManager?.makeBulkStatusUpdate(type: .seen, options: feedOptions)
                 await fetchNewMetaData()
@@ -246,6 +241,8 @@ extension Knock {
         }
         
         // MARK: Button/Swipe Interactions
+        
+        /// Called when a user performs a horizontal swipe action on a row item.
         public func didSwipeRow(item: Knock.FeedItem, swipeAction: FeedNotificationRowSwipeAction) {
             Task {
                 switch swipeAction {
@@ -256,6 +253,7 @@ extension Knock {
             }
         }
         
+        /// Called when a user taps on one of the action buttons at the top of the list.
         public func topActionButtonTapped(action: Knock.FeedTopActionButtonType) async {
             switch action {
             case .archiveAll(_):
@@ -270,16 +268,16 @@ extension Knock {
         // MARK: Private Methods
         
         private func filterDidChange() {
+            self.feedClientOptions.status = self.currentFilter.scope
+
             Task { [weak self] in
-                self?.feedClientOptions.status = self?.currentFilter.scope
-                self?._feedClientOptions.status = self?.currentFilter.scope
-                await self?.refreshFeed(showLoadingIndicator: true)
+                await self?.refreshFeed(showRefreshIndicator: true)
             }
         }
         
         private func fetchNewMetaData() async {
             do {
-                let options = Knock.FeedClientOptions(tenant: tenantId, has_tenant: true)
+                let options = Knock.FeedClientOptions(tenant: currentTenantId, has_tenant: feedClientOptions.has_tenant)
                 if let feed = try await Knock.shared.feedManager?.getUserFeedContent(options: options) {
                     DispatchQueue.main.async {
                         self.feed.meta = feed.meta
@@ -302,8 +300,9 @@ extension Knock {
             self.feed.pageInfo.after = feed.pageInfo.after
         }
         
-        private func getUserSettings() async {
-            // TODO
+        private func getBrandingRequired() async -> Bool {
+            let settings = try? await Knock.shared.feedManager?.feedModule.getFeedSettings()
+            return settings?.features.brandingRequired ?? false
         }
         
         private func handleFeedError(_ error: Error) {

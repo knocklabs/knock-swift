@@ -161,6 +161,11 @@ internal class FeedModule {
         self.socket.connect()
     }
     
+    internal func getFeedSettings() async throws -> Knock.FeedSettings? {
+        guard let userId = try? await Knock.shared.environment.getSafeUserId() else { return nil }
+        return try? await feedService.getFeedSettings(userId: userId, feedId: feedId)
+    }
+    
     private func paramsFromOptions(options: Knock.FeedClientOptions) -> [String: Any] {
         var params: [String: Any] = [:]
         

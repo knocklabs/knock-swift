@@ -15,4 +15,8 @@ internal class FeedService: KnockAPIService {
     func makeBulkStatusUpdate(feedId: String, type: Knock.KnockMessageStatusBatchUpdateType, body: AnyEncodable?) async throws -> Knock.BulkOperation {
         try await post(path: "/channels/\(feedId)/messages/bulk/\(type.rawValue)", body: body)
     }
+    
+    func getFeedSettings(userId: String, feedId: String) async throws -> Knock.FeedSettings {
+        try await get(path: "/users/\(userId)/feeds/\(feedId)/settings", queryItems: nil)
+    }
 }
