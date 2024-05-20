@@ -156,3 +156,10 @@ extension EnvironmentValues {
         self.colorScheme == .dark
     }
 }
+
+extension Bool? {
+    func stringOrNil() -> String? {
+        guard let self = self else { return nil }
+        return self ? "true" : "false"
+    }
+}

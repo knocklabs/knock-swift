@@ -117,13 +117,13 @@ struct FeedNotificationRow_Previews: PreviewProvider {
                 
         let buttons = Knock.ButtonSetContentBlock(name: "buttons", buttons: [Knock.BlockActionButton(label: "Primary", name: "primary", action: ""), Knock.BlockActionButton(label: "Secondary", name: "secondary", action: "")])
         
-        let item1 = Knock.FeedItem(__cursor: "", actors: [Knock.User(id: "1", name: "John Doe", email: nil, avatar: nil, phone_number: nil, properties: [:])], activities: [], blocks: [markdown], data: [:], id: "", inserted_at: Date(), interacted_at: nil, clicked_at: nil, link_clicked_at: nil, total_activities: 0, total_actors: 0, updated_at: nil)
+        let item1 = Knock.FeedItem(__cursor: "", actors: [Knock.User(id: "1", name: "John Doe", email: nil, avatar: nil, phone_number: nil, properties: [:])], activities: [], blocks: [markdown], data: [:], id: "", inserted_at: Date(), interacted_at: nil, clicked_at: nil, link_clicked_at: nil, archived_at: nil, total_activities: 0, total_actors: 0, updated_at: nil)
         
-        let item2 = Knock.FeedItem(__cursor: "", actors: [], activities: [], blocks: [markdown, buttons], data: [:], id: "", inserted_at: Date(), interacted_at: nil, clicked_at: nil, link_clicked_at: nil, total_activities: 0, total_actors: 0, updated_at: nil)
+        let item2 = Knock.FeedItem(__cursor: "", actors: [], activities: [], blocks: [markdown, buttons], data: [:], id: "", inserted_at: Date(), interacted_at: nil, clicked_at: nil, link_clicked_at: nil, archived_at: nil, total_activities: 0, total_actors: 0, updated_at: nil)
         
-        let item3 = Knock.FeedItem(__cursor: "", actors: [Knock.User(id: "1", name: "John Doe", email: nil, avatar: nil, phone_number: nil, properties: [:])], activities: [], blocks: [markdown2], data: [:], id: "", inserted_at: Date(), interacted_at: nil, clicked_at: nil, link_clicked_at: nil, total_activities: 0, total_actors: 0, updated_at: nil)
+        let item3 = Knock.FeedItem(__cursor: "", actors: [Knock.User(id: "1", name: "John Doe", email: nil, avatar: nil, phone_number: nil, properties: [:])], activities: [], blocks: [markdown2], data: [:], id: "", inserted_at: Date(), interacted_at: nil, clicked_at: nil, link_clicked_at: nil, archived_at: nil, total_activities: 0, total_actors: 0, updated_at: nil)
         
-        let item4 = Knock.FeedItem(__cursor: "", actors: [], activities: [], blocks: [markdown2, buttons], data: [:], id: "", inserted_at: Date(), interacted_at: nil, clicked_at: nil, link_clicked_at: nil, total_activities: 0, total_actors: 0, updated_at: nil)
+        let item4 = Knock.FeedItem(__cursor: "", actors: [], activities: [], blocks: [markdown2, buttons], data: [:], id: "", inserted_at: Date(), interacted_at: nil, clicked_at: nil, link_clicked_at: nil, archived_at: nil, total_activities: 0, total_actors: 0, updated_at: nil)
         
         List {
             Knock.FeedNotificationRow(item: item1) { _ in }

@@ -27,6 +27,10 @@ extension Knock {
         public let didTapFeedItemButtonPublisher = PassthroughSubject<String, Never>() /// Publisher for feed item button tap events.
         public let didTapFeedItemRowPublisher = PassthroughSubject<Knock.FeedItem, Never>() /// Publisher for feed item row tap events.
         
+        public var shouldHideArchived: Bool {
+            (feedClientOptions.archived == .exclude || feedClientOptions.archived == nil)
+        }
+        
         // MARK: Initialization
         
         public init(
@@ -64,7 +68,12 @@ extension Knock {
                     }
                 }
             }
-            await refreshFeed(showRefreshIndicator: true)
+            
+            let _ = await self.getBrandingRequired()
+            let _ = await self.refreshFeed(showRefreshIndicator: false)
+        }
+        
+        public func getBrandingRequiredStatus() async {
             let branding = await getBrandingRequired()
             DispatchQueue.main.async {
                 self.brandingRequired = branding
@@ -128,11 +137,17 @@ extension Knock {
             do {
                 let message = try await Knock.shared.updateMessageStatus(messageId: item.id, status: .archived)
                 
-                // remove local message if update was successful
-                DispatchQueue.main.async {
-                    self.feed.entries = self.feed.entries.filter{ $0.id != message.id }
+                if let index = self.feed.entries.firstIndex(where: { $0.id == message.id }) {
+                    DispatchQueue.main.async { [weak self] in
+                        self?.feed.entries[index].archived_at = Date()
+                        
+                        // remove local message if update was successful and the archived filter is not set to `exclude`
+                        if self?.shouldHideArchived ?? true {
+                            self?.feed.entries.remove(at: index)
+                        }
+                    }
+                    await fetchNewMetaData()
                 }
-                await fetchNewMetaData()
             } catch {
                 Knock.shared.log(type: .error, category: .feed, message: "error in archiveItem: \(error.localizedDescription)")
             }
@@ -140,10 +155,10 @@ extension Knock {
         
         /// Archives all items within the specified scope.
         public func archiveAll(scope: Knock.FeedItemScope) async {
-            let feedOptions = Knock.FeedClientOptions(status: scope, tenant: currentTenantId, has_tenant: false, archived: nil)
+            let feedOptions = Knock.FeedClientOptions(status: scope, tenant: currentTenantId, has_tenant: feedClientOptions.has_tenant, archived: nil)
             do {
                 _ = try await Knock.shared.feedManager?.makeBulkStatusUpdate(type: .archived, options: feedOptions)
-                await refreshFeed()
+                optimisticallyBulkUpdateStatus(status: .archived)
             } catch {
                 Knock.shared.log(type: .error, category: .feed, message: "error in archiveAll: \(error.localizedDescription)")
             }
@@ -153,7 +168,7 @@ extension Knock {
         public func markAllAsRead() async {
             guard feed.meta.unreadCount > 0 else { return }
             
-            let feedOptions = Knock.FeedClientOptions(status: .all, tenant: currentTenantId, has_tenant: false, archived: nil)
+            let feedOptions = Knock.FeedClientOptions(status: .all, tenant: currentTenantId, has_tenant: feedClientOptions.has_tenant, archived: nil)
             do {
                 _ = try await Knock.shared.feedManager?.makeBulkStatusUpdate(type: .read, options: feedOptions)
                 DispatchQueue.main.async {
@@ -167,7 +182,7 @@ extension Knock {
                         return newItem
                     }
                 }
-                await fetchNewMetaData()
+                optimisticallyBulkUpdateStatus(status: .read)
             } catch {
                 Knock.shared.log(type: .error, category: .feed, message: "error in markAllAsRead: \(error.localizedDescription)")
             }
@@ -177,10 +192,10 @@ extension Knock {
         public func markAllAsSeen() async {
             guard feed.meta.unseenCount > 0 else { return }
             
-            let feedOptions = Knock.FeedClientOptions(status: .all, tenant: currentTenantId, has_tenant: false, archived: nil)
+            let feedOptions = Knock.FeedClientOptions(status: .all, tenant: currentTenantId, has_tenant: feedClientOptions.has_tenant, archived: nil)
             do {
                 _ = try await Knock.shared.feedManager?.makeBulkStatusUpdate(type: .seen, options: feedOptions)
-                await fetchNewMetaData()
+                optimisticallyBulkUpdateStatus(status: .seen)
             } catch {
                 Knock.shared.log(type: .error, category: .feed, message: "error in markAllAsSeen: \(error.localizedDescription)")
             }
@@ -225,6 +240,48 @@ extension Knock {
                 let _ = try await Knock.shared.messageModule.updateMessageStatus(messageId: item.id, status: .interacted)
             } catch {
                 Knock.shared.log(type: .error, category: .feed, message: "error in markAsInteracted: \(error.localizedDescription)")
+            }
+        }
+        
+        public func optimisticallyBulkUpdateStatus(status: Knock.KnockMessageStatusUpdateType) {
+            let date = Date()
+            var meta = feed.meta
+            DispatchQueue.main.async {
+                self.feed.entries = self.feed.entries.map { item in
+                    var newItem = item
+                    switch status {
+                    case .seen:
+                        if newItem.seen_at == nil {
+                            newItem.seen_at = date
+                        }
+                    case .read:
+                        if newItem.read_at == nil {
+                            newItem.read_at = date
+                        }
+                    case .interacted:
+                        if newItem.interacted_at == nil {
+                            newItem.interacted_at = date
+                        }
+                    case .archived:
+                        if newItem.archived_at == nil {
+                            newItem.archived_at = date
+                        }
+                    case .unread:
+                        newItem.read_at = nil
+                    case .unseen:
+                        newItem.seen_at = nil
+                    }
+                    
+                    return newItem
+                }
+                
+                switch status {
+                case .seen: self.feed.meta.unseenCount = 0
+                case .read: self.feed.meta.unreadCount = 0
+                case .unread: self.feed.meta.unseenCount = self.feed.entries.count
+                case .unseen: self.feed.meta.unseenCount = self.feed.entries.count
+                default: break
+                }
             }
         }
         
@@ -277,8 +334,7 @@ extension Knock {
         
         private func fetchNewMetaData() async {
             do {
-                let options = Knock.FeedClientOptions(tenant: currentTenantId, has_tenant: feedClientOptions.has_tenant)
-                if let feed = try await Knock.shared.feedManager?.getUserFeedContent(options: options) {
+                if let feed = try await Knock.shared.feedManager?.getUserFeedContent(options: feedClientOptions) {
                     DispatchQueue.main.async {
                         self.feed.meta = feed.meta
                     }

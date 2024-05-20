@@ -50,7 +50,7 @@ internal class FeedModule {
             URLQueryItem(name: "before", value: mergedOptions.before),
             URLQueryItem(name: "source", value: mergedOptions.source),
             URLQueryItem(name: "tenant", value: mergedOptions.tenant),
-            URLQueryItem(name: "has_tenant", value: (mergedOptions.has_tenant != nil) ? "true" : "false"),
+            URLQueryItem(name: "has_tenant", value: mergedOptions.has_tenant.stringOrNil()),
             URLQueryItem(name: "status", value: (mergedOptions.status != nil) ? mergedOptions.status?.rawValue : ""),
             URLQueryItem(name: "archived", value: (mergedOptions.archived != nil) ? mergedOptions.archived?.rawValue : ""),
             URLQueryItem(name: "trigger_data", value: triggerDataJSON)

@@ -22,13 +22,14 @@ public extension Knock {
         public var link_clicked_at: Date?
         public var read_at: Date?
         public var seen_at: Date?
+        public var archived_at: Date?
         public var tenant: String?
         public var source: NotificationSource?
         public var total_activities: Int
         public var total_actors: Int
         public var updated_at: Date?
         
-        public init(__cursor: String, actors: [User]?, activities: [FeedItemActivity]?, blocks: [ContentBlockBase], data: [String : AnyCodable]?, id: String, inserted_at: Date?, interacted_at: Date?, clicked_at: Date?, link_clicked_at: Date?, read_at: Date? = nil, seen_at: Date? = nil, tenant: String? = nil, source: NotificationSource? = nil, total_activities: Int, total_actors: Int, updated_at: Date?) {
+        public init(__cursor: String, actors: [User]?, activities: [FeedItemActivity]?, blocks: [ContentBlockBase], data: [String : AnyCodable]?, id: String, inserted_at: Date?, interacted_at: Date?, clicked_at: Date?, link_clicked_at: Date?, read_at: Date? = nil, seen_at: Date? = nil, archived_at: Date?, tenant: String? = nil, source: NotificationSource? = nil, total_activities: Int, total_actors: Int, updated_at: Date?) {
             self.__cursor = __cursor
             self.blocks = blocks
             self.actors = actors
@@ -38,6 +39,7 @@ public extension Knock {
             self.inserted_at = inserted_at
             self.read_at = read_at
             self.seen_at = seen_at
+            self.archived_at = archived_at
             self.tenant = tenant
             self.total_activities = total_activities
             self.total_actors = total_actors
@@ -64,6 +66,7 @@ extension Knock.FeedItem: Codable {
         case link_clicked_at = "link_clicked_at"
         case read_at = "read_at"
         case seen_at = "seen_at"
+        case archived_at = "archived_at"
         case tenant = "tenant"
         case source = "source"
         case total_activities = "total_activities"
@@ -84,6 +87,7 @@ extension Knock.FeedItem: Codable {
         self.link_clicked_at = try container.decodeIfPresent(Date.self, forKey: .link_clicked_at)
         self.read_at = try container.decodeIfPresent(Date.self, forKey: .read_at)
         self.seen_at = try container.decodeIfPresent(Date.self, forKey: .seen_at)
+        self.archived_at = try container.decodeIfPresent(Date.self, forKey: .archived_at)
         self.tenant = try container.decodeIfPresent(String.self, forKey: .tenant)
         self.source = try container.decodeIfPresent(Knock.NotificationSource.self, forKey: .source)
         self.total_activities = try container.decode(Int.self, forKey: .total_activities)
@@ -127,6 +131,7 @@ extension Knock.FeedItem: Codable {
         try container.encodeIfPresent(link_clicked_at, forKey: .link_clicked_at)
         try container.encodeIfPresent(read_at, forKey: .read_at)
         try container.encodeIfPresent(seen_at, forKey: .seen_at)
+        try container.encodeIfPresent(archived_at, forKey: .archived_at)
         try container.encodeIfPresent(tenant, forKey: .tenant)
         try container.encodeIfPresent(source, forKey: .source)
         try container.encode(total_activities, forKey: .total_activities)
