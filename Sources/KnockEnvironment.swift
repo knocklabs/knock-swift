@@ -85,7 +85,7 @@ internal actor KnockEnvironment {
         self.pushChannelId = newChannelId
     }
     
-    func getPushChannelId() -> String? {
+    public func getPushChannelId() -> String? {
         self.pushChannelId
     }
     
@@ -125,5 +125,50 @@ internal actor KnockEnvironment {
     }
     func getPreviousPushTokens() -> [String] {
         defaults.array(forKey: previousPushTokensKey) as? [String] ?? []
+    }
+}
+
+public extension Knock {
+    
+    func setUserInfo(userId: String?, userToken: String?) async {
+        await environment.setUserInfo(userId: userId, userToken: userToken)
+    }
+    
+    func setUserInfo(userId: String?, userToken: String?, completion: @escaping () -> Void) {
+        Task {
+            await environment.setUserInfo(userId: userId, userToken: userToken)
+            completion()
+        }
+    }
+    
+    /// Returns the userId that was set from the Knock.shared.signIn method.
+    func getUserId() async -> String? {
+        await environment.getUserId()
+    }
+    
+    func getUserId(completion: @escaping (String?) -> Void) {
+        Task {
+            completion(await environment.getUserId())
+        }
+    }
+    
+    func getDeviceToken() async -> String? {
+        await environment.getDeviceToken()
+    }
+    
+    func getDeviceToken(completion: @escaping (String?) -> Void) {
+        Task {
+            completion(await environment.getDeviceToken())
+        }
+    }
+    
+    func getPushChannelId() async -> String? {
+        await environment.getPushChannelId()
+    }
+    
+    func getPushChannelId(completion: @escaping (String?) -> Void) {
+        Task {
+            completion(await environment.getPushChannelId())
+        }
     }
 }
