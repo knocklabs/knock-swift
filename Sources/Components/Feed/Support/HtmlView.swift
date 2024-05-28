@@ -52,9 +52,11 @@ extension Knock {
             
             let full = "\(htmlStart)\(html)"
             
-            if let data = full.data(using: .utf8),
-               let attributedString = try? NSAttributedString(data: data, options: options, documentAttributes: nil) {
-                uiView.attributedText = attributedString
+            DispatchQueue.main.async {
+                if let data = full.data(using: .utf8),
+                   let attributedString = try? NSAttributedString(data: data, options: options, documentAttributes: nil) {
+                    uiView.attributedText = attributedString
+                }
             }
         }
         
