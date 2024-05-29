@@ -20,4 +20,4 @@ jobs:
         run: swift package resolve
 
       - name: Build and run tests
-        run: xcodebuild test -scheme YourScheme -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 12,OS=latest'
+        run: xcodebuild test -scheme Knock -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 12,OS=latest'
