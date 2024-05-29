@@ -54,10 +54,10 @@ open class KnockAppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificat
     
     open func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         Task {
-            let channelId = await Knock.shared.environment.getPushChannelId()
+            let channelId = await Knock.shared.getPushChannelId()
 
             do {
-                let _ = try await Knock.shared.channelModule.registerTokenForAPNS(channelId: channelId, token: Knock.convertTokenToString(token: deviceToken))
+                let _ = try await Knock.shared.registerTokenForAPNS(channelId: channelId, token: Knock.convertTokenToString(token: deviceToken))
             } catch let error {
                 Knock.shared.log(type: .error, category: .pushNotification, message: "didRegisterForRemoteNotificationsWithDeviceToken", description: "Unable to register for push notification at this time", status: .fail, errorMessage: error.localizedDescription)
             }
