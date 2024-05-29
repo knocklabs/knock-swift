@@ -21,5 +21,5 @@ jobs:
         working-directory: .
         
       - name: Build and run tests
-        run: xcodebuild test -scheme Knock -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest'
+        run: swift test --enable-test-discovery --parallel
         working-directory: .
