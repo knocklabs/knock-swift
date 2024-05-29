@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name         = "Knock"
-  spec.version      = "1.1.0"
+  spec.version      = "1.1.1"
   spec.summary      = "An SDK to build in-app notifications experiences in Swift with Knock.."
 
   spec.description  = <<-DESC

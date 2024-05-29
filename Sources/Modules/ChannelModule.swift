@@ -246,11 +246,11 @@ public extension Knock {
         - channelId: the id of the APNS channel
         - token: the APNS device token as a `String`
      */
-    func registerTokenForAPNS(channelId: String, token: String) async throws -> ChannelData {
+    func registerTokenForAPNS(channelId: String?, token: String) async throws -> ChannelData {
         return try await self.channelModule.registerTokenForAPNS(channelId: channelId, token: token)
     }
     
-    func registerTokenForAPNS(channelId: String, token: String, completionHandler: @escaping ((Result<ChannelData, Error>) -> Void)) {
+    func registerTokenForAPNS(channelId: String?, token: String, completionHandler: @escaping ((Result<ChannelData, Error>) -> Void)) {
         Task {
             do {
                 let channelData = try await registerTokenForAPNS(channelId: channelId, token: token)
