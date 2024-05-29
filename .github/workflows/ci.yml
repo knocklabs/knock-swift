@@ -20,10 +20,6 @@ jobs:
         run: swift package resolve
         working-directory: .
         
-      - name: Clean build folder
-        run: xcodebuild clean -project YourProject.xcodeproj
-        working-directory: .
-
       - name: Build and run tests
         run: xcodebuild test -scheme Knock -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest'
         working-directory: .
