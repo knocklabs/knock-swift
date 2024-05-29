@@ -122,7 +122,7 @@ extension Knock {
             }
             .onDisappear {
                 Task {
-                    await viewModel.markAllAsSeen()
+                    await viewModel.bulkUpdateMessageEngagementStatus(updatedStatus: .seen)
                 }
             }
         }

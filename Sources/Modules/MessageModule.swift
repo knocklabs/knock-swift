@@ -43,7 +43,7 @@ internal class MessageModule {
         }
     }
     
-    internal func batchUpdateStatuses(messageIds: [String], status: Knock.KnockMessageStatusBatchUpdateType) async throws -> [Knock.KnockMessage] {
+    internal func batchUpdateStatuses(messageIds: [String], status: Knock.KnockMessageStatusUpdateType) async throws -> [Knock.KnockMessage] {
         do {
             let messages = try await messageService.batchUpdateStatuses(messageIds: messageIds, status: status)
             Knock.shared.log(type: .debug, category: .message, message: "batchUpdateStatuses", status: .success)
@@ -182,11 +182,11 @@ public extension Knock {
      
      *Note:* Knock scopes this batch rate limit by message_ids and status. This allows for 1 update per second per message per status.
      */
-    func batchUpdateStatuses(messageIds: [String], status: KnockMessageStatusBatchUpdateType) async throws -> [KnockMessage] {
+    func batchUpdateStatuses(messageIds: [String], status: KnockMessageStatusUpdateType) async throws -> [KnockMessage] {
         try await self.messageModule.batchUpdateStatuses(messageIds: messageIds, status: status)
     }
     
-    func batchUpdateStatuses(messageIds: [String], status: KnockMessageStatusBatchUpdateType, completionHandler: @escaping ((Result<[KnockMessage], Error>) -> Void)) {
+    func batchUpdateStatuses(messageIds: [String], status: KnockMessageStatusUpdateType, completionHandler: @escaping ((Result<[KnockMessage], Error>) -> Void)) {
         Task {
             do {
                 let messages = try await batchUpdateStatuses(messageIds: messageIds, status: status)
@@ -207,12 +207,12 @@ public extension Knock {
      
      *Note:* Knock scopes this batch rate limit by message_ids and status. This allows for 1 update per second per message per status.
      */
-    func batchUpdateStatuses(messages: [KnockMessage], status: KnockMessageStatusBatchUpdateType) async throws -> [KnockMessage] {
+    func batchUpdateStatuses(messages: [KnockMessage], status: KnockMessageStatusUpdateType) async throws -> [KnockMessage] {
         let messageIds = messages.map{$0.id}
         return try await self.messageModule.batchUpdateStatuses(messageIds: messageIds, status: status)
     }
     
-    func batchUpdateStatuses(messages: [KnockMessage], status: KnockMessageStatusBatchUpdateType, completionHandler: @escaping ((Result<[KnockMessage], Error>) -> Void)) {
+    func batchUpdateStatuses(messages: [KnockMessage], status: KnockMessageStatusUpdateType, completionHandler: @escaping ((Result<[KnockMessage], Error>) -> Void)) {
         Task {
             do {
                 let messages = try await batchUpdateStatuses(messages: messages, status: status)

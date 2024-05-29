@@ -11,18 +11,14 @@ import XCTest
 
 final class InAppFeedViewModelTests: XCTestCase {
     var viewModel: Knock.InAppFeedViewModel!
-    var feedManager: Knock.FeedManager!
     
     override func setUp() {
         super.setUp()
-        feedManager = try! Knock.FeedManager(feedId: "")
-        Knock.shared.feedManager = feedManager
         viewModel = Knock.InAppFeedViewModel()
     }
     
     override func tearDown() {
         viewModel = nil
-        feedManager = nil
         super.tearDown()
     }
     
@@ -94,7 +90,7 @@ final class InAppFeedViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.feed.entries.isEmpty)
     }
     
-    func testOptimisticBulkMarkItemAsRead() async {
+    func testOptimisticBulkMarkItemsAsRead() async {
         let item = generateTestFeedItem(status: .unread)
         let item2 = generateTestFeedItem(status: .seen)
         let item3 = generateTestFeedItem(status: .unread)
@@ -102,36 +98,30 @@ final class InAppFeedViewModelTests: XCTestCase {
 
         viewModel.feed.entries = [item, item2, item3, item4]
         viewModel.feed.meta.unreadCount = 3
-        await viewModel.optimisticallyBulkUpdateStatus(status: .read)
+        await viewModel.optimisticallyBulkUpdateStatus(updatedStatus: .read)
         XCTAssertTrue(viewModel.feed.entries.first!.read_at != nil)
         XCTAssertTrue(viewModel.feed.meta.unreadCount == 0)
     }
+    
+    func testOptimisticBulkMarkItemAsArchived() async {
+        let item = generateTestFeedItem(status: .unread)
+        let item2 = generateTestFeedItem(status: .seen)
+        let item3 = generateTestFeedItem(status: .unread)
+        let item4 = generateTestFeedItem(status: .read)
+
+        viewModel.feed.entries = [item, item2, item3, item4]
+        await viewModel.optimisticallyBulkUpdateStatus(updatedStatus: .archived)
+        XCTAssertTrue(viewModel.feed.meta.unreadCount == 0)
+    }
+    
+    func testOptimisticBulkMarkItemAsArchivedWithReadScope() async {
+        let item = generateTestFeedItem(status: .unread)
+        let item2 = generateTestFeedItem(status: .unread)
+        let item3 = generateTestFeedItem(status: .unread)
+        let item4 = generateTestFeedItem(status: .read)
+
+        viewModel.feed.entries = [item, item2, item3, item4]
+        await viewModel.optimisticallyBulkUpdateStatus(updatedStatus: .archived, archivedScope: .unread)
+        XCTAssertTrue(viewModel.feed.entries.count == 1)
+    }
 }
-
-//class MockFeedManager: FeedManagerProtocol { // Conform to the actual protocol used by Knock.FeedManager
-//    var connectedToFeed = false
-//    var messages = PassthroughSubject<Void, Never>()
-//    
-//    func connectToFeed() {
-//        connectedToFeed = true
-//    }
-//    
-//    func on(eventName: String, handler: @escaping (Any) -> Void) {
-//        messages.sink(receiveValue: { _ in handler(()) }).store(in: &cancellables)
-//    }
-//    
-//    func getUserFeedContent(options: Knock.FeedClientOptions, completion: @escaping (Result<Knock.Feed, Error>) -> Void) {
-//        // Simulate API response
-//        let feed = Knock.Feed(entries: [Knock.FeedItem(id: "1", title: "Test")], pageInfo: Knock.PageInfo(before: nil, after: nil), meta: Knock.FeedMeta())
-//        completion(.success(feed))
-//    }
-//    
-//    func makeBulkStatusUpdate(type: Knock.KnockMessageStatusBatchUpdateType, options: Knock.FeedClientOptions) async throws {
-//        // Simulate bulk update
-//    }
-//}
-//
-//protocol FeedManagerProtocol {
-//    
-//}
-

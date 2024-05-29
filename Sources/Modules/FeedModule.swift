@@ -66,7 +66,7 @@ internal class FeedModule {
         }
     }
     
-    func makeBulkStatusUpdate(type: Knock.KnockMessageStatusBatchUpdateType, options: Knock.FeedClientOptions) async throws -> Knock.BulkOperation {
+    func makeBulkStatusUpdate(type: Knock.KnockMessageStatusUpdateType, options: Knock.FeedClientOptions) async throws -> Knock.BulkOperation {
         // TODO: check https://docs.knock.app/reference#bulk-update-channel-message-status
         // older_than: ISO-8601, check milliseconds
         // newer_than: ISO-8601, check milliseconds
