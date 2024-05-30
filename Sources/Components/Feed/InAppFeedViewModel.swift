@@ -129,17 +129,17 @@ extension Knock {
             default: break
             }
             
-            let feedOptions = Knock.FeedClientOptions(status: archivedScope, tenant: currentTenantId, has_tenant: feedClientOptions.has_tenant, archived: nil)
+            let feedOptions = Knock.FeedClientOptions(status: archivedScope, tenant: currentTenantId, has_tenant: feedClientOptions.has_tenant, archived: feedClientOptions.archived)
             do {
-                _ = try await Knock.shared.feedManager?.makeBulkStatusUpdate(type: .seen, options: feedOptions)
-                await optimisticallyBulkUpdateStatus(updatedStatus: .seen, archivedScope: archivedScope)
+                _ = try await Knock.shared.feedManager?.makeBulkStatusUpdate(type: updatedStatus, options: feedOptions)
+                await optimisticallyBulkUpdateStatus(updatedStatus: updatedStatus, archivedScope: archivedScope)
             } catch {
                 logError("Failed: bulkUpdateMessageStatus for status: \(updatedStatus.rawValue)", error)
             }
         }
         
-        public func updateMessageEngagementStatus(_ item: Knock.FeedItem, status: Knock.KnockMessageStatusUpdateType) async {
-            switch status {
+        public func updateMessageEngagementStatus(_ item: Knock.FeedItem, updatedStatus: Knock.KnockMessageStatusUpdateType) async {
+            switch updatedStatus {
             case .seen: guard item.seen_at == nil else { return }
             case .read: guard item.read_at == nil else { return }
             case .interacted: guard item.inserted_at == nil else { return }
@@ -149,11 +149,11 @@ extension Knock {
             case .unarchived: guard item.archived_at != nil else { return }
             }
             do {
-                _ = try await Knock.shared.messageModule.updateMessageStatus(messageId: item.id, status: status)
-                await optimisticallyUpdateStatusForItem(item: item, status: status)
+                _ = try await Knock.shared.messageModule.updateMessageStatus(messageId: item.id, status: updatedStatus)
+                await optimisticallyUpdateStatusForItem(item: item, status: updatedStatus)
                 await fetchNewMetaData()
             } catch {
-                logError("Failed: updateMessageStatus for status: \(status.rawValue)", error)
+                logError("Failed: updateMessageStatus for status: \(updatedStatus.rawValue)", error)
             }
         }
         
@@ -167,7 +167,7 @@ extension Knock {
         public func feedItemRowTapped(item: Knock.FeedItem) {
             didTapFeedItemRowPublisher.send(item)
             Task {
-                await updateMessageEngagementStatus(item, status: .interacted)
+                await updateMessageEngagementStatus(item, updatedStatus: .interacted)
             }
         }
         
@@ -176,9 +176,9 @@ extension Knock {
         public func didSwipeRow(item: Knock.FeedItem, swipeAction: FeedNotificationRowSwipeAction) {
             Task {
                 switch swipeAction {
-                case .archive: await updateMessageEngagementStatus(item, status: .archived)
-                case .markAsRead: await updateMessageEngagementStatus(item, status: .read)
-                case .markAsUnread: await updateMessageEngagementStatus(item, status: .unread)
+                case .archive: await updateMessageEngagementStatus(item, updatedStatus: .archived)
+                case .markAsRead: await updateMessageEngagementStatus(item, updatedStatus: .read)
+                case .markAsUnread: await updateMessageEngagementStatus(item, updatedStatus: .unread)
                 }
             }
         }
@@ -360,15 +360,19 @@ extension Knock {
         }
         
         private func mergeFeedsForNewMessageReceived(feed: Knock.Feed) {
-            self.feed.entries.insert(contentsOf: feed.entries, at: 0)
-            self.feed.meta = feed.meta
-            self.feed.pageInfo.before = feed.entries.first?.__cursor
+            DispatchQueue.main.async {
+                self.feed.entries.insert(contentsOf: feed.entries, at: 0)
+                self.feed.meta = feed.meta
+                self.feed.pageInfo.before = feed.entries.first?.__cursor
+            }
         }
         
         private func mergeFeedsForNewPageOfFeed(feed: Knock.Feed) {
-            self.feed.entries.append(contentsOf: feed.entries)
-            self.feed.meta = feed.meta
-            self.feed.pageInfo.after = feed.pageInfo.after
+            DispatchQueue.main.async {
+                self.feed.entries.append(contentsOf: feed.entries)
+                self.feed.meta = feed.meta
+                self.feed.pageInfo.after = feed.pageInfo.after
+            }
         }
         
         private func getBrandingRequired() async -> Bool {

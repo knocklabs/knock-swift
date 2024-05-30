@@ -10,13 +10,13 @@ import SwiftUI
 
 public enum KnockColor {
     public enum Gray {
-        public static let gray3 = Color("Gray3", bundle: Bundle.module)
-        public static let gray4 = Color("Gray4", bundle: Bundle.module)
-        public static let gray5 = Color("Gray5", bundle: Bundle.module)
-        public static let gray6 = Color("Gray6", bundle: Bundle.module)
-        public static let gray9 = Color("Gray9", bundle: Bundle.module)
-        public static let gray11 = Color("Gray11", bundle: Bundle.module)
-        public static let gray12 = Color("Gray12", bundle: Bundle.module)
+        public static let gray3 = Color("Gray3", bundle: .module)
+        public static let gray4 = Color("Gray4", bundle: .module)
+        public static let gray5 = Color("Gray5", bundle: .module)
+        public static let gray6 = Color("Gray6", bundle: .module)
+        public static let gray9 = Color("Gray9", bundle: .module)
+        public static let gray11 = Color("Gray11", bundle: .module)
+        public static let gray12 = Color("Gray12", bundle: .module)
     }
     
     public enum Accent {
@@ -30,7 +30,7 @@ public enum KnockColor {
     }
     
     public enum Blue {
-        public static let blue9 = Color("Blue9", bundle: .module)
+        public static let blue9 = Color("blue9", bundle: .module)
     }
     
     public enum Green {
