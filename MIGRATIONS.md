@@ -27,3 +27,12 @@ await Knock.shared.signIn(userId: "userid", userToken: nil)
 - **Enhanced User Session Management**: New functionalities to sign users out and unregister device tokens have been added, providing more control over user sessions and device management.
 
 - **Centralized Access with Shared Instance**: The SDK now utilizes a shared instance for the Knock client, facilitating easier access and interaction within your app's codebase.
+
+## Upgrading to Version 1.2.0
+
+Version 1.2.0 of our Swift SDK introduces our first pre-built component, the In-App Feed. You can see the updated documentation to learn how to use this component in your own app. We have also combined our Knock.KnockMessageStatusBatchUpdateType into Knock.KnockMessageStatusUpdateType.
+
+### Key Enhancements:
+
+- **In-App Feed pre-built component**
+- **Knock.KnockMessageStatusBatchUpdateType is now just Knock.KnockMessageStatusUpdateType**
