@@ -28,20 +28,13 @@ public extension Knock {
         case archived
     }
     
-    enum KnockMessageStatusUpdateType: String {
-        case seen
-        case read
-        case interacted
-        case archive
-    }
-    
-    enum KnockMessageStatusBatchUpdateType: String, Codable {
+    enum KnockMessageStatusUpdateType: String, Codable {
         case seen
         case read
         case interacted
         case archived
-        case unseen
         case unread
+        case unseen
         case unarchived
     }
 }

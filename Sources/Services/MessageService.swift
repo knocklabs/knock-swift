@@ -21,7 +21,7 @@ internal class MessageService: KnockAPIService {
         try await delete(path: "/messages/\(messageId)/\(status.rawValue)", body: nil)
     }
     
-    internal func batchUpdateStatuses(messageIds: [String], status: Knock.KnockMessageStatusBatchUpdateType) async throws -> [Knock.KnockMessage] {
+    internal func batchUpdateStatuses(messageIds: [String], status: Knock.KnockMessageStatusUpdateType) async throws -> [Knock.KnockMessage] {
         let body = ["message_ids": messageIds]
         return try await post(path: "/messages/batch/\(status.rawValue)", body: body)
     }

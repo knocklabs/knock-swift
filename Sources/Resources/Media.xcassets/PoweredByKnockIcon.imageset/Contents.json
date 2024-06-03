@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "PoweredByKnock.svg",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

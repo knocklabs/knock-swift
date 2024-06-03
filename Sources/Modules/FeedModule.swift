@@ -50,7 +50,7 @@ internal class FeedModule {
             URLQueryItem(name: "before", value: mergedOptions.before),
             URLQueryItem(name: "source", value: mergedOptions.source),
             URLQueryItem(name: "tenant", value: mergedOptions.tenant),
-            URLQueryItem(name: "has_tenant", value: (mergedOptions.has_tenant != nil) ? "true" : "false"),
+            URLQueryItem(name: "has_tenant", value: mergedOptions.has_tenant.stringOrNil()),
             URLQueryItem(name: "status", value: (mergedOptions.status != nil) ? mergedOptions.status?.rawValue : ""),
             URLQueryItem(name: "archived", value: (mergedOptions.archived != nil) ? mergedOptions.archived?.rawValue : ""),
             URLQueryItem(name: "trigger_data", value: triggerDataJSON)
@@ -66,7 +66,7 @@ internal class FeedModule {
         }
     }
     
-    func makeBulkStatusUpdate(type: Knock.BulkChannelMessageStatusUpdateType, options: Knock.FeedClientOptions) async throws -> Knock.BulkOperation {
+    func makeBulkStatusUpdate(type: Knock.KnockMessageStatusUpdateType, options: Knock.FeedClientOptions) async throws -> Knock.BulkOperation {
         // TODO: check https://docs.knock.app/reference#bulk-update-channel-message-status
         // older_than: ISO-8601, check milliseconds
         // newer_than: ISO-8601, check milliseconds
@@ -159,6 +159,11 @@ internal class FeedModule {
             }
         
         self.socket.connect()
+    }
+    
+    internal func getFeedSettings() async throws -> Knock.FeedSettings? {
+        guard let userId = try? await Knock.shared.environment.getSafeUserId() else { return nil }
+        return try? await feedService.getFeedSettings(userId: userId, feedId: feedId)
     }
     
     private func paramsFromOptions(options: Knock.FeedClientOptions) -> [String: Any] {
