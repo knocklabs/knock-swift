@@ -20,26 +20,7 @@ extension Knock {
         
         public var body: some View {
             VStack(alignment: .leading, spacing: .zero) {
-                VStack(alignment: .leading, spacing: .zero) {
-                    if let title = theme.titleString {
-                        Text(title)
-                            .font(theme.titleFont)
-                            .foregroundStyle(theme.titleColor)
-                            .padding(.horizontal, 24)
-                    }
-                    
-                    if viewModel.filterOptions.count > 1 {
-                        filterTabView()
-                            .padding(.bottom, 12)
-                    }
-                    
-                    if let topButtons = viewModel.topButtonActions {
-                        topActionButtonsView(topButtons: topButtons)
-                            .padding(.bottom, 12)
-                        Divider()
-                    }
-                }
-                .background(theme.upperBackgroundColor)
+                topSectionView()
                 
                 ZStack(alignment: .bottom) {
                     Group {
@@ -78,16 +59,18 @@ extension Knock {
                                         viewModel.feedItemRowTapped(item: item)
                                     }
                                     .swipeActions(edge: .trailing) {
-                                        if let config = theme.rowTheme.swipeLeftConfig {
-                                            Knock.SwipeButton(config: config) {
-                                                viewModel.didSwipeRow(item: item, swipeAction: config.action)
+                                        if let config = theme.rowTheme.archiveSwipeConfig {
+                                            let useInverse = item.archived_at != nil
+                                            Knock.SwipeButton(config: config, useInverse: useInverse) {
+                                                viewModel.didSwipeRow(item: item, swipeAction: config.action, useInverse: useInverse)
                                             }
                                         }
                                     }
                                     .swipeActions(edge: .leading) {
-                                        if let config = theme.rowTheme.swipeRightConfig {
-                                            Knock.SwipeButton(config: config) {
-                                                viewModel.didSwipeRow(item: item, swipeAction: config.action)
+                                        if let config = theme.rowTheme.markAsReadSwipeConfig {
+                                            let useInverse = item.read_at != nil
+                                            Knock.SwipeButton(config: config, useInverse: useInverse) {
+                                                viewModel.didSwipeRow(item: item, swipeAction: config.action, useInverse: useInverse)
                                             }
                                         }
                                     }
@@ -125,6 +108,30 @@ extension Knock {
                     await viewModel.bulkUpdateMessageEngagementStatus(updatedStatus: .seen)
                 }
             }
+        }
+        
+        @ViewBuilder
+        private func topSectionView() -> some View {
+            VStack(alignment: .leading, spacing: .zero) {
+                if let title = theme.titleString {
+                    Text(title)
+                        .font(theme.titleFont)
+                        .foregroundStyle(theme.titleColor)
+                        .padding(.horizontal, 24)
+                }
+                
+                if viewModel.filterOptions.count > 1 {
+                    filterTabView()
+                        .padding(.bottom, 12)
+                }
+                
+                if let topButtons = viewModel.topButtonActions {
+                    topActionButtonsView(topButtons: topButtons)
+                        .padding(.bottom, 12)
+                    Divider()
+                }
+            }
+            .background(theme.upperBackgroundColor)
         }
         
         @ViewBuilder
