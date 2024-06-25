@@ -121,7 +121,7 @@ extension Knock {
                 }
                 
                 if viewModel.filterOptions.count > 1 {
-                    filterTabView()
+                    FilterBarView(filters: viewModel.filterOptions, selectedFilter: $viewModel.currentFilter)
                         .padding(.bottom, 12)
                 }
                 
@@ -149,40 +149,6 @@ extension Knock {
             .task {
                 await viewModel.fetchNewPageOfFeedItems()
             }
-        }
-        
-        @ViewBuilder
-        private func filterTabView() -> some View {
-            ZStack(alignment: .bottom) {
-                Divider()
-                    .frame(height: 1)
-                    .background(KnockColor.Gray.gray4)
-
-                HStack(spacing: .zero
-                ) {
-                    ForEach(viewModel.filterOptions, id: \.self) { option in
-                        Text(option.title)
-                            .font(.knock2.weight(.medium))
-                            .foregroundColor(option == viewModel.currentFilter ? KnockColor.Accent.accent11 : KnockColor.Gray.gray11)
-                            .padding(.vertical, 10)
-                            .padding(.horizontal, 16)
-                            .overlay(
-                                Rectangle()
-                                    .frame(height: 1)
-                                    .foregroundColor(option == viewModel.currentFilter ? KnockColor.Accent.accent9 : .clear),
-                                alignment: .bottom
-                            )
-                            .onTapGesture {
-                                withAnimation {
-                                    viewModel.currentFilter = option
-                                }
-                            }
-                    }
-                    Spacer()
-                }
-                .padding(.horizontal, 24)
-            }
-            
         }
         
         @ViewBuilder

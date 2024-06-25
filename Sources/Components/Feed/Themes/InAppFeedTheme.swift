@@ -11,6 +11,7 @@ import SwiftUI
 extension Knock {
     public struct InAppFeedTheme {
         public var rowTheme: FeedNotificationRowTheme = .init()
+        public var filterBarTheme: FilterBarTheme = FilterBarTheme()
         
         public var titleString: String?
         public var titleFont: Font
