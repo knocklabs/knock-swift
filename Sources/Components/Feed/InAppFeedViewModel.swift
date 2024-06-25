@@ -11,7 +11,6 @@ import Combine
 extension Knock {
     public class InAppFeedViewModel: ObservableObject {
         @Published public var feed: Knock.Feed = Knock.Feed() /// The current feed data.
-        // TODO: Double check to make sure tennant behaviour is working as expected.
         @Published public var filterOptions: [InAppFeedFilter] /// Available filter options for the feed.
         @Published public var topButtonActions: [Knock.FeedTopActionButtonType]? /// Actions available at the top of the feed interface.
         @Published internal var brandingRequired: Bool = true
@@ -23,8 +22,8 @@ extension Knock {
         }
         
         public var feedClientOptions: Knock.FeedClientOptions /// Configuration options for feed.
-        public let didTapFeedItemButtonPublisher = PassthroughSubject<String, Never>() /// Publisher for feed item button tap events.
-        public let didTapFeedItemRowPublisher = PassthroughSubject<Knock.FeedItem, Never>() /// Publisher for feed item row tap events.
+        public var didTapFeedItemButtonPublisher = PassthroughSubject<String, Never>() /// Publisher for feed item button tap events.
+        public var didTapFeedItemRowPublisher = PassthroughSubject<Knock.FeedItem, Never>() /// Publisher for feed item row tap events.
         
         public var shouldHideArchived: Bool {
             (feedClientOptions.archived == .exclude || feedClientOptions.archived == nil)
@@ -36,7 +35,6 @@ extension Knock {
         
         public init(
             feedClientOptions: Knock.FeedClientOptions = .init(),
-            currentTenantId: String? = nil,
             currentFilter: InAppFeedFilter? = nil,
             filterOptions: [InAppFeedFilter]? = nil,
             topButtonActions: [Knock.FeedTopActionButtonType]? = [.markAllAsRead(), .archiveRead()]
@@ -45,7 +43,6 @@ extension Knock {
             self.filterOptions = filterOptions ?? [.init(scope: .all), .init(scope: .unread), .init(scope: .archived)]
             self.currentFilter = currentFilter ?? filterOptions?.first ?? .init(scope: .all)
             self.topButtonActions = topButtonActions
-            
             self.feedClientOptions.status = self.currentFilter.scope
         }
         
