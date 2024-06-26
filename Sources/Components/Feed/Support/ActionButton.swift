@@ -17,6 +17,7 @@ extension Knock {
             Button(action: action) {
                 Text(title)
                     .font(config.font)
+                    .lineLimit(1)
                     .foregroundStyle(config.textColor)
                     .padding(.vertical, 8)
                     .frame(maxWidth: config.fillAvailableSpace ? .infinity : .none)
@@ -81,4 +82,5 @@ extension Knock {
         Knock.ActionButton(title: "Secondary", config: Knock.ActionButton.Style.secondary.defaultConfig) {}
         Knock.ActionButton(title: "Tertiary", config: Knock.ActionButton.Style.tertiary.defaultConfig) {}
     }
+    .padding()
 }

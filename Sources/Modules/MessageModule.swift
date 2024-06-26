@@ -23,7 +23,12 @@ internal class MessageModule {
     
     internal func updateMessageStatus(messageId: String, status: Knock.KnockMessageStatusUpdateType) async throws -> Knock.KnockMessage {
         do {
-            let message = try await messageService.updateMessageStatus(messageId: messageId, status: status)
+            let message = switch status {
+            case .unarchived: try await messageService.deleteMessageStatus(messageId: messageId, status: .archived)
+            case .unread: try await messageService.deleteMessageStatus(messageId: messageId, status: .read)
+            case .unseen: try await messageService.deleteMessageStatus(messageId: messageId, status: .seen)
+            default: try await messageService.updateMessageStatus(messageId: messageId, status: status)
+            }
             Knock.shared.log(type: .debug, category: .message, message: "updateMessageStatus", status: .success, additionalInfo: ["messageId": messageId])
             return message
         } catch let error {
@@ -32,6 +37,7 @@ internal class MessageModule {
         }
     }
     
+    @available(*, deprecated, message: "Use updateMessageStatus() instead")
     internal func deleteMessageStatus(messageId: String, status: Knock.KnockMessageStatusUpdateType) async throws -> Knock.KnockMessage {
         do {
             let message = try await messageService.deleteMessageStatus(messageId: messageId, status: status)
@@ -133,10 +139,12 @@ public extension Knock {
         - message: The KnockMessage that you want to update.
         - status: The new status to be associated with the KnockMessage.
      */
+    @available(*, deprecated, message: "Use updateMessageStatus() instead")
     func deleteMessageStatus(message: KnockMessage, status: KnockMessageStatusUpdateType) async throws -> KnockMessage {
         try await self.messageModule.deleteMessageStatus(messageId: message.id, status: status)
     }
     
+    @available(*, deprecated, message: "Use updateMessageStatus() instead")
     func deleteMessageStatus(message: KnockMessage, status: KnockMessageStatusUpdateType, completionHandler: @escaping ((Result<KnockMessage, Error>) -> Void)) {
         Task {
             do {

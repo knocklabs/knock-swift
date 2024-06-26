@@ -14,8 +14,8 @@ extension Knock {
         public var avatarViewTheme: AvatarViewTheme // Customize styling of avatarview
         public var notificationContentCSS: String? // Customize the css of the markdown html of the notification body
         public var backgroundColor: Color // Background color of the FeedNoticationRow
-        public var swipeRightConfig: SwipeButtonConfig? // Set this to nil to remove the right swipe action
-        public var swipeLeftConfig: SwipeButtonConfig? // Set this to nil to remove the left swipe action
+        public var markAsReadSwipeConfig: SwipeButtonConfig? // Set this to nil to remove the mark as read/unread swipe action
+        public var archiveSwipeConfig: SwipeButtonConfig? // Set this to nil to remove the archive/unarchive swipe action
         public var unreadNotificationCircleColor: Color // Color of the unread circle indicator in the top left of the row
         public var sentAtDateFormatter: DateFormatter // DateFormatter for the sent timestamp at the bottom of the row
         public var sentAtDateFont: Font // Font for sent timestamp
@@ -29,8 +29,8 @@ extension Knock {
             avatarViewTheme: AvatarViewTheme? = nil,
             notificationContentCSS: String? = nil,
             backgroundColor: Color? = nil,
-            swipeRightConfig: SwipeButtonConfig? = FeedNotificationRowSwipeAction.markAsRead.defaultConfig,
-            swipeLeftConfig: SwipeButtonConfig? = FeedNotificationRowSwipeAction.archive.defaultConfig,
+            markAsReadSwipeConfig: SwipeButtonConfig? = FeedNotificationRowSwipeAction.markAsRead.defaultConfig,
+            archiveSwipeConfig: SwipeButtonConfig? = FeedNotificationRowSwipeAction.archive.defaultConfig,
             unreadNotificationCircleColor: Color? = nil,
             sentAtDateFormatter: DateFormatter? = nil,
             sentAtDateFont: Font? = nil,
@@ -43,8 +43,8 @@ extension Knock {
             self.avatarViewTheme = avatarViewTheme ?? .init()
             self.notificationContentCSS = notificationContentCSS
             self.backgroundColor = backgroundColor ?? KnockColor.Surface.surface1
-            self.swipeRightConfig = swipeRightConfig
-            self.swipeLeftConfig = swipeLeftConfig
+            self.markAsReadSwipeConfig = markAsReadSwipeConfig
+            self.archiveSwipeConfig = archiveSwipeConfig
             self.unreadNotificationCircleColor = unreadNotificationCircleColor ?? KnockColor.Blue.blue9
             self.sentAtDateFormatter = sentAtDateFormatter ?? defaultDateFormatter
             self.sentAtDateFont = sentAtDateFont ?? .knock2.weight(.medium)

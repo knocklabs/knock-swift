@@ -11,7 +11,6 @@ import Combine
 extension Knock {
     public class InAppFeedViewModel: ObservableObject {
         @Published public var feed: Knock.Feed = Knock.Feed() /// The current feed data.
-        @Published public var currentTenantId: String? /// The tenant ID associated with the current feed.
         @Published public var filterOptions: [InAppFeedFilter] /// Available filter options for the feed.
         @Published public var topButtonActions: [Knock.FeedTopActionButtonType]? /// Actions available at the top of the feed interface.
         @Published internal var brandingRequired: Bool = true
@@ -23,8 +22,8 @@ extension Knock {
         }
         
         public var feedClientOptions: Knock.FeedClientOptions /// Configuration options for feed.
-        public let didTapFeedItemButtonPublisher = PassthroughSubject<String, Never>() /// Publisher for feed item button tap events.
-        public let didTapFeedItemRowPublisher = PassthroughSubject<Knock.FeedItem, Never>() /// Publisher for feed item row tap events.
+        public var didTapFeedItemButtonPublisher = PassthroughSubject<String, Never>() /// Publisher for feed item button tap events.
+        public var didTapFeedItemRowPublisher = PassthroughSubject<Knock.FeedItem, Never>() /// Publisher for feed item row tap events.
         
         public var shouldHideArchived: Bool {
             (feedClientOptions.archived == .exclude || feedClientOptions.archived == nil)
@@ -36,19 +35,15 @@ extension Knock {
         
         public init(
             feedClientOptions: Knock.FeedClientOptions = .init(),
-            currentTenantId: String? = nil,
             currentFilter: InAppFeedFilter? = nil,
             filterOptions: [InAppFeedFilter]? = nil,
             topButtonActions: [Knock.FeedTopActionButtonType]? = [.markAllAsRead(), .archiveRead()]
         ) {
             self.feedClientOptions = feedClientOptions
-            self.currentTenantId = currentTenantId ?? feedClientOptions.tenant
             self.filterOptions = filterOptions ?? [.init(scope: .all), .init(scope: .unread), .init(scope: .archived)]
             self.currentFilter = currentFilter ?? filterOptions?.first ?? .init(scope: .all)
             self.topButtonActions = topButtonActions
-            
             self.feedClientOptions.status = self.currentFilter.scope
-            self.feedClientOptions.tenant = self.currentTenantId
         }
         
         // MARK: Public Methods
@@ -129,7 +124,7 @@ extension Knock {
             default: break
             }
             
-            let feedOptions = Knock.FeedClientOptions(status: archivedScope, tenant: currentTenantId, has_tenant: feedClientOptions.has_tenant, archived: feedClientOptions.archived)
+            let feedOptions = Knock.FeedClientOptions(status: archivedScope, tenant: feedClientOptions.tenant, has_tenant: feedClientOptions.has_tenant, archived: feedClientOptions.archived)
             do {
                 _ = try await Knock.shared.feedManager?.makeBulkStatusUpdate(type: updatedStatus, options: feedOptions)
                 await optimisticallyBulkUpdateStatus(updatedStatus: updatedStatus, archivedScope: archivedScope)
@@ -142,7 +137,7 @@ extension Knock {
             switch updatedStatus {
             case .seen: guard item.seen_at == nil else { return }
             case .read: guard item.read_at == nil else { return }
-            case .interacted: guard item.inserted_at == nil else { return }
+            case .interacted: guard item.interacted_at == nil else { return }
             case .archived: guard item.archived_at == nil else { return }
             case .unread: guard item.read_at != nil else { return }
             case .unseen: guard item.seen_at != nil else { return }
@@ -173,12 +168,11 @@ extension Knock {
         
         // MARK: Button/Swipe Interactions
         
-        public func didSwipeRow(item: Knock.FeedItem, swipeAction: FeedNotificationRowSwipeAction) {
+        public func didSwipeRow(item: Knock.FeedItem, swipeAction: FeedNotificationRowSwipeAction, useInverse: Bool) {
             Task {
                 switch swipeAction {
-                case .archive: await updateMessageEngagementStatus(item, updatedStatus: .archived)
-                case .markAsRead: await updateMessageEngagementStatus(item, updatedStatus: .read)
-                case .markAsUnread: await updateMessageEngagementStatus(item, updatedStatus: .unread)
+                case .archive: await updateMessageEngagementStatus(item, updatedStatus: useInverse ? .unarchived : .archived)
+                case .markAsRead: await updateMessageEngagementStatus(item, updatedStatus: useInverse ? .unread : .read)
                 }
             }
         }
@@ -249,7 +243,7 @@ extension Knock {
 
         private func shouldArchive(item: Knock.FeedItem, scope: Knock.FeedItemScope) -> Bool {
             switch scope {
-            case .interacted: return item.inserted_at != nil
+            case .interacted: return item.interacted_at != nil
             case .unread: return item.read_at == nil
             case .read: return item.read_at != nil
             case .unseen: return item.seen_at == nil

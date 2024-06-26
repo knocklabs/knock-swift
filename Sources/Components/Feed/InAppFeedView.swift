@@ -20,26 +20,7 @@ extension Knock {
         
         public var body: some View {
             VStack(alignment: .leading, spacing: .zero) {
-                VStack(alignment: .leading, spacing: .zero) {
-                    if let title = theme.titleString {
-                        Text(title)
-                            .font(theme.titleFont)
-                            .foregroundStyle(theme.titleColor)
-                            .padding(.horizontal, 24)
-                    }
-                    
-                    if viewModel.filterOptions.count > 1 {
-                        filterTabView()
-                            .padding(.bottom, 12)
-                    }
-                    
-                    if let topButtons = viewModel.topButtonActions {
-                        topActionButtonsView(topButtons: topButtons)
-                            .padding(.bottom, 12)
-                        Divider()
-                    }
-                }
-                .background(theme.upperBackgroundColor)
+                topSectionView()
                 
                 ZStack(alignment: .bottom) {
                     Group {
@@ -78,16 +59,18 @@ extension Knock {
                                         viewModel.feedItemRowTapped(item: item)
                                     }
                                     .swipeActions(edge: .trailing) {
-                                        if let config = theme.rowTheme.swipeLeftConfig {
-                                            Knock.SwipeButton(config: config) {
-                                                viewModel.didSwipeRow(item: item, swipeAction: config.action)
+                                        if let config = theme.rowTheme.archiveSwipeConfig {
+                                            let useInverse = item.archived_at != nil
+                                            Knock.SwipeButton(config: config, useInverse: useInverse) {
+                                                viewModel.didSwipeRow(item: item, swipeAction: config.action, useInverse: useInverse)
                                             }
                                         }
                                     }
                                     .swipeActions(edge: .leading) {
-                                        if let config = theme.rowTheme.swipeRightConfig {
-                                            Knock.SwipeButton(config: config) {
-                                                viewModel.didSwipeRow(item: item, swipeAction: config.action)
+                                        if let config = theme.rowTheme.markAsReadSwipeConfig {
+                                            let useInverse = item.read_at != nil
+                                            Knock.SwipeButton(config: config, useInverse: useInverse) {
+                                                viewModel.didSwipeRow(item: item, swipeAction: config.action, useInverse: useInverse)
                                             }
                                         }
                                     }
@@ -128,6 +111,30 @@ extension Knock {
         }
         
         @ViewBuilder
+        private func topSectionView() -> some View {
+            VStack(alignment: .leading, spacing: .zero) {
+                if let title = theme.titleString {
+                    Text(title)
+                        .font(theme.titleFont)
+                        .foregroundStyle(theme.titleColor)
+                        .padding(.horizontal, 24)
+                }
+                
+                if viewModel.filterOptions.count > 1 {
+                    FilterBarView(filters: viewModel.filterOptions, selectedFilter: $viewModel.currentFilter)
+                        .padding(.bottom, 12)
+                }
+                
+                if let topButtons = viewModel.topButtonActions {
+                    topActionButtonsView(topButtons: topButtons)
+                        .padding(.bottom, 12)
+                    Divider()
+                }
+            }
+            .background(theme.upperBackgroundColor)
+        }
+        
+        @ViewBuilder
         private func lastRowView() -> some View {
             HStack {
                 Spacer()
@@ -142,40 +149,6 @@ extension Knock {
             .task {
                 await viewModel.fetchNewPageOfFeedItems()
             }
-        }
-        
-        @ViewBuilder
-        private func filterTabView() -> some View {
-            ZStack(alignment: .bottom) {
-                Divider()
-                    .frame(height: 1)
-                    .background(KnockColor.Gray.gray4)
-
-                HStack(spacing: .zero
-                ) {
-                    ForEach(viewModel.filterOptions, id: \.self) { option in
-                        Text(option.title)
-                            .font(.knock2.weight(.medium))
-                            .foregroundColor(option == viewModel.currentFilter ? KnockColor.Accent.accent11 : KnockColor.Gray.gray11)
-                            .padding(.vertical, 10)
-                            .padding(.horizontal, 16)
-                            .overlay(
-                                Rectangle()
-                                    .frame(height: 1)
-                                    .foregroundColor(option == viewModel.currentFilter ? KnockColor.Accent.accent9 : .clear),
-                                alignment: .bottom
-                            )
-                            .onTapGesture {
-                                withAnimation {
-                                    viewModel.currentFilter = option
-                                }
-                            }
-                    }
-                    Spacer()
-                }
-                .padding(.horizontal, 24)
-            }
-            
         }
         
         @ViewBuilder
