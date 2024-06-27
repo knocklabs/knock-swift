@@ -8,10 +8,10 @@
 import Foundation
 import SwiftUI
 import UIKit
-import WebKit
 
 extension Knock {
-    struct HtmlView: UIViewRepresentable {
+    @available(iOS 15, *)
+    struct HTMLTextView: View {
         @Environment(\.colorScheme) var colorScheme
         
         let html: String
@@ -36,12 +36,7 @@ extension Knock {
             """
         }
         
-        func updateUIView(_ uiView: UITextView, context: UIViewRepresentableContext<Self>) {
-            let options: [NSAttributedString.DocumentReadingOptionKey: Any] = [
-                .documentType: NSAttributedString.DocumentType.html,
-                .characterEncoding: String.Encoding.utf8.rawValue
-            ]
-            
+        var body: some View {
             let htmlStart = """
                 <head>
                     <style>
@@ -52,28 +47,12 @@ extension Knock {
             
             let full = "\(htmlStart)\(html)"
             
-            DispatchQueue.main.async {
-                if let data = full.data(using: .utf8),
-                   let attributedString = try? NSAttributedString(data: data, options: options, documentAttributes: nil) {
-                    uiView.attributedText = attributedString
-                }
+            if let nsAttributedString = try? NSAttributedString(data: Data(full.utf8), options: [.documentType: NSAttributedString.DocumentType.html, .characterEncoding: String.Encoding.utf8.rawValue], documentAttributes: nil),
+               let attributedString = try? AttributedString(nsAttributedString, including: \.uiKit) {
+                Text(attributedString)
+            } else {
+                Text(html)
             }
-        }
-        
-        func makeUIView(context: UIViewRepresentableContext<Self>) -> UITextView {
-            let textView = UITextView()
-            textView.textContainerInset = .zero
-            textView.textContainer.lineFragmentPadding = 0
-            
-            textView.isEditable = false
-            textView.backgroundColor = .clear
-            textView.isScrollEnabled = false
-            textView.setContentHuggingPriority(.defaultLow, for: .vertical)
-            textView.setContentHuggingPriority(.defaultLow, for: .horizontal)
-            textView.setContentCompressionResistancePriority(.required, for: .vertical)
-            textView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-            
-            return textView
         }
     }
 }

@@ -121,7 +121,7 @@ extension Knock {
                 }
                 
                 if viewModel.filterOptions.count > 1 {
-                    FilterBarView(filters: viewModel.filterOptions, selectedFilter: $viewModel.currentFilter)
+                    Knock.FilterBarView(filters: viewModel.filterOptions, selectedFilter: $viewModel.currentFilter)
                         .padding(.bottom, 12)
                 }
                 

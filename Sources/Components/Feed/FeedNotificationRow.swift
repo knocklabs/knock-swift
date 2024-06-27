@@ -41,7 +41,7 @@ extension Knock {
                             .foregroundStyle(isRead ? .clear : theme.unreadNotificationCircleColor)
                         
                         if theme.showAvatarView {
-                            AvatarView(
+                            Knock.AvatarView(
                                 imageURLString: item.actors?.first?.avatar,
                                 name: item.actors?.first?.name,
                                 backgroundColor: theme.avatarViewTheme.avatarViewBackgroundColor,
@@ -74,10 +74,13 @@ extension Knock {
                                 .foregroundStyle(theme.sentAtDateTextColor)
                         }
                     }
+                    Spacer()
                 }
                 .padding(.vertical, 12)
                 .padding(.leading, 8)
                 .padding(.trailing, 16)
+                
+                Spacer()
                 
                 Divider()
                     .background(KnockColor.Gray.gray4)
@@ -86,15 +89,14 @@ extension Knock {
 
         @ViewBuilder
         private func markdownContent(block: Knock.MarkdownContentBlock) -> some View {
-            HtmlView(html: block.rendered)
-                .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+            Knock.HTMLTextView(html: block.rendered)
         }
         
         @ViewBuilder
         private func actionButtonsContent(block: Knock.ButtonSetContentBlock) -> some View {
             HStack {
                 ForEach(Array(block.buttons.enumerated()), id: \.offset) { _, button in
-                    ActionButton(
+                    Knock.ActionButton(
                         title: button.label,
                         config: button.name == "primary" ? theme.primaryActionButtonConfig : theme.secondaryActionButtonConfig
                     ) {}

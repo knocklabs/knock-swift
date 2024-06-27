@@ -99,8 +99,15 @@ extension Knock {
         public func fetchNewPageOfFeedItems() async {
             guard let after = self.feed.pageInfo.after else { return }
             feedClientOptions.after = after
+            let originalStatus = feedClientOptions.status
+            let archived: Knock.FeedItemArchivedScope? = feedClientOptions.status == .archived ? .only : nil
+            let status = feedClientOptions.status == .archived ? .all : feedClientOptions.status
+            feedClientOptions.archived = archived
+            feedClientOptions.status = status
+            
             do {
                 guard let newFeed = try await Knock.shared.feedManager?.getUserFeedContent(options: feedClientOptions) else { return }
+                self.feedClientOptions.status = originalStatus
                 self.mergeFeedsForNewPageOfFeed(feed: newFeed)
             } catch {
                 self.handleFeedError(error)
