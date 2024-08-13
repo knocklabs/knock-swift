@@ -38,7 +38,18 @@ extension KnockAPIService {
         }
         
         if queryItems != nil {
-            URL = URL.appending(queryItems: queryItems!)
+            if #available(iOS 16.0, *) {
+                URL = URL.appending(queryItems: queryItems!)
+            } else {
+                if var components = URLComponents(url: URL, resolvingAgainstBaseURL: false) {
+                    var currentQueryItems = components.queryItems ?? []
+                    currentQueryItems.append(contentsOf: queryItems!)
+                    components.queryItems = currentQueryItems
+                    if let newURL = components.url {
+                        URL = newURL
+                    }
+                }
+            }
         }
         
         var request = URLRequest(url: URL)
