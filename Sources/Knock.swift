@@ -10,7 +10,7 @@ import OSLog
 
 // Knock client SDK.
 public class Knock {
-    internal static let clientVersion = "1.2.6"
+    internal static let clientVersion = "1.2.7"
     
     public static var shared: Knock = Knock()
     
