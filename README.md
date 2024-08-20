@@ -56,7 +56,7 @@ If you are managing dependencies using the `Package.swift` file, just add this t
 
 ``` swift
 dependencies: [
-    .package(url: "https://github.com/knocklabs/knock-swift.git", .upToNextMajor(from: "1.2.11"))
+    .package(url: "https://github.com/knocklabs/knock-swift.git", .upToNextMajor(from: "1.2.4"))
 ]
 ```
 
@@ -69,7 +69,7 @@ platform :ios, '16.0'
 use_frameworks!
 
 target 'MyApp' do
-  pod 'Knock', '~> 1.2.11'
+  pod 'Knock', '~> 1.2.4'
 end
 ```
 
