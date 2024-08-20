@@ -9,11 +9,24 @@ import Foundation
 import UIKit
 import SwiftUI
 
-class InAppFeedViewController: UIViewController {
-    var viewModel = Knock.InAppFeedViewModel() // Regular property
+open class InAppFeedViewController: UIViewController {
+    public var viewModel = Knock.InAppFeedViewModel()
     public var theme: Knock.InAppFeedTheme = .init()
     
-    override func viewDidLoad() {
+    public init(viewModel: Knock.InAppFeedViewModel = Knock.InAppFeedViewModel(), theme: Knock.InAppFeedTheme) {
+        super.init(nibName: nil, bundle: nil)
+
+        self.viewModel = viewModel
+        self.theme = theme
+    }
+    
+    required public init?(coder: NSCoder) {
+        self.viewModel = Knock.InAppFeedViewModel() // Default value for viewModel
+        self.theme = Knock.InAppFeedTheme() // Default value for theme
+        super.init(coder: coder)
+    }
+    
+    open override func viewDidLoad() {
         super.viewDidLoad()
         
         // Create the SwiftUI view, passing in the necessary environment objects
