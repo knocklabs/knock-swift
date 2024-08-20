@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name         = "Knock"
-  spec.version      = "1.2.10"
+  spec.version      = "1.2.11"
   spec.summary      = "An SDK to build in-app notifications experiences in Swift with Knock."
 
   spec.description  = <<-DESC
@@ -17,5 +17,10 @@ Pod::Spec.new do |spec|
   spec.source       = { :git => "https://github.com/knocklabs/knock-swift.git", :tag => "#{spec.version}" }
   spec.ios.deployment_target = '15.0'
   spec.swift_version = '5.3'
-  spec.source_files  = "Sources/**/*"
+  spec.source_files  = "Sources/**/*.{swift}"
+  spec.resource_bundles = {
+    'Colors' => ['Sources/Resources/Colors.xcassets'],
+    'Media' => ['Sources/Resources/Media.xcassets']
+  }
+  spec.dependency 'SwiftPhoenixClient', '~> 5.2.2'
 end
