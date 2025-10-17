@@ -92,8 +92,25 @@ internal class ChannelModule {
         }
     }
     
+    private func getDeviceLocale() -> String {
+        return Locale.current.identifier
+    }
+    
+    private func getDeviceTimezone() -> String {
+        return TimeZone.current.identifier
+    }
+    
+    private func buildTokenObject(token: String) -> [String: Any] {
+        return [
+            "token": token,
+            "locale": getDeviceLocale(),
+            "timezone": getDeviceTimezone()
+        ]
+    }
+    
     private func registerNewTokenDataOnServer(tokens: [String], channelId: String) async throws -> Knock.ChannelData {
-        let data: AnyEncodable = ["tokens": tokens]
+        let tokenObjects = tokens.map { buildTokenObject(token: $0) }
+        let data: AnyEncodable = ["tokens": tokenObjects]
         let newChannelData = try await updateUserChannelData(channelId: channelId, data: data)
         
         // Clear previous tokens upon successful update
