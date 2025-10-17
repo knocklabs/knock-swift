@@ -109,8 +109,8 @@ internal class ChannelModule {
     }
     
     private func registerNewTokenDataOnServer(tokens: [String], channelId: String) async throws -> Knock.ChannelData {
-        let tokenObjects = tokens.map { buildTokenObject(token: $0) }
-        let data: AnyEncodable = ["tokens": tokenObjects]
+        let deviceObjects = tokens.map { buildTokenObject(token: $0) }
+        let data: AnyEncodable = ["devices": deviceObjects]
         let newChannelData = try await updateUserChannelData(channelId: channelId, data: data)
         
         // Clear previous tokens upon successful update
