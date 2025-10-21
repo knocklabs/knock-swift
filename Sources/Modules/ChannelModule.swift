@@ -18,11 +18,11 @@ internal class ChannelModule {
 
     func getUserChannelData(channelId: String) async throws -> Knock.ChannelData {
         do {
-            let data: Knock.ChannelData = try await channelService.getUserChannelData(
+            let channelData: Knock.ChannelData = try await channelService.getUserChannelData(
                 userId: Knock.shared.environment.getSafeUserId(), channelId: channelId)
             Knock.shared.log(
                 type: .debug, category: .channel, message: "getUserChannelData", status: .success)
-            return data
+            return channelData
         } catch let error {
             Knock.shared.log(
                 type: .warning, category: .channel, message: "getUserChannelData", status: .fail,
@@ -35,12 +35,12 @@ internal class ChannelModule {
         -> Knock.ChannelData
     {
         do {
-            let data: Knock.ChannelData = try await channelService.updateUserChannelData(
+            let channelData: Knock.ChannelData = try await channelService.updateUserChannelData(
                 userId: Knock.shared.environment.getSafeUserId(), channelId: channelId, data: data)
             Knock.shared.log(
                 type: .debug, category: .channel, message: "updateUserChannelData", status: .success
             )
-            return data
+            return channelData
         } catch let error {
             Knock.shared.log(
                 type: .warning, category: .channel, message: "updateUserChannelData", status: .fail,
@@ -69,108 +69,9 @@ internal class ChannelModule {
         await Knock.shared.environment.setPushChannelId(channelId)
 
         // Now proceed to prepare and register the token on the server
-        return try await prepareToRegisterDeviceOrTokenOnServer(token: token, channelId: channelId)
+        return try await prepareToRegisterDeviceOnServer(token: token, channelId: channelId)
     }
 
-    private func prepareToRegisterDeviceOrTokenOnServer(token: String, channelId: String)
-        async throws -> Knock.ChannelData
-    {
-        do {
-            let channelData: Knock.ChannelData = try await getUserChannelData(channelId: channelId)
-            let devices = channelData.data?["devices"]?.value as? [Knock.Device] ?? []
-
-            let previousTokens: [String] = await Knock.shared.environment.getPreviousPushTokens()
-
-            var newDevices = filterTokensOutFromDevices(
-                devices: devices,
-                targetTokens: previousTokens
-            )
-            newDevices = addTokenToDevices(
-                devices: newDevices,
-                newToken: token
-            )
-
-            if newDevices != devices {
-                return try await registerNewDevicesDataOnServer(
-                    devices: newDevices, channelId: channelId)
-            } else {
-                return existingChannelData
-            }
-        } catch let userIdError as Knock.KnockError
-            where userIdError == Knock.KnockError.userIdNotSetError
-        {
-            // User is not signed in. This should be caught earlier, but including it here as well just in case.
-            Knock.shared.log(
-                type: .warning, category: .pushNotification,
-                message:
-                    "ChannelId and deviceToken were saved. However, we cannot register for APNS until you have have called Knock.signIn()."
-            )
-            return .init(channel_id: channelId, data: ["tokens": [token]])
-        } catch let networkError as Knock.NetworkError where networkError.code == 404 {
-            // No data registered on that channel for that user, we'll create a new record
-            return try await registerNewDevicesDataOnServer(
-                devices: [buildDeviceObject(token: token)], channelId: channelId)
-        } catch {
-            Knock.shared.log(
-                type: .error, category: .pushNotification, message: "Failed to register token",
-                errorMessage: error.localizedDescription)
-            throw error
-        }
-    }
-
-    private func getDeviceLocale() -> String {
-        return Locale.current.identifier
-    }
-
-    private func getDeviceTimezone() -> String {
-        return TimeZone.current.identifier
-    }
-
-    private func buildDeviceObject(token: String) -> Knock.Device {
-        return [
-            "token": token,
-            "locale": getDeviceLocale(),
-            "timezone": getDeviceTimezone(),
-        ]
-    }
-
-    private func filterTokensOutFromDevices(
-        devices: [Knock.Device],
-        targetTokens: [String]
-    ) -> [Knock.Device] {
-        var filteredDevices: [Knock.Device] = devices
-        filteredDevices.removeAll(where: { targetTokens.contains($0["token"] as? String ?? "") })
-        return filteredDevices
-    }
-
-    private func addTokenToDevices(
-        devices: [Knock.Device],
-        newToken: String
-    ) -> [Knock.Device] {
-        var updatedDevices: [Knock.Device] = devices
-        if !updatedDevices.contains(where: { $0["token"] as? String == newToken }) {
-            updatedDevices.append(buildDeviceObject(token: newToken))
-        }
-        return updatedDevices
-    }
-
-    private func registerNewDevicesDataOnServer(devices: [Knock.Device], channelId: String)
-        async throws -> Knock.ChannelData
-    {
-        let data: AnyEncodable = ["devices": devices]
-        let newChannelData: Knock.ChannelData = try await updateUserChannelData(
-            channelId: channelId, data: data)
-
-        // Clear previous tokens upon successful update
-        await Knock.shared.environment.setPreviousPushTokens(tokens: [])
-
-        Knock.shared.log(
-            type: .debug, category: .pushNotification, message: "Token registered on server",
-            status: .success)
-        return newChannelData
-    }
-
-    // Mark: APNS Device Token UnRegistration
     func unregisterTokenForAPNS(channelId: String, token: String) async throws -> Knock.ChannelData
     {
         do {
@@ -234,6 +135,97 @@ internal class ChannelModule {
             }
         }
     }
+
+    private func prepareToRegisterDeviceOnServer(token: String, channelId: String)
+        async throws -> Knock.ChannelData
+    {
+        do {
+            let channelData: Knock.ChannelData = try await getUserChannelData(channelId: channelId)
+            let devices = channelData.data?["devices"]?.value as? [Knock.Device] ?? []
+
+            let previousTokens: [String] = await Knock.shared.environment.getPreviousPushTokens()
+
+            var newDevices = filterTokensOutFromDevices(
+                devices: devices,
+                targetTokens: previousTokens
+            )
+            newDevices = addTokenToDevices(
+                devices: newDevices,
+                newToken: token
+            )
+
+            if newDevices != devices {
+                return try await registerNewDevicesDataOnServer(
+                    devices: newDevices, channelId: channelId)
+            } else {
+                return existingChannelData
+            }
+        } catch let userIdError as Knock.KnockError
+            where userIdError == Knock.KnockError.userIdNotSetError
+        {
+            // User is not signed in. This should be caught earlier, but including it here as well just in case.
+            Knock.shared.log(
+                type: .warning, category: .pushNotification,
+                message:
+                    "ChannelId and deviceToken were saved. However, we cannot register for APNS until you have have called Knock.signIn()."
+            )
+            return .init(channel_id: channelId, data: ["tokens": [token]])
+        } catch let networkError as Knock.NetworkError where networkError.code == 404 {
+            // No data registered on that channel for that user, we'll create a new record
+            return try await registerNewDevicesDataOnServer(
+                devices: [buildDeviceObject(token: token)], channelId: channelId)
+        } catch {
+            Knock.shared.log(
+                type: .error, category: .pushNotification, message: "Failed to register token",
+                errorMessage: error.localizedDescription)
+            throw error
+        }
+    }
+
+    private func buildDeviceObject(token: String) -> Knock.Device {
+        return [
+            "token": token,
+            "locale": Locale.current.identifier,
+            "timezone": TimeZone.current.identifier,
+        ]
+    }
+
+    private func filterTokensOutFromDevices(
+        devices: [Knock.Device],
+        targetTokens: [String]
+    ) -> [Knock.Device] {
+        var filteredDevices: [Knock.Device] = devices
+        filteredDevices.removeAll(where: { targetTokens.contains($0["token"] as? String ?? "") })
+        return filteredDevices
+    }
+
+    private func addTokenToDevices(
+        devices: [Knock.Device],
+        newToken: String
+    ) -> [Knock.Device] {
+        var updatedDevices: [Knock.Device] = devices
+        if !updatedDevices.contains(where: { $0["token"] as? String == newToken }) {
+            updatedDevices.append(buildDeviceObject(token: newToken))
+        }
+        return updatedDevices
+    }
+
+    private func registerNewDevicesDataOnServer(devices: [Knock.Device], channelId: String)
+        async throws -> Knock.ChannelData
+    {
+        let data: AnyEncodable = ["devices": devices]
+        let channelData: Knock.ChannelData = try await updateUserChannelData(
+            channelId: channelId, data: data)
+
+        // Clear previous tokens upon successful update
+        await Knock.shared.environment.setPreviousPushTokens(tokens: [])
+
+        Knock.shared.log(
+            type: .debug, category: .pushNotification, message: "Token registered on server",
+            status: .success)
+        return channelData
+    }
+
 }
 
 extension Knock {
