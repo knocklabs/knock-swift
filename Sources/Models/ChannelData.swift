@@ -8,7 +8,7 @@
 import Foundation
 import AnyCodable
 
-public extension Knock {    
+public extension Knock {
     struct ChannelData: Codable {
         public let channel_id: String
         public let data: ChannelDataData?
@@ -19,7 +19,7 @@ public extension Knock {
         public let devices: [Device]?
     }
 
-    public struct Device: Codable {
+    struct Device: Codable {
         public let token: String
         public let locale: String?
         public let timezone: String?
