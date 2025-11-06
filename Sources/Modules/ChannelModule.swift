@@ -228,7 +228,7 @@ internal class ChannelModule {
 
 }
 
-extension Knock {
+public extension Knock {
 
     /**
      Retrieves the channel data for the current user on the channel specified.
@@ -237,11 +237,11 @@ extension Knock {
      - Parameters:
         - channelId: The id of the Knock channel to lookup.
      */
-    public func getUserChannelData(channelId: String) async throws -> ChannelData {
+    func getUserChannelData(channelId: String) async throws -> ChannelData {
         try await self.channelModule.getUserChannelData(channelId: channelId)
     }
 
-    public func getUserChannelData(
+    func getUserChannelData(
         channelId: String, completionHandler: @escaping ((Result<ChannelData, Error>) -> Void)
     ) {
         Task {
@@ -261,13 +261,13 @@ extension Knock {
         - channelId: The id of the Knock channel to lookup
         - data: the shape of the payload varies depending on the channel. You can learn more about channel data schemas [here](https://docs.knock.app/send-notifications/setting-channel-data#provider-data-requirements).
      */
-    public func updateUserChannelData(channelId: String, data: AnyEncodable) async throws
+    func updateUserChannelData(channelId: String, data: AnyEncodable) async throws
         -> ChannelData
     {
         try await self.channelModule.updateUserChannelData(channelId: channelId, data: data)
     }
 
-    public func updateUserChannelData(
+    func updateUserChannelData(
         channelId: String, data: AnyEncodable,
         completionHandler: @escaping ((Result<ChannelData, Error>) -> Void)
     ) {
@@ -287,11 +287,11 @@ extension Knock {
     Returns the apnsDeviceToken that was set from the Knock.shared.registerTokenForAPNS.
     If you use our KnockAppDelegate, the token registration will be handled for you automatically.
     */
-    public func getApnsDeviceToken() async -> String? {
+    func getApnsDeviceToken() async -> String? {
         await environment.getDeviceToken()
     }
 
-    public func getApnsDeviceToken(completion: @escaping (String?) -> Void) {
+    func getApnsDeviceToken(completion: @escaping (String?) -> Void) {
         Task {
             completion(await environment.getDeviceToken())
         }
@@ -309,12 +309,12 @@ extension Knock {
         - channelId: the id of the APNS channel
         - token: the APNS device token as a `String`
      */
-    public func registerTokenForAPNS(channelId: String?, token: String) async throws -> ChannelData
+    func registerTokenForAPNS(channelId: String?, token: String) async throws -> ChannelData
     {
         return try await self.channelModule.registerTokenForAPNS(channelId: channelId, token: token)
     }
 
-    public func registerTokenForAPNS(
+    func registerTokenForAPNS(
         channelId: String?, token: String,
         completionHandler: @escaping ((Result<ChannelData, Error>) -> Void)
     ) {
@@ -328,14 +328,14 @@ extension Knock {
         }
     }
 
-    public func registerTokenForAPNS(channelId: String, token: Data) async throws -> ChannelData {
+    func registerTokenForAPNS(channelId: String, token: Data) async throws -> ChannelData {
         // 1. Convert device token to string
         let tokenString = Knock.convertTokenToString(token: token)
         return try await self.channelModule.registerTokenForAPNS(
             channelId: channelId, token: tokenString)
     }
 
-    public func registerTokenForAPNS(
+    func registerTokenForAPNS(
         channelId: String, token: Data,
         completionHandler: @escaping ((Result<ChannelData, Error>) -> Void)
     ) {
@@ -352,13 +352,13 @@ extension Knock {
         - channelId: the id of the APNS channel in Knock
         - token: the APNS device token as a `String`
      */
-    public func unregisterTokenForAPNS(channelId: String, token: String) async throws -> ChannelData
+    func unregisterTokenForAPNS(channelId: String, token: String) async throws -> ChannelData
     {
         return try await self.channelModule.unregisterTokenForAPNS(
             channelId: channelId, token: token)
     }
 
-    public func unregisterTokenForAPNS(
+    func unregisterTokenForAPNS(
         channelId: String, token: String,
         completionHandler: @escaping ((Result<ChannelData, Error>) -> Void)
     ) {
@@ -373,14 +373,14 @@ extension Knock {
         }
     }
 
-    public func unregisterTokenForAPNS(channelId: String, token: Data) async throws -> ChannelData {
+    func unregisterTokenForAPNS(channelId: String, token: Data) async throws -> ChannelData {
         // 1. Convert device token to string
         let tokenString = Knock.convertTokenToString(token: token)
         return try await self.channelModule.unregisterTokenForAPNS(
             channelId: channelId, token: tokenString)
     }
 
-    public func unregisterTokenForAPNS(
+    func unregisterTokenForAPNS(
         channelId: String, token: Data,
         completionHandler: @escaping ((Result<ChannelData, Error>) -> Void)
     ) {
@@ -393,7 +393,7 @@ extension Knock {
     /**
      Convenience method to determine whether or not the user is allowing Push Notifications for the app.
      */
-    public func getNotificationPermissionStatus(
+    func getNotificationPermissionStatus(
         completion: @escaping (UNAuthorizationStatus) -> Void
     ) {
         channelModule.userNotificationCenter.getNotificationSettings(completionHandler: {
@@ -402,7 +402,7 @@ extension Knock {
         })
     }
 
-    public func getNotificationPermissionStatus() async -> UNAuthorizationStatus {
+    func getNotificationPermissionStatus() async -> UNAuthorizationStatus {
         let settings = await channelModule.userNotificationCenter.notificationSettings()
         return settings.authorizationStatus
     }
@@ -410,7 +410,7 @@ extension Knock {
     /**
      Convenience method to request Push Notification permissions for the app.
      */
-    public func requestNotificationPermission(
+    func requestNotificationPermission(
         options: UNAuthorizationOptions = [.sound, .badge, .alert],
         completion: @escaping (UNAuthorizationStatus) -> Void
     ) {
@@ -424,7 +424,7 @@ extension Knock {
         )
     }
 
-    public func requestNotificationPermission(
+    func requestNotificationPermission(
         options: UNAuthorizationOptions = [.sound, .badge, .alert]
     ) async throws -> UNAuthorizationStatus {
         try await channelModule.userNotificationCenter.requestAuthorization(options: options)
@@ -434,7 +434,7 @@ extension Knock {
     /**
      Convenience method to request Push Notification permissions for the app, and then, if successfull, registerForRemoteNotifications in order to get a device token.
      */
-    public func requestAndRegisterForPushNotifications() {
+    func requestAndRegisterForPushNotifications() {
         Knock.shared.requestNotificationPermission { status in
             if status != .denied {
                 DispatchQueue.main.async {
