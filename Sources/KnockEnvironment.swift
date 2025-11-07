@@ -101,7 +101,7 @@ internal actor KnockEnvironment {
         let previousTokens = getPreviousPushTokens()
         if let token = token, !previousTokens.contains(token) {
             // Append new token to the list of previous tokens only if it's unique
-            // We are storing these old tokens so that we can ensure they get unregestired.
+            // We store these old tokens so that we can ensure they get unregistered.
             setPreviousPushTokens(tokens: previousTokens + [token])
         }
         
