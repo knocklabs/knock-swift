@@ -18,6 +18,7 @@ extension Knock {
         public var has_tenant: Bool? // Optionally scope to notifications with any tenancy or no tenancy
         public var archived: FeedItemArchivedScope? // Optionally scope to a given archived status (defaults to `exclude`)
         public var trigger_data: [String: AnyCodable]? // GenericData
+        public var locale: String? // Optionally scope to a particular locale
         
         public init(from decoder: Decoder) throws {
             let container: KeyedDecodingContainer<FeedClientOptions.CodingKeys> = try decoder.container(keyedBy: FeedClientOptions.CodingKeys.self)
@@ -30,9 +31,10 @@ extension Knock {
             self.has_tenant = try container.decodeIfPresent(Bool.self, forKey: FeedClientOptions.CodingKeys.has_tenant)
             self.archived = try container.decodeIfPresent(Knock.FeedItemArchivedScope.self, forKey: FeedClientOptions.CodingKeys.archived)
             self.trigger_data = try container.decodeIfPresent([String : AnyCodable].self, forKey: FeedClientOptions.CodingKeys.trigger_data)
+            self.locale = try container.decodeIfPresent(String.self, forKey: FeedClientOptions.CodingKeys.locale)
         }
         
-        public init(before: String? = nil, after: String? = nil, page_size: Int? = nil, status: FeedItemScope? = nil, source: String? = nil, tenant: String? = nil, has_tenant: Bool? = nil, archived: FeedItemArchivedScope? = nil, trigger_data: [String : AnyCodable]? = nil) {
+        public init(before: String? = nil, after: String? = nil, page_size: Int? = nil, status: FeedItemScope? = nil, source: String? = nil, tenant: String? = nil, has_tenant: Bool? = nil, archived: FeedItemArchivedScope? = nil, trigger_data: [String : AnyCodable]? = nil, locale: String? = nil) {
             self.before = before
             self.after = after
             self.page_size = page_size
@@ -42,6 +44,7 @@ extension Knock {
             self.has_tenant = has_tenant
             self.archived = archived
             self.trigger_data = trigger_data
+            self.locale = locale
         }
         
         /**
@@ -61,7 +64,8 @@ extension Knock {
                 tenant: self.tenant,
                 has_tenant: self.has_tenant,
                 archived: self.archived,
-                trigger_data: self.trigger_data
+                trigger_data: self.trigger_data,
+                locale: self.locale
             )
             
             // check if the passed options are not nil
@@ -96,6 +100,9 @@ extension Knock {
             }
             if options.trigger_data != nil {
                 mergedOptions.trigger_data = options.trigger_data
+            }
+            if options.locale != nil {
+                mergedOptions.locale = options.locale
             }
             
             return mergedOptions
