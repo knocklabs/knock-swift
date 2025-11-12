@@ -11,11 +11,6 @@ jobs:
     name: Build and Test
     runs-on: macos-14
 
-    strategy:
-      matrix:
-        destination:
-          - platform=iOS Simulator,name=iPhone 15,OS=17.2
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,17 +24,11 @@ jobs:
       - name: Show Swift version
         run: swift --version
 
-      - name: Show available destinations
-        run: xcodebuild -scheme Knock -showdestinations
+      - name: Resolve dependencies
+        run: swift package resolve
 
-      - name: Resolve Swift Package dependencies
-        run: xcodebuild -resolvePackageDependencies
+      - name: Build
+        run: swift build
 
-      - name: Build and Test
-        run: |
-          xcodebuild clean build test \
-            -scheme Knock \
-            -destination '${{ matrix.destination }}' \
-            -enableCodeCoverage YES \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO
+      - name: Run tests
+        run: swift test --enable-code-coverage
