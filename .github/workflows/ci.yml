@@ -18,17 +18,46 @@ jobs:
       - name: Select Xcode version
         run: sudo xcode-select -switch /Applications/Xcode_15.2.app
 
-      - name: Show Xcode version
-        run: xcodebuild -version
+      - name: Show versions
+        run: |
+          xcodebuild -version
+          swift --version
 
-      - name: Show Swift version
-        run: swift --version
-
-      - name: Resolve dependencies
+      - name: Resolve Swift Package dependencies
         run: swift package resolve
 
-      - name: Build
-        run: swift build
+      - name: Build with Swift PM
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -scheme Knock \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.2' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            ONLY_ACTIVE_ARCH=NO | xcpretty || xcodebuild build \
+            -scheme Knock \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.2' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            ONLY_ACTIVE_ARCH=NO
 
       - name: Run tests
-        run: swift test --enable-code-coverage
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -scheme Knock \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.2' \
+            -enableCodeCoverage YES \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            ONLY_ACTIVE_ARCH=NO | xcpretty || xcodebuild test \
+            -scheme Knock \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.2' \
+            -enableCodeCoverage YES \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            ONLY_ACTIVE_ARCH=NO
