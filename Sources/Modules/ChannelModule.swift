@@ -182,7 +182,7 @@ internal class ChannelModule {
         }
     }
 
-    private func buildDeviceObject(token: String) -> Knock.Device {
+    internal func buildDeviceObject(token: String) -> Knock.Device {
         return Knock.Device(
             token: token,
             locale: Locale.current.identifier,
@@ -190,7 +190,7 @@ internal class ChannelModule {
         )
     }
 
-    private func filterTokensOutFromDevices(
+    internal func filterTokensOutFromDevices(
         devices: [Knock.Device],
         targetTokens: [String]
     ) -> [Knock.Device] {
@@ -199,7 +199,7 @@ internal class ChannelModule {
         return filteredDevices
     }
 
-    private func addTokenToDevices(
+    internal func addTokenToDevices(
         devices: [Knock.Device],
         newToken: String
     ) -> [Knock.Device] {
