@@ -21,23 +21,23 @@ final class ChannelTests: XCTestCase {
 
     func testFilterTokensOut_RemovesMatchingTokens() {
         let devices: [Knock.Device] = [
-            ["token": "a", "locale": "en_US", "timezone": "UTC"],
-            ["token": "b", "locale": "en_US", "timezone": "UTC"],
-            ["token": "c", "locale": "en_US", "timezone": "UTC"],
+            Knock.Device(token: "a", locale: "en_US", timezone: "UTC"),
+            Knock.Device(token: "b", locale: "en_US", timezone: "UTC"),
+            Knock.Device(token: "c", locale: "en_US", timezone: "UTC"),
         ]
         let result = channelModule.filterTokensOutFromDevices(
             devices: devices, targetTokens: ["a", "b"])
         XCTAssertEqual(result.count, 1)
-        XCTAssertEqual(result.first?["token"] as? String, "c")
+        XCTAssertEqual(result.first?.token, "c")
     }
 
     func testFilterTokensOut_LeavesUnmatchedTokens() {
         let devices: [Knock.Device] = [
-            ["token": "x", "locale": "en_US", "timezone": "UTC"]
+            Knock.Device(token: "x", locale: "en_US", timezone: "UTC")
         ]
         let result = channelModule.filterTokensOutFromDevices(devices: devices, targetTokens: ["y"])
         XCTAssertEqual(result.count, 1)
-        XCTAssertEqual(result.first?["token"] as? String, "x")
+        XCTAssertEqual(result.first?.token, "x")
     }
 
     func testFilterTokensOut_WithEmptyInput_ReturnsEmpty() {
@@ -49,36 +49,36 @@ final class ChannelTests: XCTestCase {
 
     func testAddToken_AddsNewToken() {
         let devices: [Knock.Device] = [
-            ["token": "a", "locale": "en_US", "timezone": "UTC"]
+            Knock.Device(token: "a", locale: "en_US", timezone: "UTC")
         ]
         let result = channelModule.addTokenToDevices(devices: devices, newToken: "b")
         XCTAssertEqual(result.count, 2)
-        let tokens = result.compactMap { $0["token"] as? String }
+        let tokens = result.map { $0.token }
         XCTAssertTrue(tokens.contains("b"))
     }
 
     func testAddToken_DoesNotAddDuplicateToken() {
         let devices: [Knock.Device] = [
-            ["token": "a", "locale": "en_US", "timezone": "UTC"]
+            Knock.Device(token: "a", locale: "en_US", timezone: "UTC")
         ]
         let result = channelModule.addTokenToDevices(devices: devices, newToken: "a")
         XCTAssertEqual(result.count, 1)
-        XCTAssertEqual(result.first?["token"] as? String, "a")
+        XCTAssertEqual(result.first?.token, "a")
     }
 
     func testAddToken_PreservesExistingDevices() {
         let devices: [Knock.Device] = [
-            ["token": "a", "locale": "en_US", "timezone": "UTC"]
+            Knock.Device(token: "a", locale: "en_US", timezone: "UTC")
         ]
         let result = channelModule.addTokenToDevices(devices: devices, newToken: "b")
-        let tokens = result.compactMap { $0["token"] as? String }
+        let tokens = result.map { $0.token }
         XCTAssertEqual(tokens.sorted(), ["a", "b"])
     }
 
     func testBuildDeviceObject_HasExpectedFields() {
         let device = channelModule.buildDeviceObject(token: "abc123")
-        XCTAssertEqual(device["token"] as? String, "abc123")
-        XCTAssertNotNil(device["locale"])
-        XCTAssertNotNil(device["timezone"])
+        XCTAssertEqual(device.token, "abc123")
+        XCTAssertNotNil(device.locale)
+        XCTAssertNotNil(device.timezone)
     }
 }
