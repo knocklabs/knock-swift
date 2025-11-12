@@ -1,4 +1,3 @@
-
 # Official Knock iOS SDK
 
 [![GitHub Release](https://img.shields.io/github/v/release/knocklabs/knock-swift?style=flat)](https://github.com/knocklabs/knock-swift/releases/latest)
@@ -9,8 +8,6 @@
 ![min swift version is 5.3](https://img.shields.io/badge/min%20Swift%20version-5.3-orange)
 ![min ios version is 16](https://img.shields.io/badge/min%20iOS%20version-16-blue)
 [![GitHub license](https://img.shields.io/badge/license-MIT-lightgrey.svg?style=flat)](https://github.com/knocklabs/ios-example-app/blob/main/LICENSE)
-
-
 
 ---
 
@@ -34,7 +31,7 @@ See the [iOS Example App](https://github.com/knocklabs/ios-example-app) for more
 
 ### Swift Package Manager
 
-There are two ways to add this as a dependency using the Swift Package Manager: 
+There are two ways to add this as a dependency using the Swift Package Manager:
 
 1. Using Xcode
 2. Manually via `Package.swift`
@@ -46,7 +43,7 @@ There are two ways to add this as a dependency using the Swift Package Manager:
 <img width="422" alt="Screenshot 2023-06-27 at 19 41 32" src="https://github.com/knocklabs/knock-swift/assets/952873/31bb67de-5272-445a-a5c4-5df3bcfa3c8b">
 
 2. Search for `https://github.com/knocklabs/knock-swift.git` and then click `Add Package`
-*Note: We recommend that you set the Dependency Rule to Up to Next Major Version. While we encourage you to keep your app up to date with the latest SDK, major versions can include breaking changes or new features that require your attention.*
+   _Note: We recommend that you set the Dependency Rule to Up to Next Major Version. While we encourage you to keep your app up to date with the latest SDK, major versions can include breaking changes or new features that require your attention._
 
 <img width="900" alt="Screenshot 2023-06-27 at 19 42 09" src="https://github.com/knocklabs/knock-swift/assets/952873/d947cc7f-8da6-4814-aa75-3e41ffe72ff4">
 
@@ -54,9 +51,9 @@ There are two ways to add this as a dependency using the Swift Package Manager:
 
 If you are managing dependencies using the `Package.swift` file, just add this to you dependencies array:
 
-``` swift
+```swift
 dependencies: [
-    .package(url: "https://github.com/knocklabs/knock-swift.git", .upToNextMajor(from: "1.2.5"))
+    .package(url: "https://github.com/knocklabs/knock-swift.git", .upToNextMajor(from: "1.2.6"))
 ]
 ```
 
@@ -69,7 +66,7 @@ platform :ios, '16.0'
 use_frameworks!
 
 target 'MyApp' do
-  pod 'Knock', '~> 1.2.5'
+  pod 'Knock', '~> 1.2.6'
 end
 ```
 
@@ -89,12 +86,12 @@ As a last option, you could manually copy the files inside the `Sources` folder 
 
 You can now start using the SDK:
 
-``` swift
+```swift
 import Knock
 
-/* 
- Setup the shared Knock instance as soon as you can. 
- Note: pushChannelId is required if you want to use our KnockAppDelegate helper. 
+/*
+ Setup the shared Knock instance as soon as you can.
+ Note: pushChannelId is required if you want to use our KnockAppDelegate helper.
  Otherwise, this field is optional.
 */
 try? Knock.shared.setup(publishableKey: "your-pk", pushChannelId: "apns-push-channel-id")

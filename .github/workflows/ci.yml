@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: macos-14
+
+    strategy:
+      matrix:
+        destination:
+          - platform=iOS Simulator,name=iPhone 15,OS=17.2
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Select Xcode version
+        run: sudo xcode-select -switch /Applications/Xcode_15.2.app
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Show Swift version
+        run: swift --version
+
+      - name: Show available destinations
+        run: xcodebuild -scheme Knock -showdestinations
+
+      - name: Resolve Swift Package dependencies
+        run: xcodebuild -resolvePackageDependencies
+
+      - name: Build and Test
+        run: |
+          xcodebuild clean build test \
+            -scheme Knock \
+            -destination '${{ matrix.destination }}' \
+            -enableCodeCoverage YES \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO
