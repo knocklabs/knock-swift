@@ -122,7 +122,7 @@ final class InAppFeedViewModelTests: XCTestCase {
         let item4 = generateTestFeedItem(status: .read)
 
         viewModel.feed.entries = [item, item2, item3, item4]
-        viewModel.feedClientOptions.archived = .include
+        viewModel.feedClientOptions.archived = .exclude
         await viewModel.optimisticallyBulkUpdateStatus(updatedStatus: .archived)
         XCTAssertTrue(viewModel.feed.entries.count == 0)
         XCTAssertTrue(viewModel.feed.meta.unreadCount == 0)
