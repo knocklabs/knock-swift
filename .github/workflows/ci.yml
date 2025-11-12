@@ -23,20 +23,13 @@ jobs:
           xcodebuild -version
           swift --version
 
-      - name: Resolve Swift Package dependencies
+      - name: Resolve dependencies
         run: swift package resolve
 
-      - name: Build with Swift PM
+      - name: Build for iOS Simulator
         run: |
-          set -o pipefail
-          xcodebuild build \
-            -scheme Knock \
-            -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.2' \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            ONLY_ACTIVE_ARCH=NO | xcpretty || xcodebuild build \
-            -scheme Knock \
+          xcodebuild build-for-testing \
+            -scheme Knock-Package \
             -sdk iphonesimulator \
             -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.2' \
             CODE_SIGN_IDENTITY="" \
@@ -45,19 +38,8 @@ jobs:
 
       - name: Run tests
         run: |
-          set -o pipefail
-          xcodebuild test \
-            -scheme Knock \
+          xcodebuild test-without-building \
+            -scheme Knock-Package \
             -sdk iphonesimulator \
             -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.2' \
-            -enableCodeCoverage YES \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            ONLY_ACTIVE_ARCH=NO | xcpretty || xcodebuild test \
-            -scheme Knock \
-            -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.2' \
-            -enableCodeCoverage YES \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            ONLY_ACTIVE_ARCH=NO
+            -enableCodeCoverage YES
