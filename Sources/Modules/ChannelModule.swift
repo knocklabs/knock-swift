@@ -158,7 +158,7 @@ internal class ChannelModule {
                 return try await registerNewDevicesDataOnServer(
                     devices: newDevices, channelId: channelId)
             } else {
-                return existingChannelData
+                return channelData
             }
         } catch let userIdError as Knock.KnockError
             where userIdError == Knock.KnockError.userIdNotSetError
@@ -183,11 +183,11 @@ internal class ChannelModule {
     }
 
     private func buildDeviceObject(token: String) -> Knock.Device {
-        return [
-            "token": token,
-            "locale": Locale.current.identifier,
-            "timezone": TimeZone.current.identifier,
-        ]
+        return Knock.Device(
+            token: token,
+            locale: Locale.current.identifier,
+            timezone: TimeZone.current.identifier
+        )
     }
 
     private func filterTokensOutFromDevices(
@@ -195,7 +195,7 @@ internal class ChannelModule {
         targetTokens: [String]
     ) -> [Knock.Device] {
         var filteredDevices: [Knock.Device] = devices
-        filteredDevices.removeAll(where: { targetTokens.contains($0["token"] as? String ?? "") })
+        filteredDevices.removeAll(where: { targetTokens.contains($0.token) })
         return filteredDevices
     }
 
@@ -204,7 +204,7 @@ internal class ChannelModule {
         newToken: String
     ) -> [Knock.Device] {
         var updatedDevices: [Knock.Device] = devices
-        if !updatedDevices.contains(where: { $0["token"] as? String == newToken }) {
+        if !updatedDevices.contains(where: { $0.token == newToken }) {
             updatedDevices.append(buildDeviceObject(token: newToken))
         }
         return updatedDevices
