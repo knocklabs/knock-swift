@@ -53,7 +53,8 @@ internal class FeedModule {
             URLQueryItem(name: "has_tenant", value: mergedOptions.has_tenant.stringOrNil()),
             URLQueryItem(name: "status", value: (mergedOptions.status != nil) ? mergedOptions.status?.rawValue : ""),
             URLQueryItem(name: "archived", value: (mergedOptions.archived != nil) ? mergedOptions.archived?.rawValue : ""),
-            URLQueryItem(name: "trigger_data", value: triggerDataJSON)
+            URLQueryItem(name: "trigger_data", value: triggerDataJSON),
+            URLQueryItem(name: "locale", value: mergedOptions.locale)
         ]
         
         do {
