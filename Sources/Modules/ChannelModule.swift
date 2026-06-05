@@ -79,10 +79,9 @@ internal class ChannelModule {
             let previousTokensFromDevice: [String] = await Knock.shared.environment
                 .getPreviousPushTokens()
 
-            guard
-                let currentDevicesFromServer = channelData.data?["devices"]?.value
-                    as? [Knock.Device]
-            else {
+            let currentDevicesFromServer = parseDevicesFromChannelData(channelData)
+
+            guard !currentDevicesFromServer.isEmpty else {
                 // No valid tokens array found.
                 Knock.shared.log(
                     type: .warning, category: .pushNotification, message: "unregisterTokenForAPNS",
@@ -141,7 +140,7 @@ internal class ChannelModule {
     {
         do {
             let channelData: Knock.ChannelData = try await getUserChannelData(channelId: channelId)
-            let devices = channelData.data?["devices"]?.value as? [Knock.Device] ?? []
+            let devices = parseDevicesFromChannelData(channelData)
 
             let previousTokens: [String] = await Knock.shared.environment.getPreviousPushTokens()
 
@@ -188,6 +187,19 @@ internal class ChannelModule {
             locale: Locale.current.identifier,
             timezone: TimeZone.current.identifier
         )
+    }
+
+    internal func parseDevicesFromChannelData(_ channelData: Knock.ChannelData) -> [Knock.Device] {
+        guard let devicesValue = channelData.data?["devices"]?.value else {
+            return []
+        }
+
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: devicesValue)
+            return try JSONDecoder().decode([Knock.Device].self, from: jsonData)
+        } catch {
+            return []
+        }
     }
 
     internal func filterTokensOutFromDevices(
@@ -302,9 +314,9 @@ public extension Knock {
      This is a convenience method that internally gets the channel data and searches for the token. If it exists, then it's already registered and it returns.
      If the data does not exists or the token is missing from the array, it's added.
      If the new token differs from the last token that was used on the device, the old token will be unregistered.
-    
+
      You can learn more about APNS [here](https://developer.apple.com/documentation/usernotifications/registering_your_app_with_apns).
-    
+
      - Parameters:
         - channelId: the id of the APNS channel
         - token: the APNS device token as a `String`
