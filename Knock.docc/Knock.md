@@ -1,7 +1,6 @@
 # Offical Knock iOS SDK
 
 [![GitHub Release](https://img.shields.io/github/v/release/knocklabs/knock-swift?style=flat)](https://github.com/knocklabs/knock-swift/releases/latest)
-[![CocoaPods](https://img.shields.io/cocoapods/v/Knock.svg?style=flat)](https://cocoapods.org/)
 [![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
 [![Swift Package Manager compatible](https://img.shields.io/badge/Swift%20Package%20Manager-compatible-4BC51D.svg?style=flat)](https://swift.org/package-manager/)
 
@@ -50,19 +49,6 @@ If you are managing dependencies using the `Package.swift` file, just add this t
 dependencies: [
     .package(url: "https://github.com/knocklabs/knock-swift.git", .upToNextMajor(from: "1.0.0"))
 ]
-```
-
-### Cocoapods
-
-Add the dependency to your `Podfile`:
-
-```
-platform :ios, '16.0'
-use_frameworks!
-
-target 'MyApp' do
-  pod 'Knock', '~> 1.1.0'
-end
 ```
 
 ### Carthage

@@ -3,9 +3,9 @@
 ## Cursor Cloud specific instructions
 
 ### What this repo is
-This is the **Knock iOS SDK** (`Knock`), a Swift Package (`Package.swift`) distributed via SPM,
-CocoaPods, and Carthage. It is a **library, not a runnable application** — there is no server or
-app process to start. The module targets iOS 15+ and imports Apple-only frameworks throughout
+This is the **Knock iOS SDK** (`Knock`), a Swift Package (`Package.swift`) distributed via SPM and
+Carthage. It is a **library, not a runnable application** — there is no server or app process to
+start. The module targets iOS 15+ and imports Apple-only frameworks throughout
 (`SwiftUI`, `UIKit`, `WebKit`, `Combine`), and its dependency `SwiftPhoenixClient` relies on
 Apple's `FoundationNetworking` types (e.g. `URLSessionWebSocketDelegate`).
 
