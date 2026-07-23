@@ -98,11 +98,14 @@ internal actor KnockEnvironment {
     
     // APNS Device Token
     public func setDeviceToken(_ token: String?) async {
-        let previousTokens = getPreviousPushTokens()
-        if let token = token, !previousTokens.contains(token) {
-            // Append new token to the list of previous tokens only if it's unique
-            // We store these old tokens so that we can ensure they get unregistered.
-            setPreviousPushTokens(tokens: previousTokens + [token])
+        let oldToken = getDeviceToken()
+        if let oldToken, oldToken != token {
+            let previousTokens = getPreviousPushTokens()
+            if !previousTokens.contains(oldToken) {
+                // Append the replaced token to the list of previous tokens only if it's unique
+                // We store these old tokens so that we can ensure they get unregistered.
+                setPreviousPushTokens(tokens: previousTokens + [oldToken])
+            }
         }
         
         // Update the current device token
