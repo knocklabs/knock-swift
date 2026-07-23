@@ -48,4 +48,24 @@ final class AuthenticationTests: XCTestCase {
         XCTAssertEqual(publishableKey, "pk_123")
         XCTAssertEqual(deviceToken, "test")
     }
+
+    func testSetDeviceTokenTracksReplacedToken() async {
+        let environment = Knock.shared.environment
+        await environment.setDeviceToken(nil)
+        await environment.setPreviousPushTokens(tokens: [])
+
+        await environment.setDeviceToken("A")
+        let previousTokensAfterInitialRegistration = await environment.getPreviousPushTokens()
+        XCTAssertEqual(previousTokensAfterInitialRegistration, [])
+
+        await environment.setDeviceToken("B")
+
+        let currentToken = await environment.getDeviceToken()
+        let previousTokensAfterRotation = await environment.getPreviousPushTokens()
+        XCTAssertEqual(currentToken, "B")
+        XCTAssertEqual(previousTokensAfterRotation, ["A"])
+
+        await environment.setDeviceToken(nil)
+        await environment.setPreviousPushTokens(tokens: [])
+    }
 }
