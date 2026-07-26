@@ -9,6 +9,10 @@ import Foundation
 import Combine
 
 extension Knock {
+    /// `@MainActor` because this type is a SwiftUI `ObservableObject` with `@Published`
+    /// properties, and it calls into `Knock.shared.feedManager` (also main-isolated).
+    /// Publishing changes from a background thread is not allowed on `ObservableObject`.
+    @MainActor
     public class InAppFeedViewModel: ObservableObject {
         @Published public var feed: Knock.Feed = Knock.Feed() /// The current feed data.
         @Published public var filterOptions: [InAppFeedFilter] /// Available filter options for the feed.

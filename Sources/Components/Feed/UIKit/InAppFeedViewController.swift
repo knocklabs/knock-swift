@@ -10,19 +10,26 @@ import UIKit
 import SwiftUI
 
 open class InAppFeedViewController: UIViewController {
-    public var viewModel = Knock.InAppFeedViewModel()
-    public var theme: Knock.InAppFeedTheme = .init()
-    
-    public init(viewModel: Knock.InAppFeedViewModel = Knock.InAppFeedViewModel(), theme: Knock.InAppFeedTheme) {
-        super.init(nibName: nil, bundle: nil)
+    public var viewModel: Knock.InAppFeedViewModel
+    public var theme: Knock.InAppFeedTheme
 
+    // Note: `viewModel` has no default argument because `Knock.InAppFeedViewModel`
+    // is `@MainActor`-isolated, and default-argument expressions are evaluated
+    // in the caller's isolation context (not the init's). A `convenience init`
+    // preserves the old "just pass a theme" call site without breaking isolation.
+    public init(viewModel: Knock.InAppFeedViewModel, theme: Knock.InAppFeedTheme) {
         self.viewModel = viewModel
         self.theme = theme
+        super.init(nibName: nil, bundle: nil)
     }
-    
+
+    public convenience init(theme: Knock.InAppFeedTheme) {
+        self.init(viewModel: Knock.InAppFeedViewModel(), theme: theme)
+    }
+
     required public init?(coder: NSCoder) {
-        self.viewModel = Knock.InAppFeedViewModel() // Default value for viewModel
-        self.theme = Knock.InAppFeedTheme() // Default value for theme
+        self.viewModel = Knock.InAppFeedViewModel()
+        self.theme = Knock.InAppFeedTheme()
         super.init(coder: coder)
     }
     

@@ -13,8 +13,12 @@ public class Knock {
     internal static let clientVersion = "1.2.9"
     
     public static var shared: Knock = Knock()
-    
-    public var feedManager: FeedManager?
+
+    /// The chat feed manager. Main-actor isolated because the underlying Phoenix
+    /// socket and the SDK's own UIApplication lifecycle observer (which calls
+    /// `connectToFeed()` on `.didBecomeActive`) both run on the main queue.
+    /// Reading or writing this property off the main actor is a data race.
+    @MainActor public var feedManager: FeedManager?
     
     internal let environment = KnockEnvironment()
     internal lazy var authenticationModule = AuthenticationModule()

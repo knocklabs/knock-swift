@@ -12,46 +12,57 @@ import UIKit
 
 public extension Knock {
 
+    /// Main-actor isolated. The underlying Phoenix `Socket` and `Channel` are not
+    /// thread-safe, and the SDK's own `UIApplication.didBecomeActiveNotification`
+    /// observer (registered below with `queue: .main`) calls `connectToFeed()`
+    /// from the main queue. Annotating the whole class as `@MainActor` forces
+    /// every external caller to do the same, eliminating a whole class of
+    /// data-race crashes (`objc_retain` during foregrounding).
+    @MainActor
     class FeedManager {
         internal var feedModule: FeedModule!
         private var foregroundObserver: NSObjectProtocol?
         private var backgroundObserver: NSObjectProtocol?
-        
+
         public init(feedId: String, options: FeedClientOptions = FeedClientOptions(archived: .exclude)) async throws {
             self.feedModule = try await FeedModule(feedId: feedId, options: options)
             registerForAppLifecycleNotifications()
         }
-        
+
         public init(feedId: String, options: FeedClientOptions = FeedClientOptions(archived: .exclude)) throws {
             Task {
                 self.feedModule = try await FeedModule(feedId: feedId, options: options)
                 registerForAppLifecycleNotifications()
             }
         }
-        
+
+        // `deinit` cannot be `@MainActor`-isolated, but `NotificationCenter.removeObserver`
+        // is thread-safe, so we capture the observer tokens into locals and hand them to a
+        // free function that can run from any isolation domain.
         deinit {
-            deregisterFromAppLifecycleNotifications()
+            let fg = foregroundObserver
+            let bg = backgroundObserver
+            if let fg { NotificationCenter.default.removeObserver(fg) }
+            if let bg { NotificationCenter.default.removeObserver(bg) }
         }
-        
+
         private func registerForAppLifecycleNotifications() {
             foregroundObserver = NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
-                self?.didEnterForeground()
+                // `queue: .main` gives us a main-thread callback, but from Swift's point of
+                // view we're still in a non-isolated closure. Hop explicitly to main-actor
+                // isolation before touching `self`.
+                Task { @MainActor [weak self] in
+                    self?.didEnterForeground()
+                }
             }
 
             backgroundObserver = NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
-                self?.didEnterBackground()
+                Task { @MainActor [weak self] in
+                    self?.didEnterBackground()
+                }
             }
         }
 
-        private func deregisterFromAppLifecycleNotifications() {
-            if let observer = foregroundObserver {
-                NotificationCenter.default.removeObserver(observer)
-            }
-            if let observer = backgroundObserver {
-                NotificationCenter.default.removeObserver(observer)
-            }
-        }
-        
         private func didEnterForeground() {
             Knock.shared.feedManager?.connectToFeed()
         }

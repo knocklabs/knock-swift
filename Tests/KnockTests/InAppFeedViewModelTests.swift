@@ -9,6 +9,7 @@ import Foundation
 import XCTest
 @testable import Knock
 
+@MainActor
 final class InAppFeedViewModelTests: XCTestCase {
     var viewModel: Knock.InAppFeedViewModel!
     
