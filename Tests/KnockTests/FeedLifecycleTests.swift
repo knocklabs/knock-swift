@@ -3,13 +3,14 @@ import XCTest
 import SwiftPhoenixClient
 @testable import Knock
 
-/// Mirrors `URLSessionTransport`'s threading model: all state access and all delegate
-/// callbacks are serialized on a private queue, entered synchronously and reentrantly.
-/// Callbacks therefore run *while the transport queue is held*, which is what makes
-/// lock-ordering bugs between this queue and `FeedModule.lifecycleQueue` observable.
+/// Mirrors `URLSessionTransport`'s threading model: state is guarded by a serial queue, while
+/// delegate callbacks are delivered under a separate recursive delivery lock that the `delegate`
+/// setter also takes. Reproducing that split matters — it is what makes a lock-ordering bug
+/// between the delivery lock and `FeedModule.lifecycleQueue` observable in these tests.
 final class FakeFeedTransport: PhoenixTransport {
     private let eventQueue = DispatchQueue(label: "com.knock.tests.transport.events")
     private let eventQueueKey = DispatchSpecificKey<Void>()
+    private let deliveryLock = NSRecursiveLock()
     private var _readyState: PhoenixTransportReadyState = .closed
     private var _delegate: PhoenixTransportDelegate?
     private var _connectCount = 0
@@ -26,6 +27,13 @@ final class FakeFeedTransport: PhoenixTransport {
         return eventQueue.sync(execute: work)
     }
     
+    private func deliver(_ body: (PhoenixTransportDelegate) -> Void) {
+        deliveryLock.lock()
+        defer { deliveryLock.unlock() }
+        guard let delegate = syncOnEventQueue({ _delegate }) else { return }
+        body(delegate)
+    }
+    
     var readyState: PhoenixTransportReadyState {
         get { syncOnEventQueue { _readyState } }
         set { syncOnEventQueue { _readyState = newValue } }
@@ -33,7 +41,11 @@ final class FakeFeedTransport: PhoenixTransport {
     
     var delegate: PhoenixTransportDelegate? {
         get { syncOnEventQueue { _delegate } }
-        set { syncOnEventQueue { _delegate = newValue } }
+        set {
+            deliveryLock.lock()
+            defer { deliveryLock.unlock() }
+            syncOnEventQueue { _delegate = newValue }
+        }
     }
     
     var connectCount: Int { syncOnEventQueue { _connectCount } }
@@ -44,16 +56,16 @@ final class FakeFeedTransport: PhoenixTransport {
         syncOnEventQueue {
             _connectCount += 1
             _readyState = .open
-            _delegate?.onOpen(response: nil)
         }
+        deliver { $0.onOpen(response: nil) }
     }
     
     func disconnect(code: Int, reason: String?) {
         syncOnEventQueue {
             _disconnectCount += 1
             _readyState = .closed
-            _delegate?.onClose(code: code, reason: reason)
         }
+        deliver { $0.onClose(code: code, reason: reason) }
     }
     
     func send(data: Data) {
@@ -61,10 +73,8 @@ final class FakeFeedTransport: PhoenixTransport {
     }
     
     func fail(_ error: Error, response: URLResponse? = nil) {
-        syncOnEventQueue {
-            _readyState = .closed
-            _delegate?.onError(error: error, response: response)
-        }
+        syncOnEventQueue { _readyState = .closed }
+        deliver { $0.onError(error: error, response: response) }
     }
 }
 
@@ -152,9 +162,9 @@ final class FeedLifecycleTests: XCTestCase {
     }
     
     /// `connectToFeed` holds the lifecycle queue while calling into the socket, which acquires
-    /// the transport's event queue. A socket error is delivered in the opposite direction, while
-    /// the transport holds its event queue. If the error handler took the lifecycle queue
-    /// synchronously, these two orderings would deadlock.
+    /// the transport's delivery lock. A socket error is delivered in the opposite direction,
+    /// with that lock already held. If the error handler took the lifecycle queue synchronously
+    /// rather than hopping onto it, these two orderings would deadlock.
     func testSocketErrorDuringConnectDoesNotDeadlockAgainstTransportQueue() {
         let response = HTTPURLResponse(
             url: URL(string: "https://api.knock.app/ws")!,
@@ -211,6 +221,10 @@ final class FeedLifecycleTests: XCTestCase {
         XCTAssertEqual(group.wait(timeout: .now() + 5), .success)
         module.disconnectFromFeed()
         XCTAssertFalse(module.test_hasFeedChannel)
+        XCTAssertFalse(module.test_isFeedConnected)
+        // The state above can be reached while the socket is still open if a connect and a
+        // disconnect interleave, which would leak a live socket after backgrounding.
+        XCTAssertEqual(transport.readyState, .closed)
     }
     
     func testDeinitDisconnectsAndReleasesModule() {

@@ -1,4 +1,4 @@
 # Pinned to the knocklabs fork for the URLSession teardown-race fix (upstream
 # davidstump/SwiftPhoenixClient#289 and #295). Replace with `~> 5.3.6` once that
 # fix ships in an upstream release.
-github "knocklabs/SwiftPhoenixClient" "6890d92d41e79c27f1a8cb36fdf0579ea760b49b"
+github "knocklabs/SwiftPhoenixClient" "5.3.6-knock.1"

@@ -18,9 +18,13 @@ let package = Package(
         // Pinned to the knocklabs fork for the URLSession teardown-race fix (upstream
         // davidstump/SwiftPhoenixClient#289 and #295). Once that fix ships upstream, replace
         // with: .package(url: "https://github.com/davidstump/SwiftPhoenixClient.git", from: "5.3.6")
+        //
+        // Pinned by version, not revision: SwiftPM refuses to resolve a version-pinned package
+        // whose own dependencies are revision-pinned, so a `revision:` here would break every
+        // app that depends on a tagged knock-swift release.
         .package(
             url: "https://github.com/knocklabs/SwiftPhoenixClient.git",
-            revision: "6890d92d41e79c27f1a8cb36fdf0579ea760b49b"
+            from: "5.3.6-knock.1"
         )
     ],
     targets: [

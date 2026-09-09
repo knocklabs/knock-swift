@@ -110,63 +110,59 @@ internal class FeedModule {
     }
     
     func disconnectFromFeed() {
-        // Claim the teardown under the queue, then perform it outside. See
-        // `syncOnLifecycleQueue` for why no socket call may happen while holding the queue.
-        let channelToLeave: Channel? = syncOnLifecycleQueue {
-            let channel = feedChannel
-            feedChannel = nil
+        syncOnLifecycleQueue {
+            Knock.shared.log(type: .debug, category: .feed, message: "Disconnecting from feed")
+            
+            if let channel = feedChannel {
+                channel.leave()
+                socket.remove(channel)
+                feedChannel = nil
+            }
+            
+            // Avoids a spurious close notification on a socket that never connected.
+            if isFeedConnected || socket.isConnected || socket.isConnecting {
+                socket.disconnect()
+            }
+            
             isFeedConnected = false
-            return channel
         }
-        
-        Knock.shared.log(type: .debug, category: .feed, message: "Disconnecting from feed")
-        
-        if let channelToLeave {
-            channelToLeave.leave()
-            socket.remove(channelToLeave)
-        }
-        socket.disconnect()
     }
     
     // Todo: Make AsyncStream method for this
     func on(eventName: String, completionHandler: @escaping ((Message) -> Void)) {
-        guard let channel = syncOnLifecycleQueue({ feedChannel }) else {
-            Knock.shared.log(type: .error, category: .feed, message: "FeedManager.on", status: .fail, errorMessage: "Feed channel is nil. You should call first connectToFeed()")
-            return
-        }
-        
-        channel.delegateOn(eventName, to: self) { (self, message) in
-            completionHandler(message)
+        syncOnLifecycleQueue {
+            guard let channel = feedChannel else {
+                Knock.shared.log(type: .error, category: .feed, message: "FeedManager.on", status: .fail, errorMessage: "Feed channel is nil. You should call first connectToFeed()")
+                return
+            }
+            
+            channel.delegateOn(eventName, to: self) { (self, message) in
+                completionHandler(message)
+            }
         }
     }
     
     func connectToFeed(options: Knock.FeedClientOptions? = nil) {
-        // Publish the new channel under the queue so concurrent callers can't both create one,
-        // then join and connect outside it.
-        let channelToJoin: Channel? = syncOnLifecycleQueue {
-            guard !isFeedConnected else { return nil }
+        syncOnLifecycleQueue {
+            guard !isFeedConnected else { return }
             
             let mergedOptions = feedOptions.mergeOptions(options: options)
             let params = paramsFromOptions(options: mergedOptions)
             let channel = socket.channel(feedTopic, params: params)
             
             feedChannel = channel
+            channel
+                .join()
+                .delegateReceive("ok", to: self) { (self, _) in
+                    Knock.shared.log(type: .debug, category: .feed, message: "connectToFeed", description: "CHANNEL: \(channel.topic) joined")
+                }
+                .delegateReceive("error", to: self) { (self, message) in
+                    Knock.shared.log(type: .error, category: .feed, message: "connectToFeed", status: .fail, errorMessage: "CHANNEL: \(channel.topic) failed to join. \(message.payload)")
+                }
+            
             isFeedConnected = true
-            return channel
+            socket.connect()
         }
-        
-        guard let channelToJoin else { return }
-        
-        channelToJoin
-            .join()
-            .delegateReceive("ok", to: self) { (self, _) in
-                Knock.shared.log(type: .debug, category: .feed, message: "connectToFeed", description: "CHANNEL: \(channelToJoin.topic) joined")
-            }
-            .delegateReceive("error", to: self) { (self, message) in
-                Knock.shared.log(type: .error, category: .feed, message: "connectToFeed", status: .fail, errorMessage: "CHANNEL: \(channelToJoin.topic) failed to join. \(message.payload)")
-            }
-        
-        socket.connect()
     }
     
     internal var test_isFeedConnected: Bool {
@@ -181,19 +177,29 @@ internal class FeedModule {
         socket.channels.count
     }
     
-    /// Guards `feedChannel` and `isFeedConnected`.
+    /// Serializes feed lifecycle operations, so each one's state changes and socket calls
+    /// happen as a unit. Without that, a backgrounding disconnect can interleave with a
+    /// foregrounding connect and leave the socket open with no channel attached.
     ///
-    /// Only state may be touched while the queue is held. `Socket` and `URLSessionTransport`
-    /// deliver callbacks while holding the transport's own serial queue, and from there reach
-    /// back into this module; meanwhile `Socket` lifecycle calls acquire that transport queue.
-    /// Calling the socket while holding this queue therefore acquires the two queues in
-    /// opposite orders and deadlocks. Reentrant callers also run inline and get no exclusion
-    /// at all, so a callout under the queue can observe and clobber half-updated state.
+    /// Callers must not enter this queue synchronously from a socket callback: socket callbacks
+    /// are delivered while the transport holds its delivery lock, and `socket.connect()` and
+    /// `socket.disconnect()` acquire that same lock from inside this queue. Entering
+    /// synchronously from a callback would acquire the two in the opposite order and deadlock.
+    /// Use `asyncOnLifecycleQueue` from callbacks instead.
     private func syncOnLifecycleQueue<T>(_ work: () -> T) -> T {
         if DispatchQueue.getSpecific(key: lifecycleQueueKey) != nil {
             return work()
         }
         return lifecycleQueue.sync(execute: work)
+    }
+    
+    /// Schedules lifecycle work originating from a socket callback. See `syncOnLifecycleQueue`
+    /// for why such work must not acquire the queue synchronously.
+    private func asyncOnLifecycleQueue(_ work: @escaping (FeedModule) -> Void) {
+        lifecycleQueue.async { [weak self] in
+            guard let self else { return }
+            work(self)
+        }
     }
     
     private func registerSocketCallbacks() {
@@ -209,7 +215,7 @@ internal class FeedModule {
             let (error, response) = error
             if let statusCode = (response as? HTTPURLResponse)?.statusCode, statusCode > 400 {
                 Knock.shared.log(type: .error, category: .feed, message: "connectToFeed", description: "Socket Errored \(statusCode)", status: .fail, errorMessage: error.localizedDescription)
-                self.disconnectFromFeed()
+                self.asyncOnLifecycleQueue { $0.disconnectFromFeed() }
             } else {
                 Knock.shared.log(type: .error, category: .feed, message: "connectToFeed", description: "Socket Errored", status: .fail, errorMessage: error.localizedDescription)
             }

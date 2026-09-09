@@ -5,7 +5,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/knocklabs/SwiftPhoenixClient.git",
       "state" : {
-        "revision" : "6890d92d41e79c27f1a8cb36fdf0579ea760b49b"
+        "revision" : "4614dec274183513a7efec7a20ffb761f9423aef",
+        "version" : "5.3.6-knock.1"
       }
     }
   ],
