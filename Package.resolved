@@ -3,10 +3,9 @@
     {
       "identity" : "swiftphoenixclient",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/davidstump/SwiftPhoenixClient.git",
+      "location" : "https://github.com/knocklabs/SwiftPhoenixClient.git",
       "state" : {
-        "revision" : "588bf6baab5d049752748e19a4bff32421ea40ec",
-        "version" : "5.3.2"
+        "revision" : "6890d92d41e79c27f1a8cb36fdf0579ea760b49b"
       }
     }
   ],
