@@ -1,2 +1,4 @@
+# Pending: raise to ~> 5.3.6 once the URLSession teardown-race fix (KNO-13997,
+# upstream #289/#295) is released. Until then Carthage consumers remain exposed
+# to the teardown crash; SPM consumers are pinned via Package.swift.
 github "davidstump/SwiftPhoenixClient" ~> 5.2.2
-

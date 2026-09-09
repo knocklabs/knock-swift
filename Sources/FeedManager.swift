@@ -31,6 +31,9 @@ public extension Knock {
         
         deinit {
             deregisterFromAppLifecycleNotifications()
+            // `FeedManager` is the only owner of `feedModule`, so releasing it here runs
+            // `FeedModule.deinit`, which owns socket teardown. Disconnecting again from this
+            // deinit would duplicate that teardown.
         }
         
         private func registerForAppLifecycleNotifications() {

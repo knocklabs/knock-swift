@@ -16,8 +16,11 @@ internal class FeedModule {
     private var feedTopic: String
     private var feedOptions: Knock.FeedClientOptions
     private let feedService = FeedService()
+    private let lifecycleQueue = DispatchQueue(label: "com.knock.feed.lifecycle")
+    private let lifecycleQueueKey = DispatchSpecificKey<Void>()
+    private var isFeedConnected = false
     
-    internal init(feedId: String, options: Knock.FeedClientOptions) async throws {
+    internal convenience init(feedId: String, options: Knock.FeedClientOptions) async throws {
         // use regex and circumflex accent to mark only the starting http to be replaced and not any others
         let base = await Knock.shared.environment.getBaseUrl()
         let websocketHostname = base.replacingOccurrences(of: "^http", with: "ws", options: .regularExpression) // default: wss://api.knock.app
@@ -32,11 +35,23 @@ internal class FeedModule {
         
         let userToken = await Knock.shared.environment.getUserToken()
         let publishableKey = try await Knock.shared.environment.getSafePublishableKey()
-        self.socket = Socket(websocketPath, params: ["vsn": "2.0.0", "api_key": publishableKey, "user_token": userToken ?? ""])
+        let socket = Socket(websocketPath, params: ["vsn": "2.0.0", "api_key": publishableKey, "user_token": userToken ?? ""])
+        self.init(socket: socket, feedId: feedId, userId: userId, options: options)
+        Knock.shared.log(type: .debug, category: .feed, message: "FeedManager", status: .success)
+    }
+    
+    internal init(socket: Socket, feedId: String, userId: String, options: Knock.FeedClientOptions) {
+        self.socket = socket
         self.feedId = feedId
         self.feedTopic = "feeds:\(feedId):\(userId)"
         self.feedOptions = options
-        Knock.shared.log(type: .debug, category: .feed, message: "FeedManager", status: .success)
+        lifecycleQueue.setSpecific(key: lifecycleQueueKey, value: ())
+        registerSocketCallbacks()
+    }
+    
+    deinit {
+        disconnectFromFeed()
+        socket.releaseCallbacks()
     }
     
     func getUserFeedContent(options: Knock.FeedClientOptions? = nil) async throws -> Knock.Feed {
@@ -95,30 +110,93 @@ internal class FeedModule {
     }
     
     func disconnectFromFeed() {
-        Knock.shared.log(type: .debug, category: .feed, message: "Disconnecting from feed")
-        
-        if let channel = self.feedChannel {
-            channel.leave()
-            self.socket.remove(channel)
+        // Claim the teardown under the queue, then perform it outside. See
+        // `syncOnLifecycleQueue` for why no socket call may happen while holding the queue.
+        let channelToLeave: Channel? = syncOnLifecycleQueue {
+            let channel = feedChannel
+            feedChannel = nil
+            isFeedConnected = false
+            return channel
         }
         
-        self.socket.disconnect()
+        Knock.shared.log(type: .debug, category: .feed, message: "Disconnecting from feed")
+        
+        if let channelToLeave {
+            channelToLeave.leave()
+            socket.remove(channelToLeave)
+        }
+        socket.disconnect()
     }
     
     // Todo: Make AsyncStream method for this
     func on(eventName: String, completionHandler: @escaping ((Message) -> Void)) {
-        if let channel = feedChannel {
-            channel.delegateOn(eventName, to: self) { (self, message) in
-                completionHandler(message)
-            }
-        }
-        else {
+        guard let channel = syncOnLifecycleQueue({ feedChannel }) else {
             Knock.shared.log(type: .error, category: .feed, message: "FeedManager.on", status: .fail, errorMessage: "Feed channel is nil. You should call first connectToFeed()")
+            return
+        }
+        
+        channel.delegateOn(eventName, to: self) { (self, message) in
+            completionHandler(message)
         }
     }
     
     func connectToFeed(options: Knock.FeedClientOptions? = nil) {
-        // Setup the socket to receive open/close events
+        // Publish the new channel under the queue so concurrent callers can't both create one,
+        // then join and connect outside it.
+        let channelToJoin: Channel? = syncOnLifecycleQueue {
+            guard !isFeedConnected else { return nil }
+            
+            let mergedOptions = feedOptions.mergeOptions(options: options)
+            let params = paramsFromOptions(options: mergedOptions)
+            let channel = socket.channel(feedTopic, params: params)
+            
+            feedChannel = channel
+            isFeedConnected = true
+            return channel
+        }
+        
+        guard let channelToJoin else { return }
+        
+        channelToJoin
+            .join()
+            .delegateReceive("ok", to: self) { (self, _) in
+                Knock.shared.log(type: .debug, category: .feed, message: "connectToFeed", description: "CHANNEL: \(channelToJoin.topic) joined")
+            }
+            .delegateReceive("error", to: self) { (self, message) in
+                Knock.shared.log(type: .error, category: .feed, message: "connectToFeed", status: .fail, errorMessage: "CHANNEL: \(channelToJoin.topic) failed to join. \(message.payload)")
+            }
+        
+        socket.connect()
+    }
+    
+    internal var test_isFeedConnected: Bool {
+        syncOnLifecycleQueue { isFeedConnected }
+    }
+    
+    internal var test_hasFeedChannel: Bool {
+        syncOnLifecycleQueue { feedChannel != nil }
+    }
+    
+    internal var test_channelCount: Int {
+        socket.channels.count
+    }
+    
+    /// Guards `feedChannel` and `isFeedConnected`.
+    ///
+    /// Only state may be touched while the queue is held. `Socket` and `URLSessionTransport`
+    /// deliver callbacks while holding the transport's own serial queue, and from there reach
+    /// back into this module; meanwhile `Socket` lifecycle calls acquire that transport queue.
+    /// Calling the socket while holding this queue therefore acquires the two queues in
+    /// opposite orders and deadlocks. Reentrant callers also run inline and get no exclusion
+    /// at all, so a callout under the queue can observe and clobber half-updated state.
+    private func syncOnLifecycleQueue<T>(_ work: () -> T) -> T {
+        if DispatchQueue.getSpecific(key: lifecycleQueueKey) != nil {
+            return work()
+        }
+        return lifecycleQueue.sync(execute: work)
+    }
+    
+    private func registerSocketCallbacks() {
         socket.delegateOnOpen(to: self) { (self) in
             Knock.shared.log(type: .debug, category: .feed, message: "connectToFeed", description: "Socket Opened")
         }
@@ -131,7 +209,7 @@ internal class FeedModule {
             let (error, response) = error
             if let statusCode = (response as? HTTPURLResponse)?.statusCode, statusCode > 400 {
                 Knock.shared.log(type: .error, category: .feed, message: "connectToFeed", description: "Socket Errored \(statusCode)", status: .fail, errorMessage: error.localizedDescription)
-                self.socket.disconnect()
+                self.disconnectFromFeed()
             } else {
                 Knock.shared.log(type: .error, category: .feed, message: "connectToFeed", description: "Socket Errored", status: .fail, errorMessage: error.localizedDescription)
             }
@@ -140,26 +218,6 @@ internal class FeedModule {
         socket.logger = { msg in
             Knock.shared.log(type: .debug, category: .feed, message: "SwiftPhoenixClient", description: msg)
         }
-        
-        let mergedOptions = feedOptions.mergeOptions(options: options)
-        
-        let params = paramsFromOptions(options: mergedOptions)
-        
-        // Setup the Channel to receive and send messages
-        let channel = socket.channel(feedTopic, params: params)
-        
-        // Now connect the socket and join the channel
-        self.feedChannel = channel
-        self.feedChannel?
-            .join()
-            .delegateReceive("ok", to: self) { (self, _) in
-                Knock.shared.log(type: .debug, category: .feed, message: "connectToFeed", description: "CHANNEL: \(channel.topic) joined")
-            }
-            .delegateReceive("error", to: self) { (self, message) in
-                Knock.shared.log(type: .error, category: .feed, message: "connectToFeed", status: .fail, errorMessage: "CHANNEL: \(channel.topic) failed to join. \(message.payload)")
-            }
-        
-        self.socket.connect()
     }
     
     internal func getFeedSettings() async throws -> Knock.FeedSettings? {
