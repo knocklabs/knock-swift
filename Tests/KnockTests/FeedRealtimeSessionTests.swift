@@ -27,7 +27,9 @@ struct FeedRealtimeSessionTests {
     func connected(_ session: FeedRealtimeSession, options: Knock.FeedClientOptions? = nil) async throws -> FakeRealtimeChannel {
         try await session.connect(options: options)
         try await withTimeout { try await session.waitUntilConnected() }
-        return try #require(factory.last?.lastChannel)
+        let channel = try #require(factory.last?.lastChannel)
+        try await waitUntil("signal subscription") { channel.signalSubscriberCount == 1 }
+        return channel
     }
 
     // MARK: Connecting
@@ -286,6 +288,37 @@ struct FeedRealtimeSessionTests {
         try await waitUntil("event") { events.values.count == 1 }
     }
 
+    @Test func aChannelThatKeepsErroringIsRejoinedWithBackoff() async throws {
+        let delays = LockIsolated<[Int]>([])
+        let session = makeSession(policy: .init(
+            joinRetryDelay: { attempt in
+                delays.withLock { $0.append(attempt) }
+                return .milliseconds(10)
+            },
+            maxReconnectAttemptsBeforeFirstConnection: 3
+        ))
+        let events = StreamRecorder(await session.events(named: "new-message"))
+        let first = try await connected(session)
+        let socket = try #require(factory.last)
+
+        first.send(.errored)
+        try await waitUntil("first rejoin") { socket.channels.count == 2 }
+        #expect(delays.value == [1])
+        let second = try #require(socket.lastChannel)
+        try await waitUntil("signal subscription") { second.signalSubscriberCount == 1 }
+        second.send(.errored)
+        try await waitUntil("second rejoin") { socket.channels.count == 3 }
+        #expect(delays.value == [1, 2])
+
+        let third = try #require(socket.lastChannel)
+        try await waitUntil("subscriptions") { third.liveSubscriptionCount(for: "new-message") == 1 && third.signalSubscriberCount == 1 }
+        third.push("new-message")
+        try await waitUntil("event") { events.values.count == 1 }
+        third.send(.errored)
+        try await waitUntil("third rejoin") { socket.channels.count == 4 }
+        #expect(delays.value == [1, 2, 1], "An event shows the channel recovered, so the backoff starts over")
+    }
+
     @Test func aClosedChannelFailsTheConnection() async throws {
         let session = makeSession()
         let channel = try await connected(session)
@@ -528,6 +561,42 @@ struct FeedRealtimeSessionTests {
 
         try await withTimeout { try await session.waitUntilConnected() }
         #expect(factory.created.count == 2)
+    }
+
+    @Test func waitUntilConnectedThrowsWhenASuspendedConnectionIsDisconnected() async throws {
+        let session = makeSession()
+        _ = try await connected(session)
+        await session.suspend()
+
+        let finished = LockIsolated(false)
+        let wait = Task {
+            defer { finished.setValue(true) }
+            try await session.waitUntilConnected()
+        }
+        try await expectStaysTrue("waiting while suspended") { !finished.value }
+        await session.disconnect()
+
+        await #expect(throws: Knock.RealtimeError.disconnected) {
+            try await withTimeout { try await wait.value }
+        }
+    }
+
+    @Test func retryIfFailedRetriesOnlyFailedConnections() async throws {
+        let session = makeSession()
+        factory.onCreate { $0.enqueueJoins(.reject("unauthorized")) }
+        try await session.connect(options: nil)
+        try await waitUntil("failed state") { await session.state.isFailed }
+
+        factory.onCreate { _ in }
+        try await session.retryIfFailed()
+        try await withTimeout { try await session.waitUntilConnected() }
+        #expect(factory.created.count == 2)
+
+        try await session.retryIfFailed()
+        await session.suspend()
+        try await session.retryIfFailed()
+        #expect(factory.created.count == 2)
+        #expect(await session.state == .disconnected)
     }
 
     @Test func waitUntilConnectedKeepsWaitingWhileSuspended() async throws {
