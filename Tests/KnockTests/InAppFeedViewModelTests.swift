@@ -41,73 +41,73 @@ final class InAppFeedViewModelTests: XCTestCase {
         return item
     }
     
-    func testOptimisticMarkItemAsRead() async {
+    func testOptimisticMarkItemAsRead() {
         let viewModel = makeViewModel()
         let item = generateTestFeedItem(status: .read)
         viewModel.feed.entries = [item]
         viewModel.feed.meta.unreadCount = 1
-        await viewModel.optimisticallyUpdateStatusForItem(item: item, status: .read)
+        viewModel.optimisticallyUpdateStatusForItem(item: item, status: .read)
         XCTAssertTrue(viewModel.feed.entries.first!.read_at != nil)
         XCTAssertTrue(viewModel.feed.meta.unreadCount == 0)
     }
     
-    func testOptimisticMarkItemAsReadWithUnreadFilter() async {
+    func testOptimisticMarkItemAsReadWithUnreadFilter() {
         let viewModel = makeViewModel()
         viewModel.feedClientOptions.status = .unread
         let item = generateTestFeedItem(status: .read)
         viewModel.feed.entries = [item]
-        await viewModel.optimisticallyUpdateStatusForItem(item: item, status: .read)
+        viewModel.optimisticallyUpdateStatusForItem(item: item, status: .read)
         // This should remove the item from the feed since we currently have the unread filter selected
         XCTAssertTrue(viewModel.feed.entries.isEmpty)
     }
     
-    func testOptimisticMarkItemAsSeen() async {
+    func testOptimisticMarkItemAsSeen() {
         let viewModel = makeViewModel()
         let item = generateTestFeedItem(status: .seen)
         viewModel.feed.entries = [item]
         viewModel.feed.meta.unseenCount = 1
-        await viewModel.optimisticallyUpdateStatusForItem(item: item, status: .seen)
+        viewModel.optimisticallyUpdateStatusForItem(item: item, status: .seen)
         XCTAssertTrue(viewModel.feed.entries.first!.seen_at != nil)
         XCTAssertTrue(viewModel.feed.meta.unseenCount == 0)
     }
     
-    func testOptimisticMarkItemAsReadWithUnseenFilter() async {
+    func testOptimisticMarkItemAsReadWithUnseenFilter() {
         let viewModel = makeViewModel()
         viewModel.feedClientOptions.status = .unseen
         let item = generateTestFeedItem(status: .seen)
         viewModel.feed.entries = [item]
-        await viewModel.optimisticallyUpdateStatusForItem(item: item, status: .seen)
+        viewModel.optimisticallyUpdateStatusForItem(item: item, status: .seen)
         XCTAssertTrue(viewModel.feed.entries.isEmpty)
     }
     
-    func testOptimisticMarkItemAsArchived() async {
+    func testOptimisticMarkItemAsArchived() {
         let viewModel = makeViewModel()
         let item = generateTestFeedItem(status: .archived)
         viewModel.feed.entries = [item]
-        await viewModel.optimisticallyUpdateStatusForItem(item: item, status: .seen)
+        viewModel.optimisticallyUpdateStatusForItem(item: item, status: .seen)
         XCTAssertTrue(viewModel.feed.entries.first!.archived_at != nil)
     }
     
-    func testOptimisticMarkItemAsArchivedWithNoArchivedFilter() async {
+    func testOptimisticMarkItemAsArchivedWithNoArchivedFilter() {
         let viewModel = makeViewModel()
         viewModel.feedClientOptions.status = .all
         viewModel.feedClientOptions.archived = .exclude
         let item = generateTestFeedItem(status: .archived)
         viewModel.feed.entries = [item]
-        await viewModel.optimisticallyUpdateStatusForItem(item: item, status: .archived)
+        viewModel.optimisticallyUpdateStatusForItem(item: item, status: .archived)
         XCTAssertTrue(viewModel.feed.entries.isEmpty)
     }
     
-    func testOptimisticUpdateIgnoresUnknownItem() async {
+    func testOptimisticUpdateIgnoresUnknownItem() {
         let viewModel = makeViewModel()
         viewModel.feed.entries = [generateTestFeedItem(status: .unread, id: "a")]
         viewModel.feed.meta.unreadCount = 1
-        await viewModel.optimisticallyUpdateStatusForItem(item: generateTestFeedItem(status: .unread, id: "b"), status: .read)
+        viewModel.optimisticallyUpdateStatusForItem(item: generateTestFeedItem(status: .unread, id: "b"), status: .read)
         XCTAssertNil(viewModel.feed.entries.first?.read_at)
         XCTAssertEqual(viewModel.feed.meta.unreadCount, 1)
     }
     
-    func testOptimisticBulkMarkItemsAsRead() async {
+    func testOptimisticBulkMarkItemsAsRead() {
         let viewModel = makeViewModel()
         let item = generateTestFeedItem(status: .unread)
         let item2 = generateTestFeedItem(status: .seen)
@@ -116,12 +116,12 @@ final class InAppFeedViewModelTests: XCTestCase {
 
         viewModel.feed.entries = [item, item2, item3, item4]
         viewModel.feed.meta.unreadCount = 3
-        await viewModel.optimisticallyBulkUpdateStatus(updatedStatus: .read)
+        viewModel.optimisticallyBulkUpdateStatus(updatedStatus: .read)
         XCTAssertTrue(viewModel.feed.entries.first!.read_at != nil)
         XCTAssertTrue(viewModel.feed.meta.unreadCount == 0)
     }
     
-    func testOptimisticBulkMarkItemAsArchived() async {
+    func testOptimisticBulkMarkItemAsArchived() {
         let viewModel = makeViewModel()
         let item = generateTestFeedItem(status: .unread)
         let item2 = generateTestFeedItem(status: .seen)
@@ -129,12 +129,12 @@ final class InAppFeedViewModelTests: XCTestCase {
         let item4 = generateTestFeedItem(status: .read)
 
         viewModel.feed.entries = [item, item2, item3, item4]
-        await viewModel.optimisticallyBulkUpdateStatus(updatedStatus: .archived)
+        viewModel.optimisticallyBulkUpdateStatus(updatedStatus: .archived)
         XCTAssertTrue(viewModel.feed.entries.count == 0)
         XCTAssertTrue(viewModel.feed.meta.unreadCount == 0)
     }
     
-    func testOptimisticBulkMarkItemAsArchivedAndShouldHideArchived() async {
+    func testOptimisticBulkMarkItemAsArchivedAndShouldHideArchived() {
         let viewModel = makeViewModel()
         let item = generateTestFeedItem(status: .unread)
         let item2 = generateTestFeedItem(status: .seen)
@@ -143,12 +143,12 @@ final class InAppFeedViewModelTests: XCTestCase {
 
         viewModel.feed.entries = [item, item2, item3, item4]
         viewModel.feedClientOptions.archived = .exclude
-        await viewModel.optimisticallyBulkUpdateStatus(updatedStatus: .archived)
+        viewModel.optimisticallyBulkUpdateStatus(updatedStatus: .archived)
         XCTAssertTrue(viewModel.feed.entries.count == 0)
         XCTAssertTrue(viewModel.feed.meta.unreadCount == 0)
     }
     
-    func testOptimisticBulkMarkItemAsArchivedWithUnReadScope() async {
+    func testOptimisticBulkMarkItemAsArchivedWithUnReadScope() {
         let viewModel = makeViewModel()
         let item = generateTestFeedItem(status: .unread)
         let item2 = generateTestFeedItem(status: .unread)
@@ -156,7 +156,7 @@ final class InAppFeedViewModelTests: XCTestCase {
         let item4 = generateTestFeedItem(status: .read)
 
         viewModel.feed.entries = [item, item2, item3, item4]
-        await viewModel.optimisticallyBulkUpdateStatus(updatedStatus: .archived, archivedScope: .unread)
+        viewModel.optimisticallyBulkUpdateStatus(updatedStatus: .archived, archivedScope: .unread)
         XCTAssertTrue(viewModel.feed.entries.count == 1)
     }
     

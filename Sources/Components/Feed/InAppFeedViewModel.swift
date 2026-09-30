@@ -78,7 +78,7 @@ extension Knock {
         /// Connects to the feed, refreshes it, and prepends new messages as they arrive. Calling this again replaces the previous observation.
         public func connectFeedAndObserveNewMessages() async {
             guard let feedManager else {
-                Knock.shared.log(type: .warning, category: .feed, message: "connectFeedAndObserveNewMessages", status: .fail, errorMessage: "Knock.shared.feedManager is not set")
+                Knock.shared.log(type: .warning, category: .feed, message: "connectFeedAndObserveNewMessages", status: .fail, errorMessage: "No feed manager is set")
                 return
             }
             feedManager.connectToFeed()
@@ -144,7 +144,7 @@ extension Knock {
             let feedOptions = Knock.FeedClientOptions(status: archivedScope, tenant: feedClientOptions.tenant, has_tenant: feedClientOptions.has_tenant, archived: feedClientOptions.archived)
             do {
                 _ = try await feedManager?.makeBulkStatusUpdate(type: updatedStatus, options: feedOptions)
-                await optimisticallyBulkUpdateStatus(updatedStatus: updatedStatus, archivedScope: archivedScope)
+                optimisticallyBulkUpdateStatus(updatedStatus: updatedStatus, archivedScope: archivedScope)
             } catch {
                 logError("Failed: bulkUpdateMessageStatus for status: \(updatedStatus.rawValue)", error)
             }
@@ -162,7 +162,7 @@ extension Knock {
             }
             do {
                 _ = try await Knock.shared.messageModule.updateMessageStatus(messageId: item.id, status: updatedStatus)
-                await optimisticallyUpdateStatusForItem(item: item, status: updatedStatus)
+                optimisticallyUpdateStatusForItem(item: item, status: updatedStatus)
                 await fetchNewMetaData()
             } catch {
                 logError("Failed: updateMessageStatus for status: \(updatedStatus.rawValue)", error)
@@ -216,8 +216,7 @@ extension Knock {
             return options
         }
         
-        internal func handleNewMessageEvent() async {
-            guard let feedManager else { return }
+        internal func handleNewMessageEvent(from feedManager: Knock.FeedManager) async {
             do {
                 let newFeed = try await feedManager.getUserFeedContent(options: requestOptions(before: feed.pageInfo.before))
                 mergeFeedsForNewMessageReceived(feed: newFeed)
@@ -246,7 +245,7 @@ extension Knock {
         internal func optimisticallyBulkUpdateStatus(
             updatedStatus: Knock.KnockMessageStatusUpdateType,
             archivedScope: Knock.FeedItemScope = .all
-        ) async {
+        ) {
             let date = Date()
             let updatedEntries = updateEntriesStatus(entries: feed.entries, status: updatedStatus, date: date, archivedScope: archivedScope)
             
@@ -257,7 +256,7 @@ extension Knock {
             optimisticallyUpdateMetaCounts(status: updatedStatus)
         }
 
-        internal func optimisticallyUpdateStatusForItem(item: Knock.FeedItem, status: Knock.KnockMessageStatusUpdateType) async {
+        internal func optimisticallyUpdateStatusForItem(item: Knock.FeedItem, status: Knock.KnockMessageStatusUpdateType) {
             guard let index = feed.entries.firstIndex(where: { $0.id == item.id }) else { return }
             switch status {
             case .read:
@@ -316,7 +315,7 @@ extension Knock {
                 let events = await feedManager.events(named: "new-message")
                 for await _ in events {
                     guard let self else { return }
-                    await self.handleNewMessageEvent()
+                    await self.handleNewMessageEvent(from: feedManager)
                 }
             }
         }
