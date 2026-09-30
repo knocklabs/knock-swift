@@ -19,18 +19,16 @@ internal final class PhoenixNectarRealtimeSocket: RealtimeSocket {
     private let joinPolicy: RequestPolicy
     private let logger: RealtimeLogger
 
-    /// - Parameter connectParams: Read on every connection attempt, including automatic reconnects. Defaults to
-    ///   `configuration.connectParams`.
+    /// - Parameter connectParams: Read on every connection attempt, including automatic reconnects.
     init(
-        configuration: RealtimeSocketConfiguration,
-        connectParams: (@Sendable () -> [String: String])? = nil,
+        endpoint: String,
+        connectParams: @escaping @Sendable () -> [String: String],
         joinTimeout: Duration = .seconds(10),
         logger: RealtimeLogger = .disabled
     ) throws {
-        let connectParams = connectParams ?? { [params = configuration.connectParams] in params }
         let joinPolicy = RequestPolicy(timeout: joinTimeout)
         self.socket = try Socket(
-            endpoint: configuration.endpoint,
+            endpoint: endpoint,
             configuration: Socket.Configuration(
                 // Used for the automatic rejoins PhoenixNectar sends after a reconnect.
                 defaultRequestPolicy: joinPolicy,

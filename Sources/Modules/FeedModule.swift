@@ -66,19 +66,15 @@ internal final class FeedModule: Sendable {
     /// Reconnects send the latest user token, so a token refreshed with `signIn` is used without reconnecting by hand.
     static func phoenixNectarSocketFactory(environment: @escaping @Sendable () -> KnockEnvironment) -> RealtimeSocketFactory {
         { configuration in
-            try PhoenixNectarRealtimeSocket(
-                configuration: configuration,
-                connectParams: { connectParams(configuration.connectParams, currentUserToken: environment().currentUserToken.value) },
+            let publishableKey = configuration.connectParams["api_key"] ?? ""
+            return try PhoenixNectarRealtimeSocket(
+                endpoint: configuration.endpoint,
+                connectParams: {
+                    FeedRealtimeTarget.connectParams(publishableKey: publishableKey, userToken: environment().currentUserToken)
+                },
                 logger: realtimeLogger
             )
         }
-    }
-
-    static func connectParams(_ params: [String: String], currentUserToken: String?) -> [String: String] {
-        guard let currentUserToken else { return params }
-        var params = params
-        params["user_token"] = currentUserToken
-        return params
     }
 
     func getUserFeedContent(options: Knock.FeedClientOptions? = nil) async throws -> Knock.Feed {

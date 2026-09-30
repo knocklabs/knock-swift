@@ -49,11 +49,16 @@ internal struct FeedRealtimeTarget: Sendable, Equatable {
         FeedRealtimeTarget(
             socket: RealtimeSocketConfiguration(
                 endpoint: websocketEndpoint(baseUrl: baseUrl),
-                connectParams: ["api_key": publishableKey, "user_token": userToken ?? ""]
+                connectParams: connectParams(publishableKey: publishableKey, userToken: userToken)
             ),
             topic: "feeds:\(feedId):\(userId)",
             joinParams: FeedChannelJoinParams(options: options)
         )
+    }
+
+    /// The socket's query parameters. A missing user token is sent as an empty string.
+    static func connectParams(publishableKey: String, userToken: String?) -> [String: String] {
+        ["api_key": publishableKey, "user_token": userToken ?? ""]
     }
 
     /// Maps the API base URL (e.g. `https://api.knock.app`) to the feed websocket endpoint (`wss://api.knock.app/ws/v1/websocket`).

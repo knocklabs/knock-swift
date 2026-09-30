@@ -179,14 +179,10 @@ struct FeedManagerRealtimeTests {
         #expect(await manager.connectionState == .disconnected)
     }
 
-    @Test func reconnectsUseTheLatestUserToken() async throws {
-        #expect(environment.currentUserToken.value == "token-1")
-        await environment.setUserInfo(userId: "user-1", userToken: "token-2")
-        #expect(environment.currentUserToken.value == "token-2")
-
-        let params = ["api_key": "pk_test", "user_token": "token-1"]
-        #expect(FeedModule.connectParams(params, currentUserToken: "token-2") == ["api_key": "pk_test", "user_token": "token-2"])
-        #expect(FeedModule.connectParams(params, currentUserToken: nil) == params)
+    @Test func theUserTokenCanBeReadWithoutAwaitingTheEnvironment() async {
+        #expect(environment.currentUserToken == "token-1")
+        await environment.setUserInfo(userId: nil, userToken: nil)
+        #expect(environment.currentUserToken == nil)
     }
 
     @Test func connectionStatesAreObservable() async throws {

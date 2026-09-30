@@ -20,7 +20,8 @@ internal enum RealtimeConnectionState: Sendable, Equatable {
 internal struct RealtimeSocketConfiguration: Sendable, Equatable {
     /// The websocket endpoint, without query parameters (e.g. `wss://api.knock.app/ws/v1/websocket`).
     var endpoint: String
-    /// Query parameters sent with every connection attempt (`vsn` is added by the socket implementation).
+    /// The query parameters the socket connects with (`vsn` is added by the socket implementation). Sockets with
+    /// different parameters are different connections, but reconnects may send a refreshed user token.
     var connectParams: [String: String]
 }
 

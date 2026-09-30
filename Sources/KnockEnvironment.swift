@@ -15,11 +15,8 @@ internal actor KnockEnvironment {
     private let previousPushTokensKey = "knock_previous_push_token"
 
     private var userId: String?
-    private var userToken: String? {
-        didSet { currentUserToken.setValue(userToken) }
-    }
-    /// The user token, readable without awaiting the actor. The realtime socket reads it on every reconnect.
-    nonisolated let currentUserToken = LockIsolated<String?>(nil)
+    /// Lock-protected so the realtime socket can read the token synchronously on every reconnect.
+    private let userToken = LockIsolated<String?>(nil)
     private var publishableKey: String?
     private var pushChannelId: String?
     private var baseUrl: String = defaultBaseUrl
@@ -38,7 +35,7 @@ internal actor KnockEnvironment {
     
     func setUserInfo(userId: String?, userToken: String?) {
         self.userId = userId
-        self.userToken = userToken
+        self.userToken.setValue(userToken)
     }
     
     func getUserId() -> String? {
@@ -53,11 +50,15 @@ internal actor KnockEnvironment {
     }
     
     func getUserToken() -> String? {
-        userToken
+        userToken.value
+    }
+
+    nonisolated var currentUserToken: String? {
+        userToken.value
     }
     
     func getSafeUserToken() throws -> String? {
-        guard let token = userToken else {
+        guard let token = userToken.value else {
             throw Knock.KnockError.userTokenNotSet
         }
         return token
