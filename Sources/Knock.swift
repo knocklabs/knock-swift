@@ -9,7 +9,7 @@ import Foundation
 
 // Knock client SDK.
 public final class Knock: Sendable {
-    internal static let clientVersion = "1.2.9"
+    internal static let clientVersion = "2.0.0-rc.1"
 
     private static let sharedInstance = LockIsolated(Knock())
 

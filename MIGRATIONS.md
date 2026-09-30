@@ -37,7 +37,7 @@ Version 1.2.0 of our Swift SDK introduces our first pre-built component, the In-
 - **In-App Feed pre-built component**
 - **Knock.KnockMessageStatusBatchUpdateType is now just Knock.KnockMessageStatusUpdateType**
 
-## Upgrading to Version 2.0.0 (experimental)
+## Upgrading to Version 2.0.0
 
 Version 2.0.0 builds the SDK in the Swift 6 language mode with complete concurrency checking, and replaces `SwiftPhoenixClient` with [PhoenixNectar](https://github.com/jvdvleuten/PhoenixNectar) for the realtime feed connection.
 
