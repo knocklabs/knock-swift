@@ -12,6 +12,10 @@ struct TimeoutError: Error, CustomStringConvertible {
     let description: String
 }
 
+/// How long async helpers wait before failing. Generous because shared CI simulators can stall for seconds; passing
+/// tests return as soon as their condition holds.
+let defaultTestTimeout = Duration.seconds(10)
+
 /// A generic failure for fakes and test closures to throw.
 struct TestError: Error, Equatable, LocalizedError {
     let reason: String
@@ -22,7 +26,7 @@ struct TestError: Error, Equatable, LocalizedError {
 /// Polls `condition` until it returns true, failing after `timeout`.
 func waitUntil(
     _ message: @autoclosure () -> String = "condition",
-    timeout: Duration = .seconds(3),
+    timeout: Duration = defaultTestTimeout,
     isolation: isolated (any Actor)? = #isolation,
     _ condition: () async throws -> Bool
 ) async throws {
@@ -55,7 +59,7 @@ func expectStaysTrue(
 
 /// Runs `operation`, failing if it doesn't finish within `timeout`.
 func withTimeout<T: Sendable>(
-    _ timeout: Duration = .seconds(3),
+    _ timeout: Duration = defaultTestTimeout,
     _ operation: @escaping @Sendable () async throws -> T
 ) async throws -> T {
     try await withThrowingTaskGroup(of: T.self) { group in
@@ -97,7 +101,7 @@ final class StreamRecorder<Element: Sendable>: Sendable {
 }
 
 extension StreamRecorder where Element: Equatable {
-    func waitFor(_ element: Element, timeout: Duration = .seconds(3)) async throws {
+    func waitFor(_ element: Element, timeout: Duration = defaultTestTimeout) async throws {
         try await waitUntil("\(element) (recorded: \(values))", timeout: timeout) { values.contains(element) }
     }
 }
