@@ -70,7 +70,8 @@ extension Knock {
         }
         
         /// The manager whose new messages are being observed. Requests go through it so they match the realtime feed.
-        private var observedFeedManager: Knock.FeedManager?
+        /// Weak, since only its owner's release shuts its connection down.
+        private weak var observedFeedManager: Knock.FeedManager?
 
         private var feedManager: Knock.FeedManager? {
             observedFeedManager ?? feedManagerProvider()
@@ -316,10 +317,11 @@ extension Knock {
         private func observeNewMessages(from feedManager: Knock.FeedManager) {
             newMessagesTask?.cancel()
             observedFeedManager = feedManager
-            newMessagesTask = Task { [weak self] in
-                let events = await feedManager.events(named: "new-message")
+            // The events stream finishes when the manager is released, which ends the loop.
+            newMessagesTask = Task { [weak self, weak feedManager] in
+                guard let events = await feedManager?.events(named: "new-message") else { return }
                 for await _ in events {
-                    guard let self else { return }
+                    guard let self, let feedManager else { return }
                     await self.handleNewMessageEvent(from: feedManager)
                 }
             }

@@ -291,4 +291,29 @@ final class InAppFeedViewModelTests: XCTestCase {
         XCTAssertNil(weakViewModel)
         try await waitUntil { await feedManager.feedModule.realtime.subscriberCount == 0 }
     }
+
+    func testObservingNewMessagesDoesNotKeepTheFeedManagerAlive() async throws {
+        let environment = KnockEnvironment()
+        let factory = FakeRealtimeSocketFactory()
+        weak var weakFeedManager: Knock.FeedManager?
+        let viewModel: Knock.InAppFeedViewModel
+        do {
+            let feedManager = Knock.FeedManager(
+                feedModule: FeedModule(feedId: "feed", options: .init(), environment: { environment }, socketFactory: factory.make, realtimePolicy: .fast),
+                lifecycleEvents: AsyncStream { _ in }
+            )
+            weakFeedManager = feedManager
+            viewModel = Knock.InAppFeedViewModel(
+                feedClientOptions: .init(),
+                currentFilter: nil,
+                filterOptions: nil,
+                topButtonActions: nil,
+                feedManagerProvider: { [weak feedManager] in feedManager }
+            )
+            await viewModel.connectFeedAndObserveNewMessages()
+            try await waitUntil { await feedManager.feedModule.realtime.subscriberCount == 1 }
+        }
+        try await waitUntil { weakFeedManager == nil }
+        withExtendedLifetime(viewModel) {}
+    }
 }
