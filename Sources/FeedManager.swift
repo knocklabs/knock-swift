@@ -16,6 +16,7 @@ public extension Knock {
     /// enters the background and re-established when it becomes active again.
     final class FeedManager: Sendable {
         internal let feedModule: FeedModule
+        private let realtime: FeedRealtimeSession
         private let operations: SerialExecutionQueue
         private let lifecycleTask: Task<Void, Never>
 
@@ -59,6 +60,7 @@ public extension Knock {
             let operations = SerialExecutionQueue()
             let realtime = feedModule.realtime
             self.feedModule = feedModule
+            self.realtime = realtime
             self.operations = operations
             self.lifecycleTask = Task {
                 for await event in lifecycleEvents {
@@ -80,7 +82,7 @@ public extension Knock {
 
         deinit {
             lifecycleTask.cancel()
-            let realtime = feedModule.realtime
+            let realtime = self.realtime
             operations.enqueue { await realtime.shutdown() }
             operations.finish()
         }
@@ -97,7 +99,7 @@ public extension Knock {
             - options: [optional] Options of type `FeedClientOptions` to merge with the default ones (set on the constructor) and scope as much as possible the results
          */
         public func connectToFeed(options: FeedClientOptions? = nil) {
-            let realtime = feedModule.realtime
+            let realtime = self.realtime
             operations.enqueue {
                 do {
                     try await realtime.connect(options: options)
@@ -113,7 +115,7 @@ public extension Knock {
          - Throws: `RealtimeError` if the connection fails or is disconnected before it's established, or an error if Knock isn't set up or no user is signed in.
          */
         public func connect(options: FeedClientOptions? = nil) async throws {
-            let realtime = feedModule.realtime
+            let realtime = self.realtime
             try await operations.run { try await realtime.connect(options: options) }
             try await realtime.waitUntilConnected()
         }
@@ -121,13 +123,13 @@ public extension Knock {
         /// Disconnects from the feed. Event subscriptions stay registered and receive events again after the next connect.
         public func disconnectFromFeed() {
             Knock.shared.log(type: .debug, category: .feed, message: "Disconnecting from feed")
-            let realtime = feedModule.realtime
+            let realtime = self.realtime
             operations.enqueue { await realtime.disconnect() }
         }
 
         /// Disconnects from the feed and waits for the socket to close.
         public func disconnect() async {
-            let realtime = feedModule.realtime
+            let realtime = self.realtime
             _ = try? await operations.run { await realtime.disconnect() }
         }
 
@@ -138,7 +140,7 @@ public extension Knock {
          after a reconnect. Stop receiving events by cancelling the task iterating the stream.
          */
         public func events(named eventName: String) async -> AsyncStream<FeedEvent> {
-            await feedModule.realtime.events(named: eventName)
+            await realtime.events(named: eventName)
         }
 
         /**
@@ -151,7 +153,7 @@ public extension Knock {
          */
         @discardableResult
         public func on(eventName: String, completionHandler: @escaping @MainActor (FeedEvent) -> Void) -> FeedEventSubscription {
-            let realtime = feedModule.realtime
+            let realtime = self.realtime
             let task = Task {
                 let events = await realtime.events(named: eventName)
                 for await event in events {
@@ -163,12 +165,12 @@ public extension Knock {
 
         /// The current state of the realtime connection.
         public var connectionState: FeedConnectionState {
-            get async { await feedModule.realtime.state }
+            get async { await realtime.state }
         }
 
         /// A stream of realtime connection states, starting with the current state.
         public func connectionStates() async -> AsyncStream<FeedConnectionState> {
-            await feedModule.realtime.connectionStates()
+            await realtime.connectionStates()
         }
 
         // MARK: Feed
