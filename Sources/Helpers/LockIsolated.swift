@@ -21,7 +21,12 @@ internal final class LockIsolated<Value: Sendable>: @unchecked Sendable {
     }
 
     func setValue(_ newValue: Value) {
-        withLock { $0 = newValue }
+        // Returned out of the lock so the old value is released after unlocking, where a deinit it triggers can use
+        // this lock.
+        _ = withLock { value in
+            defer { value = newValue }
+            return value
+        }
     }
 
     @discardableResult

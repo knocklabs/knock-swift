@@ -190,6 +190,25 @@ struct AppLifecycleEventTests {
     }
 }
 
+@Suite("LockIsolated")
+struct LockIsolatedTests {
+    final class DeinitProbe: Sendable {
+        let onDeinit: @Sendable () -> Void
+        init(onDeinit: @escaping @Sendable () -> Void) { self.onDeinit = onDeinit }
+        deinit { onDeinit() }
+    }
+
+    @Test func aReplacedValueIsReleasedOutsideTheLock() {
+        let box = LockIsolated<DeinitProbe?>(nil)
+        let valueSeenByDeinit = LockIsolated<Bool?>(nil)
+        box.setValue(DeinitProbe { valueSeenByDeinit.setValue(box.value != nil) })
+
+        box.setValue(nil)
+
+        #expect(valueSeenByDeinit.value == false)
+    }
+}
+
 @Suite("RealtimeBackoff")
 struct RealtimeBackoffTests {
     @Test(arguments: [(1, 0.5), (2, 1.0), (3, 2.0), (4, 4.0), (6, 16.0), (7, 30.0), (100, 30.0)])
