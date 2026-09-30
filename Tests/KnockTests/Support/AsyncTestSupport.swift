@@ -16,6 +16,7 @@ struct TimeoutError: Error, CustomStringConvertible {
 func waitUntil(
     _ message: @autoclosure () -> String = "condition",
     timeout: Duration = .seconds(3),
+    isolation: isolated (any Actor)? = #isolation,
     _ condition: () async throws -> Bool
 ) async throws {
     let clock = ContinuousClock()
