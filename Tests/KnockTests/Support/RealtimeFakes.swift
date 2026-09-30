@@ -14,6 +14,7 @@ final class FakeRealtimeSocket: RealtimeSocket {
         case succeed
         case reject(String)
         case fail(String)
+        case failUnrecoverably(String)
         /// Suspends until the join task is cancelled.
         case hang
     }
@@ -76,7 +77,7 @@ final class FakeRealtimeSocket: RealtimeSocket {
             return state.connectError
         }
         if let error {
-            throw RealtimeJoinError.transient(reason: error)
+            throw TestError(reason: error)
         }
         emit(.connecting)
     }
@@ -124,6 +125,8 @@ final class FakeRealtimeSocket: RealtimeSocket {
             throw RealtimeJoinError.rejected(reason: reason)
         case .fail(let reason):
             throw RealtimeJoinError.transient(reason: reason)
+        case .failUnrecoverably(let reason):
+            throw RealtimeJoinError.unrecoverable(reason: reason)
         case .hang:
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(60))
@@ -234,7 +237,7 @@ final class FakeRealtimeSocketFactory: Sendable {
                 defer { value = nil }
                 return value
             }) {
-                throw TimeoutError(description: reason)
+                throw TestError(reason: reason)
             }
             let socket = FakeRealtimeSocket(configuration: configuration)
             configure.value?(socket)

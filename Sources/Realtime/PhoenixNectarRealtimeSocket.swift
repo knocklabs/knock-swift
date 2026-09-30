@@ -16,29 +16,25 @@ internal import PhoenixNectar
 internal final class PhoenixNectarRealtimeSocket: RealtimeSocket {
     private let socket: Socket
     private let signalHub = ChannelSignalHub()
-    private let joinTimeout: Duration
+    private let joinPolicy: RequestPolicy
     private let logger: RealtimeLogger
 
-    init(
-        configuration: RealtimeSocketConfiguration,
-        joinTimeout: Duration = .seconds(10),
-        heartbeatInterval: Duration = .seconds(30),
-        reconnectDelay: @escaping @Sendable (Int) -> Duration = RealtimeBackoff.delay(attempt:),
-        logger: RealtimeLogger = .disabled
-    ) throws {
+    init(configuration: RealtimeSocketConfiguration, joinTimeout: Duration = .seconds(10), logger: RealtimeLogger = .disabled) throws {
         let connectParams = configuration.connectParams
+        let joinPolicy = RequestPolicy(timeout: joinTimeout)
         self.socket = try Socket(
             endpoint: configuration.endpoint,
             configuration: Socket.Configuration(
-                defaultRequestPolicy: RequestPolicy(timeout: joinTimeout),
+                // Used for the automatic rejoins PhoenixNectar sends after a reconnect.
+                defaultRequestPolicy: joinPolicy,
                 connectionPolicy: ConnectionPolicy(
-                    heartbeatInterval: heartbeatInterval,
-                    reconnectBackoff: reconnectDelay
+                    heartbeatInterval: .seconds(30),
+                    reconnectBackoff: RealtimeBackoff.delay(attempt:)
                 )
             ),
             connectParamsProvider: { connectParams }
         )
-        self.joinTimeout = joinTimeout
+        self.joinPolicy = joinPolicy
         self.logger = logger
     }
 
@@ -49,24 +45,20 @@ internal final class PhoenixNectarRealtimeSocket: RealtimeSocket {
             switch event {
             case .frameReceived(let message):
                 hub.handle(message)
-                logger("Received \(message.event.rawValue) on \(message.topic.rawValue)")
+                logger(.debug, "Received \(message.event.rawValue) on \(message.topic.rawValue)")
             case .connectionStateChanged(let state):
-                logger("Socket state changed: \(state)")
+                logger(.debug, "Socket state changed: \(state)")
             case .pushTimedOut(let ref):
-                logger("Push \(ref) timed out")
+                logger(.debug, "Push \(ref) timed out")
             case .transport(.error(let error)):
-                logger("Socket transport error: \(error)")
+                logger(.debug, "Socket transport error: \(error)")
             case .transport(.close(let code, let reason)):
-                logger("Socket closed (\(code)) \(reason ?? "")")
+                logger(.debug, "Socket closed (\(code)) \(reason ?? "")")
             default:
                 break
             }
         }
-        do {
-            try await socket.connect()
-        } catch {
-            throw RealtimeJoinError.transient(reason: error.localizedDescription)
-        }
+        try await socket.connect()
     }
 
     func disconnect() async {
@@ -91,8 +83,8 @@ internal final class PhoenixNectarRealtimeSocket: RealtimeSocket {
         // Signals for a previous join of this topic are stale once a new join starts.
         signalHub.remove(topic: topic)
         do {
-            let channel = try await socket.joinChannel(topic, params: params, policy: RequestPolicy(timeout: joinTimeout))
-            return PhoenixNectarRealtimeChannel(channel: channel, signals: signalHub.register(topic: topic))
+            let channel = try await socket.joinChannel(topic, params: params, policy: joinPolicy)
+            return PhoenixNectarRealtimeChannel(channel: channel, signalStream: signalHub.register(topic: topic))
         } catch let error as PhoenixError {
             throw Self.joinError(from: error)
         }
@@ -101,22 +93,40 @@ internal final class PhoenixNectarRealtimeSocket: RealtimeSocket {
     static func joinError(from error: PhoenixError) -> RealtimeJoinError {
         switch error {
         case .serverError(let reply):
-            return .rejected(reason: reason(from: reply))
+            return .rejected(reason: reason(fromResponse: try? reply.decode([String: AnyCodable].self)))
         case .timeout, .notConnected, .channelClosed, .bufferOverflow, .protocolViolation:
             return .transient(reason: error.localizedDescription)
         case .encodingFailure, .decodingFailure, .malformedEndpoint:
-            return .rejected(reason: error.localizedDescription)
+            return .unrecoverable(reason: error.localizedDescription)
         }
     }
 
-    static func reason(from reply: PhoenixReply) -> String {
-        guard let response = try? reply.decode([String: AnyCodable].self), !response.isEmpty else {
-            return "unknown"
-        }
+    /// The `reason` Phoenix puts in error replies (for example `{"reason": "unauthorized"}`).
+    static func reason(fromResponse response: [String: AnyCodable]?) -> String {
+        guard let response, !response.isEmpty else { return "unknown" }
         if let reason = response["reason"]?.value as? String {
             return reason
         }
         return response.description
+    }
+
+    /// Maps an inbound frame on a joined topic to a channel signal.
+    ///
+    /// The feed channel never pushes, and the reply to an explicit join arrives before its topic is registered with
+    /// the signal hub, so a reply on a registered topic is the reply to an automatic rejoin.
+    static func signal(for event: PhoenixEvent, status: PushStatus?, reason: () -> String) -> RealtimeChannelSignal? {
+        switch event {
+        case .system(.error):
+            return .errored
+        case .system(.close):
+            return .closed
+        case .system(.reply) where status == .ok:
+            return .rejoined
+        case .system(.reply) where status == .error:
+            return .rejoinRejected(reason: reason())
+        default:
+            return nil
+        }
     }
 
     private static func map(_ state: ConnectionState) -> RealtimeConnectionState {
@@ -139,12 +149,7 @@ internal final class PhoenixNectarRealtimeSocket: RealtimeSocket {
 
 private struct PhoenixNectarRealtimeChannel: RealtimeChannel {
     let channel: Channel
-    let signalBroadcaster: ChannelSignalBroadcaster
-
-    init(channel: Channel, signals: ChannelSignalBroadcaster) {
-        self.channel = channel
-        self.signalBroadcaster = signals
-    }
+    let signalStream: AsyncStream<RealtimeChannelSignal>
 
     var topic: String {
         channel.topic.rawValue
@@ -155,94 +160,44 @@ private struct PhoenixNectarRealtimeChannel: RealtimeChannel {
     }
 
     func signals() async -> AsyncStream<RealtimeChannelSignal> {
-        signalBroadcaster.makeStream()
+        signalStream
     }
 }
 
-/// Fans channel signals out to any number of streams. Finishing the broadcaster finishes every stream.
-private final class ChannelSignalBroadcaster: Sendable {
-    private struct State {
-        var continuations: [UUID: AsyncStream<RealtimeChannelSignal>.Continuation] = [:]
-        var isFinished = false
-    }
+/// Routes inbound frames to the signal stream of the joined channel they belong to.
+private final class ChannelSignalHub: Sendable {
+    private let continuations = LockIsolated<[String: AsyncStream<RealtimeChannelSignal>.Continuation]>([:])
 
-    private let state = LockIsolated(State())
-
-    func makeStream() -> AsyncStream<RealtimeChannelSignal> {
+    func register(topic: String) -> AsyncStream<RealtimeChannelSignal> {
         let (stream, continuation) = AsyncStream.makeStream(of: RealtimeChannelSignal.self, bufferingPolicy: .unbounded)
-        let id = UUID()
-        let registered = state.withLock { state -> Bool in
-            guard !state.isFinished else { return false }
-            state.continuations[id] = continuation
-            return true
+        let previous = continuations.withLock { continuations in
+            defer { continuations[topic] = continuation }
+            return continuations[topic]
         }
-        guard registered else {
-            continuation.finish()
-            return stream
-        }
-        continuation.onTermination = { [weak self] _ in
-            self?.state.withLock { _ = $0.continuations.removeValue(forKey: id) }
-        }
+        previous?.finish()
         return stream
     }
 
-    func yield(_ signal: RealtimeChannelSignal) {
-        let continuations = state.withLock { Array($0.continuations.values) }
-        continuations.forEach { $0.yield(signal) }
-    }
-
-    func finish() {
-        let continuations = state.withLock { state -> [AsyncStream<RealtimeChannelSignal>.Continuation] in
-            state.isFinished = true
-            defer { state.continuations.removeAll() }
-            return Array(state.continuations.values)
-        }
-        continuations.forEach { $0.finish() }
-    }
-}
-
-/// Routes inbound frames to the signal broadcaster of the joined channel they belong to.
-private final class ChannelSignalHub: Sendable {
-    private let broadcasters = LockIsolated<[String: ChannelSignalBroadcaster]>([:])
-
-    func register(topic: String) -> ChannelSignalBroadcaster {
-        let broadcaster = ChannelSignalBroadcaster()
-        let previous = broadcasters.withLock { broadcasters in
-            defer { broadcasters[topic] = broadcaster }
-            return broadcasters[topic]
-        }
-        previous?.finish()
-        return broadcaster
-    }
-
     func remove(topic: String) {
-        broadcasters.withLock { $0.removeValue(forKey: topic) }?.finish()
+        continuations.withLock { $0.removeValue(forKey: topic) }?.finish()
     }
 
     func finishAll() {
-        let all = broadcasters.withLock { broadcasters in
-            defer { broadcasters.removeAll() }
-            return Array(broadcasters.values)
+        let all = continuations.withLock { continuations in
+            defer { continuations.removeAll() }
+            return Array(continuations.values)
         }
         all.forEach { $0.finish() }
     }
 
     func handle(_ message: PhoenixMessage) {
-        guard let broadcaster = broadcasters.value[message.topic.rawValue] else { return }
-        switch message.event {
-        case .system(.error):
-            broadcaster.yield(.errored)
-        case .system(.close):
-            broadcaster.yield(.closed)
-        // The feed channel never pushes, and the reply to the initial join arrives before the topic is registered
-        // here, so any reply on a registered topic is the reply to an automatic rejoin.
-        case .system(.reply) where message.pushStatus == .ok:
-            broadcaster.yield(.rejoined)
-        case .system(.reply) where message.pushStatus == .error:
-            let reason = (try? message.replyEnvelope()).map(PhoenixNectarRealtimeSocket.reason(from:)) ?? "unknown"
-            broadcaster.yield(.rejoinRejected(reason: reason))
-        default:
-            break
-        }
+        guard let continuation = continuations.value[message.topic.rawValue],
+              let signal = PhoenixNectarRealtimeSocket.signal(
+                  for: message.event,
+                  status: message.pushStatus,
+                  reason: { PhoenixNectarRealtimeSocket.reason(fromResponse: try? message.replyEnvelope().decode([String: AnyCodable].self)) }
+              )
+        else { return }
+        continuation.yield(signal)
     }
 }

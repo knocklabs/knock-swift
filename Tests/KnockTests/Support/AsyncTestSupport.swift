@@ -12,6 +12,13 @@ struct TimeoutError: Error, CustomStringConvertible {
     let description: String
 }
 
+/// A generic failure for fakes and test closures to throw.
+struct TestError: Error, Equatable, LocalizedError {
+    let reason: String
+
+    var errorDescription: String? { reason }
+}
+
 /// Polls `condition` until it returns true, failing after `timeout`.
 func waitUntil(
     _ message: @autoclosure () -> String = "condition",
@@ -27,6 +34,23 @@ func waitUntil(
     }
     if try await condition() { return }
     throw TimeoutError(description: "Timed out waiting for \(message())")
+}
+
+/// Checks that `condition` holds for the whole of `duration`, for asserting that something does *not* happen.
+func expectStaysTrue(
+    _ message: @autoclosure () -> String,
+    for duration: Duration = .milliseconds(30),
+    isolation: isolated (any Actor)? = #isolation,
+    _ condition: () async throws -> Bool
+) async throws {
+    let clock = ContinuousClock()
+    let deadline = clock.now.advanced(by: duration)
+    repeat {
+        guard try await condition() else {
+            throw TestError(reason: "Expected \(message()) to stay true")
+        }
+        try await Task.sleep(for: .milliseconds(5))
+    } while clock.now < deadline
 }
 
 /// Runs `operation`, failing if it doesn't finish within `timeout`.
@@ -75,5 +99,24 @@ final class StreamRecorder<Element: Sendable>: Sendable {
 extension StreamRecorder where Element: Equatable {
     func waitFor(_ element: Element, timeout: Duration = .seconds(3)) async throws {
         try await waitUntil("\(element) (recorded: \(values))", timeout: timeout) { values.contains(element) }
+    }
+}
+
+/// Suspends callers until `open()` is called.
+actor AsyncGate {
+    private var isOpen = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    var waiterCount: Int { waiters.count }
+
+    func wait() async {
+        guard !isOpen else { return }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+
+    func open() {
+        isOpen = true
+        waiters.forEach { $0.resume() }
+        waiters.removeAll()
     }
 }

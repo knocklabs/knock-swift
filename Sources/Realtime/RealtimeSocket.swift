@@ -39,12 +39,14 @@ internal enum RealtimeChannelSignal: Sendable, Equatable {
 internal enum RealtimeJoinError: Error, Equatable, LocalizedError {
     /// The server replied to the join with an error. Retrying with the same parameters will not help.
     case rejected(reason: String)
+    /// The join request could not be made at all (for example, the parameters could not be encoded). Retrying will not help.
+    case unrecoverable(reason: String)
     /// The join could not complete (timeout, dropped connection, ...). It is safe to retry.
     case transient(reason: String)
 
     var errorDescription: String? {
         switch self {
-        case .rejected(let reason), .transient(let reason):
+        case .rejected(let reason), .unrecoverable(let reason), .transient(let reason):
             return reason
         }
     }
@@ -65,9 +67,9 @@ internal protocol RealtimeSocket: Sendable {
 
 internal protocol RealtimeChannel: Sendable {
     var topic: String { get }
-    /// Payloads pushed by the server for `event`. The stream finishes when the underlying connection drops.
+    /// Payloads pushed by the server for `event`. The stream may finish when the underlying connection drops.
     func messages(event: String) async -> AsyncThrowingStream<[String: AnyCodable], Error>
-    /// Channel signals. The stream lives until the socket is disconnected.
+    /// Channel signals, for a single consumer. The stream lives until the socket is disconnected or the topic is joined again.
     func signals() async -> AsyncStream<RealtimeChannelSignal>
 }
 

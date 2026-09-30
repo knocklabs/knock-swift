@@ -34,7 +34,10 @@ let package = Package(
         
         .testTarget(
             name: "KnockTests",
-            dependencies: ["Knock"]),
+            dependencies: [
+                "Knock",
+                .product(name: "PhoenixNectar", package: "PhoenixNectar")
+            ]),
     ],
     swiftLanguageModes: [.v6]
 )

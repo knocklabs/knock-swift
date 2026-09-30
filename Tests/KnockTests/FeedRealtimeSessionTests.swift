@@ -104,7 +104,7 @@ struct FeedRealtimeSessionTests {
         let session = makeSession()
         factory.failNextCreation(with: "bad endpoint")
 
-        await #expect(throws: TimeoutError.self) {
+        await #expect(throws: TestError(reason: "bad endpoint")) {
             try await session.connect(options: nil)
         }
         guard case .failed(.connectionFailed) = await session.state else {
@@ -153,6 +153,19 @@ struct FeedRealtimeSessionTests {
         #expect(factory.last?.disconnectCount == 1)
     }
 
+    @Test func anUnrecoverableJoinFailureFailsTheConnectionWithoutRetrying() async throws {
+        let session = makeSession()
+        factory.onCreate { $0.enqueueJoins(.failUnrecoverably("Encoding failed")) }
+
+        try await session.connect(options: nil)
+
+        await #expect(throws: Knock.RealtimeError.connectionFailed(reason: "Encoding failed")) {
+            try await withTimeout { try await session.waitUntilConnected() }
+        }
+        #expect(factory.last?.joinRequests.count == 1)
+        #expect(factory.last?.disconnectCount == 1)
+    }
+
     @Test func connectingAfterAFailureStartsANewConnection() async throws {
         let session = makeSession()
         factory.onCreate { $0.enqueueJoins(.reject("unauthorized")) }
@@ -171,8 +184,7 @@ struct FeedRealtimeSessionTests {
 
         try await session.connect(options: nil)
         let socket = try #require(factory.last)
-        try await waitUntil("first join attempt") { socket.joinRequests.count == 1 }
-        try await Task.sleep(for: .milliseconds(20))
+        try await waitUntil("join waiting to retry") { await session.isWaitingToRetryJoin }
 
         socket.emit(.connected)
 
@@ -193,13 +205,12 @@ struct FeedRealtimeSessionTests {
         for attempt in 1...3 {
             socket.emit(.reconnecting(attempt: attempt))
         }
-        try await Task.sleep(for: .milliseconds(20))
-        #expect(await session.state == .connecting)
-
+        // Transport states are handled in order, so giving up after attempt 3 would report this earlier failure.
+        socket.emit(.failed(reason: "HTTP 403"))
         socket.emit(.reconnecting(attempt: 4))
 
         try await waitUntil("failed state") { await session.state.isFailed }
-        #expect(await session.state == .failed(.connectionFailed(reason: "HTTP 401")))
+        #expect(await session.state == .failed(.connectionFailed(reason: "HTTP 403")))
         #expect(socket.disconnectCount == 1)
     }
 
@@ -213,10 +224,12 @@ struct FeedRealtimeSessionTests {
             socket.emit(.reconnecting(attempt: attempt))
         }
         try await waitUntil("reconnecting state") { await session.state == .reconnecting(attempt: 10) }
+        let states = StreamRecorder(await session.connectionStates())
 
         socket.emit(.connected)
-        try await Task.sleep(for: .milliseconds(20))
-        #expect(await session.state == .reconnecting(attempt: 10), "Connected is only reported once the channel is rejoined")
+        socket.emit(.reconnecting(attempt: 11))
+        try await states.waitFor(.reconnecting(attempt: 11))
+        #expect(!states.values.contains(.connected), "Connected is only reported once the channel is rejoined")
 
         channel.send(.rejoined)
         try await waitUntil("connected state") { await session.state == .connected }
@@ -263,9 +276,10 @@ struct FeedRealtimeSessionTests {
 
         channel.send(.errored)
         try await waitUntil("rejoin") { socket.channels.count == 2 }
-        channel.finishMessageStreams()
         let rejoined = try #require(socket.lastChannel)
         try await waitUntil("resubscription") { rejoined.liveSubscriptionCount(for: "new-message") == 1 }
+        try await waitUntil("old subscription cancelled") { channel.liveSubscriptionCount(for: "new-message") == 0 }
+        #expect(channel.signalSubscriberCount == 1)
 
         rejoined.push("new-message", ["id": "1"])
 
@@ -428,7 +442,6 @@ struct FeedRealtimeSessionTests {
         try await session.connect(options: nil)
 
         let wait = Task { try await session.waitUntilConnected() }
-        try await Task.sleep(for: .milliseconds(20))
         await session.disconnect()
 
         await #expect(throws: Knock.RealtimeError.disconnected) {
@@ -442,7 +455,6 @@ struct FeedRealtimeSessionTests {
         try await session.connect(options: nil)
 
         let wait = Task { try await session.waitUntilConnected() }
-        try await Task.sleep(for: .milliseconds(20))
         wait.cancel()
 
         await #expect(throws: CancellationError.self) {
@@ -458,10 +470,8 @@ struct FeedRealtimeSessionTests {
         try await waitUntil("join attempt") { socket.joinRequests.count == 1 }
 
         await session.disconnect()
-        try await Task.sleep(for: .milliseconds(30))
 
-        #expect(socket.joinRequests.count == 1)
-        #expect(socket.channels.isEmpty)
+        try await expectStaysTrue("no further joins") { socket.joinRequests.count == 1 && socket.channels.isEmpty }
     }
 
     // MARK: Suspend and resume
@@ -525,11 +535,16 @@ struct FeedRealtimeSessionTests {
         _ = try await connected(session)
         await session.suspend()
 
-        let wait = Task { try await session.waitUntilConnected() }
-        try await Task.sleep(for: .milliseconds(20))
+        let finished = LockIsolated(false)
+        let wait = Task {
+            try await session.waitUntilConnected()
+            finished.setValue(true)
+        }
+        try await expectStaysTrue("waiting while suspended") { !finished.value }
         try await session.resume()
 
         try await withTimeout { try await wait.value }
+        #expect(finished.value)
     }
 
     // MARK: Shutdown and state stream
@@ -582,24 +597,5 @@ struct FeedRealtimeSessionTests {
         session = nil
 
         try await waitUntil("socket disconnected") { current.disconnectCount == 1 }
-    }
-}
-
-/// Suspends callers until `open()` is called.
-actor AsyncGate {
-    private var isOpen = false
-    private var waiters: [CheckedContinuation<Void, Never>] = []
-
-    var waiterCount: Int { waiters.count }
-
-    func wait() async {
-        guard !isOpen else { return }
-        await withCheckedContinuation { waiters.append($0) }
-    }
-
-    func open() {
-        isOpen = true
-        waiters.forEach { $0.resume() }
-        waiters.removeAll()
     }
 }

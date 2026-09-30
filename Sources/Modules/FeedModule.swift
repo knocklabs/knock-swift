@@ -33,9 +33,7 @@ internal final class FeedModule: Sendable {
                 )
             },
             policy: realtimePolicy,
-            log: { type, message in
-                Knock.shared.log(type: type, category: .feed, message: "FeedRealtime", description: message)
-            }
+            logger: FeedModule.realtimeLogger
         )
     }
 
@@ -58,14 +56,15 @@ internal final class FeedModule: Sendable {
         )
     }
 
+    static let realtimeLogger = RealtimeLogger(
+        isEnabled: { Knock.shared.logger.shouldLog($0) },
+        log: { type, message in
+            Knock.shared.log(type: type, category: .feed, message: "FeedRealtime", description: message)
+        }
+    )
+
     static let makePhoenixNectarSocket: RealtimeSocketFactory = { configuration in
-        try PhoenixNectarRealtimeSocket(
-            configuration: configuration,
-            logger: RealtimeLogger(
-                isEnabled: { Knock.shared.logger.shouldLog(.debug) },
-                log: { Knock.shared.log(type: .debug, category: .feed, message: "PhoenixNectar", description: $0) }
-            )
-        )
+        try PhoenixNectarRealtimeSocket(configuration: configuration, logger: realtimeLogger)
     }
 
     func getUserFeedContent(options: Knock.FeedClientOptions? = nil) async throws -> Knock.Feed {

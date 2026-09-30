@@ -91,8 +91,7 @@ struct FeedManagerRealtimeTests {
         #expect(subscription.isCancelled)
         try await waitUntil("unsubscribed") { channel.liveSubscriptionCount(for: "new-message") == 0 }
         channel.push("new-message")
-        try await Task.sleep(for: .milliseconds(20))
-        #expect(received.value.count == 1)
+        try await expectStaysTrue("no delivery after cancelling") { received.value.count == 1 }
     }
 
     @Test func eventsCanBeSubscribedBeforeConnecting() async throws {

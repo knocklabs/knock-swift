@@ -148,8 +148,8 @@ struct SerialExecutionQueueTests {
         let queue = SerialExecutionQueue()
 
         #expect(try await queue.run { 42 } == 42)
-        await #expect(throws: TimeoutError.self) {
-            try await queue.run { throw TimeoutError(description: "boom") }
+        await #expect(throws: TestError(reason: "boom")) {
+            try await queue.run { throw TestError(reason: "boom") }
         }
     }
 
