@@ -7,7 +7,7 @@
 
 import Foundation
 
-internal protocol UserServiceProtocol {
+internal protocol UserServiceProtocol: Sendable {
     func getUser(userId: String) async throws -> Knock.User
     func updateUser(user: Knock.User) async throws -> Knock.User
 }

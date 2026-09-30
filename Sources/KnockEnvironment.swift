@@ -137,7 +137,7 @@ public extension Knock {
         await environment.setUserInfo(userId: userId, userToken: userToken)
     }
 
-    func setUserInfo(userId: String?, userToken: String?, completion: @escaping () -> Void) {
+    func setUserInfo(userId: String?, userToken: String?, completion: @escaping @Sendable () -> Void) {
         Task {
             await environment.setUserInfo(userId: userId, userToken: userToken)
             completion()
@@ -149,7 +149,7 @@ public extension Knock {
         await environment.getUserId()
     }
 
-    func getUserId(completion: @escaping (String?) -> Void) {
+    func getUserId(completion: @escaping @Sendable (String?) -> Void) {
         Task {
             completion(await environment.getUserId())
         }
@@ -159,7 +159,7 @@ public extension Knock {
         await environment.getDeviceToken()
     }
 
-    func getDeviceToken(completion: @escaping (String?) -> Void) {
+    func getDeviceToken(completion: @escaping @Sendable (String?) -> Void) {
         Task {
             completion(await environment.getDeviceToken())
         }
@@ -169,7 +169,7 @@ public extension Knock {
         await environment.getPushChannelId()
     }
 
-    func getPushChannelId(completion: @escaping (String?) -> Void) {
+    func getPushChannelId(completion: @escaping @Sendable (String?) -> Void) {
         Task {
             completion(await environment.getPushChannelId())
         }

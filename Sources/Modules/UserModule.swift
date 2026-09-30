@@ -6,9 +6,8 @@
 //
 
 import Foundation
-import OSLog
 
-internal class UserModule {
+internal final class UserModule: Sendable {
     let userService = UserService()
     
     func getUser() async throws -> Knock.User {
@@ -44,7 +43,7 @@ public extension Knock {
         return try await userModule.getUser()
     }
     
-    func getUser(completionHandler: @escaping ((Result<User, Error>) -> Void)) {
+    func getUser(completionHandler: @escaping @Sendable ((Result<User, Error>) -> Void)) {
         Task {
             do {
                 let user = try await getUser()
@@ -62,7 +61,7 @@ public extension Knock {
         return try await userModule.updateUser(user: user)
     }
     
-    func updateUser(user: User, completionHandler: @escaping ((Result<User, Error>) -> Void)) {
+    func updateUser(user: User, completionHandler: @escaping @Sendable ((Result<User, Error>) -> Void)) {
         Task {
             do {
                 let user = try await updateUser(user: user)

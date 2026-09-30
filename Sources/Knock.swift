@@ -5,24 +5,34 @@
 //  Created by Diego on 26/04/23.
 //
 
-import SwiftUI
-import OSLog
+import Foundation
 
 // Knock client SDK.
-public class Knock {
+public final class Knock: Sendable {
     internal static let clientVersion = "1.2.9"
-    
-    public static var shared: Knock = Knock()
-    
-    public var feedManager: FeedManager?
-    
+
+    private static let sharedInstance = LockIsolated(Knock())
+
+    /// The shared Knock instance. Replaced by `resetInstanceCompletely()`.
+    public static var shared: Knock {
+        get { sharedInstance.value }
+        set { sharedInstance.setValue(newValue) }
+    }
+
+    private let _feedManager = LockIsolated<FeedManager?>(nil)
+
+    public var feedManager: FeedManager? {
+        get { _feedManager.value }
+        set { _feedManager.setValue(newValue) }
+    }
+
     internal let environment = KnockEnvironment()
-    internal lazy var authenticationModule = AuthenticationModule()
-    internal lazy var userModule = UserModule()
-    internal lazy var preferenceModule = PreferenceModule()
-    internal lazy var messageModule = MessageModule()
-    internal lazy var channelModule = ChannelModule()
-    internal lazy var logger = KnockLogger()
+    internal let authenticationModule = AuthenticationModule()
+    internal let userModule = UserModule()
+    internal let preferenceModule = PreferenceModule()
+    internal let messageModule = MessageModule()
+    internal let channelModule = ChannelModule()
+    internal let logger = KnockLogger()
     
     /**
     Sets up the shared Knock instance. Make sure to call this as soon as you can. Preferrably in your AppDelegate.
@@ -54,12 +64,12 @@ public class Knock {
      After calling this, you will need to setup and signin again.
      */
     public func resetInstanceCompletely() {
-        Knock.shared = Knock()
+        Knock.sharedInstance.setValue(Knock())
     }
 }
 
 public extension Knock {
-    struct KnockStartupOptions {
+    struct KnockStartupOptions: Sendable {
         public init(hostname: String? = nil, loggingOptions: LoggingOptions = .errorsOnly) {
             self.hostname = hostname
             self.loggingOptions = loggingOptions
@@ -68,7 +78,7 @@ public extension Knock {
         var loggingOptions: LoggingOptions
     }
     
-    enum LoggingOptions {
+    enum LoggingOptions: Sendable {
         case errorsOnly
         case errorsAndWarningsOnly
         case verbose
