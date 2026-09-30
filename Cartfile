@@ -1,2 +1,1 @@
-github "davidstump/SwiftPhoenixClient" ~> 5.2.2
-
+github "jvdvleuten/PhoenixNectar" ~> 0.1.0

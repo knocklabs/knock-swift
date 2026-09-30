@@ -1,14 +1,15 @@
 {
+  "originHash" : "eea8e518d5e091c48cfce72aaa4c9eebb16b426bb8b61679b0b3809a39162c6e",
   "pins" : [
     {
-      "identity" : "swiftphoenixclient",
+      "identity" : "phoenixnectar",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/davidstump/SwiftPhoenixClient.git",
+      "location" : "https://github.com/jvdvleuten/PhoenixNectar.git",
       "state" : {
-        "revision" : "588bf6baab5d049752748e19a4bff32421ea40ec",
-        "version" : "5.3.2"
+        "revision" : "5f9eea6b8c3f24379491784f5c79078b061ed682",
+        "version" : "0.1.0"
       }
     }
   ],
-  "version" : 2
+  "version" : 3
 }
