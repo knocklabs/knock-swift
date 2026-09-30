@@ -15,7 +15,11 @@ internal actor KnockEnvironment {
     private let previousPushTokensKey = "knock_previous_push_token"
 
     private var userId: String?
-    private var userToken: String?
+    private var userToken: String? {
+        didSet { currentUserToken.setValue(userToken) }
+    }
+    /// The user token, readable without awaiting the actor. The realtime socket reads it on every reconnect.
+    nonisolated let currentUserToken = LockIsolated<String?>(nil)
     private var publishableKey: String?
     private var pushChannelId: String?
     private var baseUrl: String = defaultBaseUrl

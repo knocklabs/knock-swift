@@ -18,13 +18,13 @@ internal final class FeedModule: Sendable {
         feedId: String,
         options: Knock.FeedClientOptions,
         environment: @escaping @Sendable () -> KnockEnvironment = { Knock.shared.environment },
-        socketFactory: @escaping RealtimeSocketFactory = FeedModule.makePhoenixNectarSocket,
+        socketFactory: RealtimeSocketFactory? = nil,
         realtimePolicy: FeedRealtimeSession.Policy = .default
     ) {
         self.feedId = feedId
         self.feedOptions = options
         self.realtime = FeedRealtimeSession(
-            socketFactory: socketFactory,
+            socketFactory: socketFactory ?? FeedModule.phoenixNectarSocketFactory(environment: environment),
             targetProvider: { overrides in
                 try await FeedModule.realtimeTarget(
                     feedId: feedId,
@@ -63,8 +63,22 @@ internal final class FeedModule: Sendable {
         }
     )
 
-    static let makePhoenixNectarSocket: RealtimeSocketFactory = { configuration in
-        try PhoenixNectarRealtimeSocket(configuration: configuration, logger: realtimeLogger)
+    /// Reconnects send the latest user token, so a token refreshed with `signIn` is used without reconnecting by hand.
+    static func phoenixNectarSocketFactory(environment: @escaping @Sendable () -> KnockEnvironment) -> RealtimeSocketFactory {
+        { configuration in
+            try PhoenixNectarRealtimeSocket(
+                configuration: configuration,
+                connectParams: { connectParams(configuration.connectParams, currentUserToken: environment().currentUserToken.value) },
+                logger: realtimeLogger
+            )
+        }
+    }
+
+    static func connectParams(_ params: [String: String], currentUserToken: String?) -> [String: String] {
+        guard let currentUserToken else { return params }
+        var params = params
+        params["user_token"] = currentUserToken
+        return params
     }
 
     func getUserFeedContent(options: Knock.FeedClientOptions? = nil) async throws -> Knock.Feed {
