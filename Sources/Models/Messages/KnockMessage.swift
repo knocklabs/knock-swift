@@ -10,7 +10,7 @@ import Foundation
 public extension Knock {
     // https://docs.knock.app/reference#messages#feeds
     
-    // Named `KnockMessage` and not only `Message` to avoid a name colission to the type in `SwiftPhoenixClient`
+    // Named `KnockMessage` and not only `Message` to avoid name collisions with the many `Message` types in client apps and dependencies
     struct KnockMessage: Codable, Sendable {
         public let id: String
         public let channel_id: String

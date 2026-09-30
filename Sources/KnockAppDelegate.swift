@@ -7,7 +7,6 @@
 
 import Foundation
 import UIKit
-import OSLog
 
 /**
 This class serves as an optional base class designed to streamline the integration of Knock into your application. By inheriting from KnockAppDelegate in your AppDelegate, you gain automatic handling of Push Notification registration and device token management, simplifying the initial setup process for Knock's functionalities.
@@ -23,12 +22,13 @@ Key Features:
 - Automatic message status updates, based on Push Notification interaction.
 
 Developers can benefit from a quick and efficient setup, focusing more on the unique aspects of their notification handling logic while relying on KnockAppDelegate for the foundational setup and management tasks.
+
+The `UNUserNotificationCenterDelegate` methods and the helpers they call are `nonisolated`, because the system doesn't guarantee they're called on the main actor. Overrides of those helpers must be `nonisolated` too.
 */
 
 @available(iOSApplicationExtension, unavailable)
 open class KnockAppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
-            
-    
+
     // MARK: Launching
     /// - NOTE: If overriding this function in your AppDelegate, make sure to call super on this to get the default functionality as well.
     open func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
@@ -39,7 +39,7 @@ open class KnockAppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificat
         // Check if launched from the tap of a notification
         if let launchOptions = launchOptions,
            let userInfo = launchOptions[.remoteNotification] as? [String: AnyObject] {
-            Knock.shared.log(type: .error, category: .pushNotification, message: "pushNotificationTapped")
+            Knock.shared.log(type: .debug, category: .pushNotification, message: "pushNotificationTapped")
             pushNotificationTapped(userInfo: userInfo)
         }
         
@@ -66,13 +66,13 @@ open class KnockAppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificat
     
     // MARK: Notifications
     
-    open func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+    nonisolated open func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         Knock.shared.log(type: .debug, category: .pushNotification, message: "pushNotificationDeliveredInForeground")
         let presentationOptions = pushNotificationDeliveredInForeground(notification: notification)
         completionHandler(presentationOptions)
     }
     
-    open func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+    nonisolated open func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         Knock.shared.log(type: .debug, category: .pushNotification, message: "pushNotificationTapped")
         pushNotificationTapped(userInfo: response.notification.request.content.userInfo)
         completionHandler()
@@ -89,18 +89,18 @@ open class KnockAppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificat
      If you want to retain the default logic we provide in these methods, be sure to call the super first.
     */
     
-    public func getMessageId(userInfo: [AnyHashable : Any]) -> String? {
+    nonisolated public func getMessageId(userInfo: [AnyHashable : Any]) -> String? {
         return userInfo["knock_message_id"] as? String
     }
     
-    open func pushNotificationDeliveredInForeground(notification: UNNotification) -> UNNotificationPresentationOptions {
+    nonisolated open func pushNotificationDeliveredInForeground(notification: UNNotification) -> UNNotificationPresentationOptions {
         if let messageId = getMessageId(userInfo: notification.request.content.userInfo) {
             Knock.shared.updateMessageStatus(messageId: messageId, status: .read) { _ in }
         }
         return [.sound, .badge, .banner]
     }
     
-    open func pushNotificationTapped(userInfo: [AnyHashable : Any]) {
+    nonisolated open func pushNotificationTapped(userInfo: [AnyHashable : Any]) {
         if let messageId = getMessageId(userInfo: userInfo) {
             Knock.shared.updateMessageStatus(messageId: messageId, status: .interacted) { _ in }
         }
