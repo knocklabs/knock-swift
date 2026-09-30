@@ -69,15 +69,18 @@ extension Knock {
             newMessagesTask?.cancel()
         }
         
+        /// The manager whose new messages are being observed. Requests go through it so they match the realtime feed.
+        private var observedFeedManager: Knock.FeedManager?
+
         private var feedManager: Knock.FeedManager? {
-            feedManagerProvider()
+            observedFeedManager ?? feedManagerProvider()
         }
         
         // MARK: Public Methods
         
         /// Connects to the feed, refreshes it, and prepends new messages as they arrive. Calling this again replaces the previous observation.
         public func connectFeedAndObserveNewMessages() async {
-            guard let feedManager else {
+            guard let feedManager = feedManagerProvider() else {
                 Knock.shared.log(type: .warning, category: .feed, message: "connectFeedAndObserveNewMessages", status: .fail, errorMessage: "No feed manager is set")
                 return
             }
@@ -92,6 +95,7 @@ extension Knock {
         public func stopObservingNewMessages() {
             newMessagesTask?.cancel()
             newMessagesTask = nil
+            observedFeedManager = nil
         }
 
         public func refreshFeed(showRefreshIndicator: Bool = false) async {
@@ -311,6 +315,7 @@ extension Knock {
         
         private func observeNewMessages(from feedManager: Knock.FeedManager) {
             newMessagesTask?.cancel()
+            observedFeedManager = feedManager
             newMessagesTask = Task { [weak self] in
                 let events = await feedManager.events(named: "new-message")
                 for await _ in events {
