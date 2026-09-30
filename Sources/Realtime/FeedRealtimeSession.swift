@@ -30,7 +30,7 @@ internal actor FeedRealtimeSession {
         )
     }
 
-    private enum Intent {
+    enum Intent {
         case idle
         case active(Knock.FeedClientOptions?)
         case suspended(Knock.FeedClientOptions?)
@@ -56,18 +56,54 @@ internal actor FeedRealtimeSession {
         }
     }
 
+    private enum RetryReason {
+        /// The join request failed, typically because the socket is down.
+        case joinFailed
+        /// The server-side channel crashed while the socket stayed up.
+        case channelErrored
+    }
+
+    private enum JoinPhase {
+        case joining
+        case waitingToRetry(RetryReason, delay: Duration)
+        case joined(JoinedChannel)
+    }
+
     private struct Connection {
         let id = UUID()
         let target: FeedRealtimeTarget
         let socket: any RealtimeSocket
         var joinTask: Task<Void, Never>?
         var monitorTask: Task<Void, Never>?
-        var isWaitingToRetryJoin = false
-        var joined: JoinedChannel?
-        /// Server-side channel crashes since the channel last proved healthy. Drives the rejoin backoff.
-        var consecutiveChannelErrors = 0
+        var joinPhase = JoinPhase.joining
+        /// Failed joins and channel crashes since the channel was last stable. Drives the retry backoff.
+        var retryAttempt = 0
         var hasConnectedTransport = false
         var lastTransportFailure: String?
+
+        var joined: JoinedChannel? {
+            get {
+                guard case .joined(let joined) = joinPhase else { return nil }
+                return joined
+            }
+            set {
+                joinPhase = newValue.map(JoinPhase.joined) ?? .joining
+            }
+        }
+
+        /// Drops the joined channel (if any) and waits `delay` before the next join. Returns the delay.
+        mutating func scheduleRetry(_ reason: RetryReason, policy: Policy) -> Duration {
+            if let joined {
+                joined.cancelTasks()
+                if joined.joinedAt.duration(to: .now) >= policy.stableChannelDuration {
+                    retryAttempt = 0
+                }
+            }
+            retryAttempt += 1
+            let delay = policy.joinRetryDelay(retryAttempt)
+            joinPhase = .waitingToRetry(reason, delay: delay)
+            return delay
+        }
 
         func cancelTasks() {
             joinTask?.cancel()
@@ -76,24 +112,31 @@ internal actor FeedRealtimeSession {
         }
     }
 
+    /// Everything that observes the session. All of it is finished on shutdown.
+    private struct Observers {
+        var states: [UUID: AsyncStream<Knock.FeedConnectionState>.Continuation] = [:]
+        /// Woken on every state or intent change, including ones that leave the state unchanged.
+        var statusWaiters: [UUID: AsyncStream<Void>.Continuation] = [:]
+        var events: [String: [UUID: AsyncStream<Knock.FeedEvent>.Continuation]] = [:]
+
+        func finishAll() {
+            states.values.forEach { $0.finish() }
+            statusWaiters.values.forEach { $0.finish() }
+            events.values.forEach { $0.values.forEach { $0.finish() } }
+        }
+    }
+
     private let socketFactory: RealtimeSocketFactory
     private let targetProvider: TargetProvider
     private let policy: Policy
     private let log: RealtimeLogger
 
-    private var intent = Intent.idle {
-        didSet { notifyStatusWaiters() }
-    }
+    private var intent = Intent.idle
     /// Incremented by every connect/disconnect/suspend so that a slow `connect` can tell it was superseded.
     private var requestGeneration = 0
     private var connection: Connection?
-
     private(set) var state = Knock.FeedConnectionState.disconnected
-    private var stateContinuations: [UUID: AsyncStream<Knock.FeedConnectionState>.Continuation] = [:]
-    /// Woken on every state or intent change, including ones that leave the state unchanged.
-    private var statusWaiters: [UUID: AsyncStream<Void>.Continuation] = [:]
-
-    private var subscribers: [String: [UUID: AsyncStream<Knock.FeedEvent>.Continuation]] = [:]
+    private var observers = Observers()
 
     init(
         socketFactory: @escaping RealtimeSocketFactory,
@@ -112,9 +155,7 @@ internal actor FeedRealtimeSession {
         if let socket = connection?.socket {
             Task { await socket.disconnect() }
         }
-        subscribers.values.forEach { $0.values.forEach { $0.finish() } }
-        stateContinuations.values.forEach { $0.finish() }
-        statusWaiters.values.forEach { $0.finish() }
+        observers.finishAll()
     }
 
     private var isShutdown: Bool {
@@ -132,7 +173,7 @@ internal actor FeedRealtimeSession {
         guard !isShutdown else { throw Knock.RealtimeError.disconnected }
         requestGeneration += 1
         let generation = requestGeneration
-        intent = .active(options)
+        setIntent(.active(options))
 
         let target: FeedRealtimeTarget
         do {
@@ -170,7 +211,7 @@ internal actor FeedRealtimeSession {
     func disconnect() async {
         guard !isShutdown else { return }
         requestGeneration += 1
-        intent = .idle
+        setIntent(.idle)
         await closeConnection(entering: .disconnected)
     }
 
@@ -178,7 +219,7 @@ internal actor FeedRealtimeSession {
     func suspend() async {
         guard case .active(let options) = intent else { return }
         requestGeneration += 1
-        intent = .suspended(options)
+        setIntent(.suspended(options))
         await closeConnection(entering: .disconnected)
         log(.debug, "Suspended feed connection")
     }
@@ -191,16 +232,29 @@ internal actor FeedRealtimeSession {
         case .suspended(let options):
             log(.debug, "Resuming feed connection")
             try await connect(options: options)
-        case .active where state.isFailed:
-            try await retryIfFailed()
-        case .active, .idle, .shutdown:
+        case .active:
+            try await retryFailedConnection()
+        case .idle, .shutdown:
             return
         }
     }
 
-    /// Retries a connection that failed (used when the network becomes available). Otherwise does nothing; in particular,
-    /// a suspended connection stays suspended.
-    func retryIfFailed() async throws {
+    /// Applies an app lifecycle change. Backgrounding suspends an active connection, becoming active resumes it (or
+    /// retries it if it failed), and a recovered network retries a connection that failed to connect.
+    func handle(_ event: AppLifecycleEvent) async throws {
+        switch event {
+        case .didEnterBackground:
+            await suspend()
+        case .didBecomeActive:
+            try await resume()
+        case .networkBecameAvailable:
+            // The network coming back can't fix a rejected join or a channel the server closed.
+            guard case .failed(.connectionFailed) = state else { return }
+            try await retryFailedConnection()
+        }
+    }
+
+    private func retryFailedConnection() async throws {
         guard case .active(let options) = intent, state.isFailed else { return }
         log(.debug, "Retrying failed feed connection")
         try await connect(options: options)
@@ -210,17 +264,11 @@ internal actor FeedRealtimeSession {
     func shutdown() async {
         guard !isShutdown else { return }
         requestGeneration += 1
-        intent = .shutdown
+        setIntent(.shutdown)
         await closeConnection(entering: .disconnected)
-        let allSubscribers = subscribers.values.flatMap(\.values)
-        subscribers.removeAll()
-        allSubscribers.forEach { $0.finish() }
-        let allStateContinuations = stateContinuations.values
-        stateContinuations.removeAll()
-        allStateContinuations.forEach { $0.finish() }
-        let allStatusWaiters = statusWaiters.values
-        statusWaiters.removeAll()
-        allStatusWaiters.forEach { $0.finish() }
+        let finished = observers
+        observers = Observers()
+        finished.finishAll()
     }
 
     /// Suspends until the channel is joined. Throws if the connection fails, or if the session is disconnected
@@ -229,27 +277,34 @@ internal actor FeedRealtimeSession {
         let (changes, continuation) = AsyncStream.makeStream(of: Void.self, bufferingPolicy: .bufferingNewest(1))
         let id = UUID()
         continuation.yield()
-        if !isShutdown {
-            statusWaiters[id] = continuation
-        } else {
+        if isShutdown {
             continuation.finish()
+        } else {
+            observers.statusWaiters[id] = continuation
         }
-        defer { statusWaiters[id] = nil }
+        defer { observers.statusWaiters[id] = nil }
 
         for await _ in changes {
-            switch (state, intent) {
-            case (.connected, _):
-                return
-            case (.failed(let error), _):
-                throw error
-            case (.disconnected, .idle), (_, .shutdown):
-                throw Knock.RealtimeError.disconnected
-            case (.disconnected, _), (.connecting, _), (.reconnecting, _):
-                continue
+            if let outcome = Self.connectOutcome(state: state, intent: intent) {
+                return try outcome.get()
             }
         }
         try Task.checkCancellation()
         throw Knock.RealtimeError.disconnected
+    }
+
+    /// How a `waitUntilConnected` call ends in `state` with `intent`, or `nil` to keep waiting.
+    static func connectOutcome(state: Knock.FeedConnectionState, intent: Intent) -> Result<Void, Knock.RealtimeError>? {
+        switch (state, intent) {
+        case (.connected, _):
+            return .success(())
+        case (.failed(let error), _):
+            return .failure(error)
+        case (.disconnected, .idle), (_, .shutdown):
+            return .failure(.disconnected)
+        case (.disconnected, _), (.connecting, _), (.reconnecting, _):
+            return nil
+        }
     }
 
     // MARK: - Streams
@@ -263,7 +318,7 @@ internal actor FeedRealtimeSession {
             return stream
         }
         let id = UUID()
-        stateContinuations[id] = continuation
+        observers.states[id] = continuation
         continuation.onTermination = { [weak self] _ in
             Task { await self?.removeStateContinuation(id: id) }
         }
@@ -281,7 +336,7 @@ internal actor FeedRealtimeSession {
             return stream
         }
         let id = UUID()
-        subscribers[event, default: [:]][id] = continuation
+        observers.events[event, default: [:]][id] = continuation
         continuation.onTermination = { [weak self] _ in
             Task { await self?.removeSubscriber(event: event, id: id) }
         }
@@ -291,12 +346,13 @@ internal actor FeedRealtimeSession {
 
     /// The number of live event subscriptions. Only used by tests.
     var subscriberCount: Int {
-        subscribers.values.reduce(0) { $0 + $1.count }
+        observers.events.values.reduce(0) { $0 + $1.count }
     }
 
     /// Whether a join is waiting out its retry delay. Only used by tests.
     var isWaitingToRetryJoin: Bool {
-        connection?.isWaitingToRetryJoin ?? false
+        guard case .waitingToRetry = connection?.joinPhase else { return false }
+        return true
     }
 
     // MARK: - Connection lifecycle
@@ -321,14 +377,13 @@ internal actor FeedRealtimeSession {
         await joinLoop(id: id)
     }
 
-    private func joinLoop(id: UUID, initialDelay: Duration? = nil) async {
-        var attempt = 0
-        if let initialDelay {
-            connection?.isWaitingToRetryJoin = true
-            try? await Task.sleep(for: initialDelay)
-        }
+    private func joinLoop(id: UUID) async {
         while let current = connection(id), !Task.isCancelled {
-            connection?.isWaitingToRetryJoin = false
+            if case .waitingToRetry(_, let delay) = current.joinPhase {
+                try? await Task.sleep(for: delay)
+                guard connection(id) != nil, !Task.isCancelled else { return }
+                connection?.joinPhase = .joining
+            }
             do {
                 let channel = try await current.socket.join(topic: current.target.topic, params: current.target.joinParams)
                 guard connection(id) != nil else { return }
@@ -343,12 +398,10 @@ internal actor FeedRealtimeSession {
                 await fail(connectionID: id, error: .connectionFailed(reason: reason))
                 return
             } catch {
-                guard connection(id) != nil, !Task.isCancelled else { return }
-                attempt += 1
-                let delay = policy.joinRetryDelay(attempt)
+                guard var updated = connection(id), !Task.isCancelled else { return }
+                let delay = updated.scheduleRetry(.joinFailed, policy: policy)
+                connection = updated
                 log(.debug, "Joining \(current.target.topic) failed (\(error.localizedDescription)). Retrying in \(delay)")
-                connection?.isWaitingToRetryJoin = true
-                try? await Task.sleep(for: delay)
             }
         }
     }
@@ -361,14 +414,14 @@ internal actor FeedRealtimeSession {
         connection?.joined = JoinedChannel(channel: channel, signalTask: signalTask)
         setState(.connected)
         log(.debug, "Joined \(channel.topic)")
-        for event in subscribers.keys {
+        for event in observers.events.keys {
             startForwarderIfNeeded(event: event)
         }
     }
 
-    private func restartJoinLoop(connectionID id: UUID, initialDelay: Duration? = nil) {
+    private func restartJoinLoop(connectionID id: UUID) {
         connection?.joinTask?.cancel()
-        connection?.joinTask = Task { await self.joinLoop(id: id, initialDelay: initialDelay) }
+        connection?.joinTask = Task { await self.joinLoop(id: id) }
     }
 
     private func handleTransportState(_ transportState: RealtimeConnectionState, connectionID id: UUID) async {
@@ -379,8 +432,10 @@ internal actor FeedRealtimeSession {
         case .connected:
             connection?.hasConnectedTransport = true
             connection?.lastTransportFailure = nil
-            // A join that is waiting out its backoff can be retried right away now that the socket is open.
-            if current.isWaitingToRetryJoin {
+            // A join that failed while the socket was down can be retried right away now that it is open. A channel
+            // crash keeps its backoff: the socket being open doesn't make the channel healthy.
+            if case .waitingToRetry(.joinFailed, _) = current.joinPhase {
+                connection?.joinPhase = .joining
                 restartJoinLoop(connectionID: id)
             }
             // With a joined channel, the socket rejoins it automatically; `.rejoined` marks the state connected.
@@ -410,17 +465,12 @@ internal actor FeedRealtimeSession {
         case .errored:
             // The server-side channel crashed. The socket is still up, so join the channel again; the new join
             // starts new forwarders. Back off so a channel that crashes right after every join isn't rejoined in a loop.
-            if let joined = connection?.joined, joined.joinedAt.duration(to: .now) >= policy.stableChannelDuration {
-                connection?.consecutiveChannelErrors = 0
-            }
-            connection?.consecutiveChannelErrors += 1
-            let errors = connection?.consecutiveChannelErrors ?? 1
-            let delay = policy.joinRetryDelay(errors)
+            guard var current = connection(id), current.joined != nil else { return }
+            let delay = current.scheduleRetry(.channelErrored, policy: policy)
+            connection = current
             log(.error, "The feed channel errored. Rejoining in \(delay).")
-            connection?.joined?.cancelTasks()
-            connection?.joined = nil
-            setState(.reconnecting(attempt: errors))
-            restartJoinLoop(connectionID: id, initialDelay: delay)
+            setState(.reconnecting(attempt: current.retryAttempt))
+            restartJoinLoop(connectionID: id)
         case .closed:
             log(.error, "The feed channel was closed by the server")
             await fail(connectionID: id, error: .channelClosed)
@@ -457,22 +507,27 @@ internal actor FeedRealtimeSession {
     private func setState(_ newState: Knock.FeedConnectionState) {
         guard newState != state else { return }
         state = newState
-        stateContinuations.values.forEach { $0.yield(newState) }
-        notifyStatusWaiters()
+        observers.states.values.forEach { $0.yield(newState) }
+        statusDidChange()
     }
 
-    private func notifyStatusWaiters() {
-        statusWaiters.values.forEach { $0.yield() }
+    private func setIntent(_ newIntent: Intent) {
+        intent = newIntent
+        statusDidChange()
+    }
+
+    private func statusDidChange() {
+        observers.statusWaiters.values.forEach { $0.yield() }
     }
 
     private func removeStateContinuation(id: UUID) {
-        stateContinuations[id] = nil
+        observers.states[id] = nil
     }
 
     // MARK: - Event forwarding
 
     private func startForwarderIfNeeded(event: String) {
-        guard subscribers[event]?.isEmpty == false,
+        guard observers.events[event]?.isEmpty == false,
               let joined = connection?.joined,
               joined.forwarders[event] == nil
         else { return }
@@ -482,13 +537,11 @@ internal actor FeedRealtimeSession {
     }
 
     private func deliver(_ feedEvent: Knock.FeedEvent) {
-        // Events only arrive on a joined channel, so they also confirm a rejoin that wasn't otherwise observed, and
-        // show the channel is healthy again.
+        // Events only arrive on a joined channel, so they also confirm a rejoin that wasn't otherwise observed.
         if connection?.joined != nil {
-            connection?.consecutiveChannelErrors = 0
             setState(.connected)
         }
-        subscribers[feedEvent.event]?.values.forEach { $0.yield(feedEvent) }
+        observers.events[feedEvent.event]?.values.forEach { $0.yield(feedEvent) }
     }
 
     /// The channel's message stream can end when the socket drops. Subscribe again so events keep flowing after the
@@ -500,9 +553,9 @@ internal actor FeedRealtimeSession {
     }
 
     private func removeSubscriber(event: String, id: UUID) {
-        subscribers[event]?[id] = nil
-        guard subscribers[event]?.isEmpty ?? true else { return }
-        subscribers[event] = nil
+        observers.events[event]?[id] = nil
+        guard observers.events[event]?.isEmpty ?? true else { return }
+        observers.events[event] = nil
         connection?.joined?.forwarders.removeValue(forKey: event)?.task.cancel()
     }
 

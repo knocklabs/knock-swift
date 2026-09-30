@@ -20,7 +20,6 @@ public extension Knock {
         private let realtime: FeedRealtimeSession
         private let operations: SerialExecutionQueue
         private let lifecycleTask: Task<Void, Never>
-        private let handledLifecycleEvents = LockIsolated(0)
 
         /// The id of the in-app feed channel.
         public var feedId: String {
@@ -64,31 +63,17 @@ public extension Knock {
             self.feedModule = feedModule
             self.realtime = realtime
             self.operations = operations
-            let handledLifecycleEvents = handledLifecycleEvents
             self.lifecycleTask = Task {
                 for await event in lifecycleEvents {
                     operations.enqueue {
                         do {
-                            switch event {
-                            case .didEnterBackground:
-                                await realtime.suspend()
-                            case .didBecomeActive:
-                                try await realtime.resume()
-                            case .networkBecameAvailable:
-                                try await realtime.retryIfFailed()
-                            }
+                            try await realtime.handle(event)
                         } catch {
-                            Knock.shared.log(type: .error, category: .feed, message: "Resuming feed connection", status: .fail, errorMessage: error.localizedDescription)
+                            Knock.shared.log(type: .error, category: .feed, message: "Handling \(event)", status: .fail, errorMessage: error.localizedDescription)
                         }
-                        handledLifecycleEvents.withLock { $0 += 1 }
                     }
                 }
             }
-        }
-
-        /// The number of lifecycle events whose realtime operation has finished. Only used by tests.
-        internal var handledLifecycleEventCount: Int {
-            handledLifecycleEvents.value
         }
 
         deinit {

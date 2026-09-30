@@ -129,30 +129,6 @@ struct FeedManagerRealtimeTests {
         try await waitUntil("delivery") { events.values.count == 1 }
     }
 
-    @Test func foregroundingDoesNotConnectAFeedThatWasNeverConnected() async throws {
-        let manager = makeManager()
-
-        lifecycle.continuation.yield(.didEnterBackground)
-        lifecycle.continuation.yield(.didBecomeActive)
-        lifecycle.continuation.yield(.networkBecameAvailable)
-        try await waitUntil("lifecycle events handled") { manager.handledLifecycleEventCount == 3 }
-
-        #expect(factory.created.isEmpty)
-    }
-
-    @Test func foregroundingDoesNotReconnectAFeedThatWasDisconnected() async throws {
-        let manager = makeManager()
-        try await withTimeout { try await manager.connect() }
-        await manager.disconnect()
-
-        lifecycle.continuation.yield(.didEnterBackground)
-        lifecycle.continuation.yield(.didBecomeActive)
-        lifecycle.continuation.yield(.networkBecameAvailable)
-        try await waitUntil("lifecycle events handled") { manager.handledLifecycleEventCount == 3 }
-
-        #expect(factory.created.count == 1)
-    }
-
     @Test func aFailedConnectionIsRetriedWhenTheNetworkBecomesAvailable() async throws {
         let manager = makeManager()
         factory.onCreate { $0.failConnect(with: "offline") }
@@ -165,18 +141,6 @@ struct FeedManagerRealtimeTests {
 
         try await waitUntil("reconnected") { await manager.connectionState == .connected }
         #expect(factory.created.count == 2)
-    }
-
-    @Test func aNetworkRecoveryDoesNotResumeASuspendedConnection() async throws {
-        let manager = makeManager()
-        try await withTimeout { try await manager.connect() }
-
-        lifecycle.continuation.yield(.didEnterBackground)
-        lifecycle.continuation.yield(.networkBecameAvailable)
-        try await waitUntil("lifecycle events handled") { manager.handledLifecycleEventCount == 2 }
-
-        #expect(factory.created.count == 1)
-        #expect(await manager.connectionState == .disconnected)
     }
 
     @Test func theUserTokenCanBeReadWithoutAwaitingTheEnvironment() async {

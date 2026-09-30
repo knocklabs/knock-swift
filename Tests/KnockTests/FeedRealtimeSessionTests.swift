@@ -288,35 +288,65 @@ struct FeedRealtimeSessionTests {
         try await waitUntil("event") { events.values.count == 1 }
     }
 
-    @Test func aChannelThatKeepsErroringIsRejoinedWithBackoff() async throws {
-        let delays = LockIsolated<[Int]>([])
-        let session = makeSession(policy: .init(
+    func recordingDelays(stableChannelDuration: Duration = .seconds(60), delay: Duration = .milliseconds(10)) -> (FeedRealtimeSession.Policy, LockIsolated<[Int]>) {
+        let attempts = LockIsolated<[Int]>([])
+        let policy = FeedRealtimeSession.Policy(
             joinRetryDelay: { attempt in
-                delays.withLock { $0.append(attempt) }
-                return .milliseconds(10)
+                attempts.withLock { $0.append(attempt) }
+                return delay
             },
-            maxReconnectAttemptsBeforeFirstConnection: 3
-        ))
-        let events = StreamRecorder(await session.events(named: "new-message"))
+            maxReconnectAttemptsBeforeFirstConnection: 3,
+            stableChannelDuration: stableChannelDuration
+        )
+        return (policy, attempts)
+    }
+
+    func crash(_ channel: FakeRealtimeChannel, rejoiningOn socket: FakeRealtimeSocket) async throws -> FakeRealtimeChannel {
+        let count = socket.channels.count
+        channel.send(.errored)
+        try await waitUntil("rejoin") { socket.channels.count == count + 1 }
+        let rejoined = try #require(socket.lastChannel)
+        try await waitUntil("signal subscription") { rejoined.signalSubscriberCount == 1 }
+        return rejoined
+    }
+
+    @Test func aChannelThatKeepsErroringIsRejoinedWithBackoff() async throws {
+        let (policy, attempts) = recordingDelays()
+        let session = makeSession(policy: policy)
         let first = try await connected(session)
         let socket = try #require(factory.last)
 
-        first.send(.errored)
-        try await waitUntil("first rejoin") { socket.channels.count == 2 }
-        #expect(delays.value == [1])
-        let second = try #require(socket.lastChannel)
-        try await waitUntil("signal subscription") { second.signalSubscriberCount == 1 }
-        second.send(.errored)
-        try await waitUntil("second rejoin") { socket.channels.count == 3 }
-        #expect(delays.value == [1, 2])
+        let second = try await crash(first, rejoiningOn: socket)
+        #expect(attempts.value == [1])
+        _ = try await crash(second, rejoiningOn: socket)
+        #expect(attempts.value == [1, 2])
+        #expect(await session.state == .connected)
+    }
 
-        let third = try #require(socket.lastChannel)
-        try await waitUntil("subscriptions") { third.liveSubscriptionCount(for: "new-message") == 1 && third.signalSubscriberCount == 1 }
-        third.push("new-message")
-        try await waitUntil("event") { events.values.count == 1 }
-        third.send(.errored)
-        try await waitUntil("third rejoin") { socket.channels.count == 4 }
-        #expect(delays.value == [1, 2, 1], "An event shows the channel recovered, so the backoff starts over")
+    @Test func aChannelThatStayedJoinedStartsItsBackoffOver() async throws {
+        let (policy, attempts) = recordingDelays(stableChannelDuration: .zero)
+        let session = makeSession(policy: policy)
+        let first = try await connected(session)
+        let socket = try #require(factory.last)
+
+        let second = try await crash(first, rejoiningOn: socket)
+        _ = try await crash(second, rejoiningOn: socket)
+
+        #expect(attempts.value == [1, 1])
+    }
+
+    @Test func theSocketOpeningDoesNotSkipAChannelCrashBackoff() async throws {
+        let (policy, _) = recordingDelays(delay: .seconds(600))
+        let session = makeSession(policy: policy)
+        let channel = try await connected(session)
+        let socket = try #require(factory.last)
+
+        channel.send(.errored)
+        try await waitUntil("waiting to rejoin") { await session.isWaitingToRetryJoin }
+        socket.emit(.connected)
+
+        try await expectStaysTrue("no rejoin before the backoff") { socket.joinRequests.count == 1 }
+        #expect(await session.state == .reconnecting(attempt: 1))
     }
 
     @Test func aClosedChannelFailsTheConnection() async throws {
@@ -581,22 +611,80 @@ struct FeedRealtimeSessionTests {
         }
     }
 
-    @Test func retryIfFailedRetriesOnlyFailedConnections() async throws {
+    @Test func aRecoveredNetworkRetriesAConnectionThatFailedToConnect() async throws {
+        let session = makeSession()
+        factory.onCreate { $0.failConnect(with: "offline") }
+        try await session.connect(options: nil)
+        try await waitUntil("failed state") { await session.state.isFailed }
+
+        factory.onCreate { _ in }
+        try await session.handle(.networkBecameAvailable)
+
+        try await withTimeout { try await session.waitUntilConnected() }
+        #expect(factory.created.count == 2)
+    }
+
+    @Test func aRecoveredNetworkDoesNotRetryARejectedJoin() async throws {
         let session = makeSession()
         factory.onCreate { $0.enqueueJoins(.reject("unauthorized")) }
         try await session.connect(options: nil)
         try await waitUntil("failed state") { await session.state.isFailed }
 
-        factory.onCreate { _ in }
-        try await session.retryIfFailed()
-        try await withTimeout { try await session.waitUntilConnected() }
-        #expect(factory.created.count == 2)
+        try await session.handle(.networkBecameAvailable)
+        #expect(factory.created.count == 1)
 
-        try await session.retryIfFailed()
-        await session.suspend()
-        try await session.retryIfFailed()
-        #expect(factory.created.count == 2)
+        factory.onCreate { _ in }
+        try await session.handle(.didBecomeActive)
+        try await withTimeout { try await session.waitUntilConnected() }
+        #expect(factory.created.count == 2, "Becoming active retries any failure, since the token may have been refreshed")
+    }
+
+    @Test func lifecycleEventsDoNotConnectAnIdleSession() async throws {
+        let session = makeSession()
+        for event in [AppLifecycleEvent.didEnterBackground, .didBecomeActive, .networkBecameAvailable] {
+            try await session.handle(event)
+        }
+        #expect(factory.created.isEmpty)
+
+        _ = try await connected(session)
+        await session.disconnect()
+        for event in [AppLifecycleEvent.didEnterBackground, .didBecomeActive, .networkBecameAvailable] {
+            try await session.handle(event)
+        }
+        #expect(factory.created.count == 1)
+    }
+
+    @Test func aRecoveredNetworkDoesNotResumeASuspendedConnection() async throws {
+        let session = makeSession()
+        _ = try await connected(session)
+
+        try await session.handle(.didEnterBackground)
+        try await session.handle(.networkBecameAvailable)
+
+        #expect(factory.created.count == 1)
         #expect(await session.state == .disconnected)
+    }
+
+    @Test(arguments: [
+        (Knock.FeedConnectionState.connected, FeedRealtimeSession.Intent.active(nil), Result<Void, Knock.RealtimeError>?.some(.success(()))),
+        (.failed(.channelClosed), .active(nil), .some(.failure(.channelClosed))),
+        (.disconnected, .idle, .some(.failure(.disconnected))),
+        (.connecting, .shutdown, .some(.failure(.disconnected))),
+        (.disconnected, .suspended(nil), nil),
+        (.disconnected, .active(nil), nil),
+        (.connecting, .active(nil), nil),
+        (.reconnecting(attempt: 2), .active(nil), nil),
+    ])
+    func connectOutcomes(state: Knock.FeedConnectionState, intent: FeedRealtimeSession.Intent, expected: Result<Void, Knock.RealtimeError>?) {
+        let outcome = FeedRealtimeSession.connectOutcome(state: state, intent: intent)
+        switch (outcome, expected) {
+        case (nil, nil), (.success, .success):
+            break
+        case (.failure(let error), .failure(let expectedError)):
+            #expect(error == expectedError)
+        default:
+            Issue.record("Expected \(String(describing: expected)), got \(String(describing: outcome))")
+        }
     }
 
     @Test func waitUntilConnectedKeepsWaitingWhileSuspended() async throws {
