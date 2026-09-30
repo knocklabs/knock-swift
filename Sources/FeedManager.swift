@@ -108,6 +108,9 @@ public extension Knock {
         /**
          Connect to the feed via socket and wait until the feed channel is joined.
 
+         Joins that fail transiently (for example, timing out on an open socket) are retried with backoff and keep this
+         waiting. Cancel the calling task to stop waiting; the connection keeps retrying in the background.
+
          - Throws: `RealtimeError` if the connection fails or is disconnected before it's established, or an error if Knock isn't set up or no user is signed in.
          */
         public func connect(options: FeedClientOptions? = nil) async throws {
@@ -134,6 +137,9 @@ public extension Knock {
 
          The subscription works across connections: it can be created before connecting, and keeps receiving events
          after a reconnect. Stop receiving events by cancelling the task iterating the stream.
+
+         The subscription attaches to each channel just after it's joined, so an event sent in that moment can be
+         missed. Refetch the feed after connecting if you need every message.
          */
         public func events(named eventName: String) async -> AsyncStream<FeedEvent> {
             await realtime.events(named: eventName)
@@ -143,7 +149,7 @@ public extension Knock {
          Calls `completionHandler` on the main actor for every realtime event with the given name, such as `new-message`.
 
          The subscription works across connections: it can be created before connecting, and keeps receiving events
-         after a reconnect.
+         after a reconnect. As with `events(named:)`, an event sent just as a channel is joined can be missed.
 
          - Returns: A subscription. Call `cancel()` on it to stop receiving events.
          */

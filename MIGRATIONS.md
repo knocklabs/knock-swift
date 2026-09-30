@@ -87,5 +87,5 @@ subscription.cancel()
 
 - `Knock`, `Knock.FeedManager` and the public models are `Sendable`. Completion handlers are `@Sendable`.
 - Types conforming to `ContentBlockBase` must be `Sendable`.
-- `Knock.InAppFeedViewModel` is `@MainActor` and `final`. Calling `connectFeedAndObserveNewMessages()` again replaces the previous observation, and `stopObservingNewMessages()` stops it. Feed requests no longer write `before`/`after` cursors back into `feedClientOptions`.
+- `Knock.InAppFeedViewModel` is `@MainActor` and `final`. Calling `connectFeedAndObserveNewMessages()` again replaces the previous observation, and `stopObservingNewMessages()` stops it. Feed requests no longer write `before`/`after` cursors back into `feedClientOptions`. They also no longer overwrite `feedClientOptions.archived`: the archived filter still requests `archived: only`, but other filters now send the `archived` value you configured instead of clearing it.
 - `KnockAppDelegate`'s `UNUserNotificationCenterDelegate` methods, `getMessageId(userInfo:)`, `pushNotificationDeliveredInForeground(notification:)` and `pushNotificationTapped(userInfo:)` are `nonisolated`, because the system doesn't guarantee they're called on the main actor. Mark your overrides `nonisolated` too.
