@@ -74,7 +74,7 @@ public extension Knock {
         try await self.messageModule.getMessage(messageId: messageId)
     }
     
-    func getMessage(messageId: String, completionHandler: @escaping @Sendable ((Result<KnockMessage, Error>) -> Void)) {
+    func getMessage(messageId: String, completionHandler: @escaping @Sendable (Result<KnockMessage, Error>) -> Void) {
         Task {
             do {
                 let message = try await getMessage(messageId: messageId)
@@ -97,7 +97,7 @@ public extension Knock {
         try await self.messageModule.updateMessageStatus(messageId: message.id, status: status)
     }
     
-    func updateMessageStatus(message: KnockMessage, status: KnockMessageStatusUpdateType, completionHandler: @escaping @Sendable ((Result<KnockMessage, Error>) -> Void)) {
+    func updateMessageStatus(message: KnockMessage, status: KnockMessageStatusUpdateType, completionHandler: @escaping @Sendable (Result<KnockMessage, Error>) -> Void) {
         Task {
             do {
                 let message = try await updateMessageStatus(message: message, status: status)
@@ -120,7 +120,7 @@ public extension Knock {
         try await self.messageModule.updateMessageStatus(messageId: messageId, status: status)
     }
     
-    func updateMessageStatus(messageId: String, status: KnockMessageStatusUpdateType, completionHandler: @escaping @Sendable ((Result<KnockMessage, Error>) -> Void)) {
+    func updateMessageStatus(messageId: String, status: KnockMessageStatusUpdateType, completionHandler: @escaping @Sendable (Result<KnockMessage, Error>) -> Void) {
         Task {
             do {
                 let message = try await updateMessageStatus(messageId: messageId, status: status)
@@ -145,7 +145,7 @@ public extension Knock {
     }
     
     @available(*, deprecated, message: "Use updateMessageStatus() instead")
-    func deleteMessageStatus(message: KnockMessage, status: KnockMessageStatusUpdateType, completionHandler: @escaping @Sendable ((Result<KnockMessage, Error>) -> Void)) {
+    func deleteMessageStatus(message: KnockMessage, status: KnockMessageStatusUpdateType, completionHandler: @escaping @Sendable (Result<KnockMessage, Error>) -> Void) {
         Task {
             do {
                 let message = try await deleteMessageStatus(message: message, status: status)
@@ -168,7 +168,7 @@ public extension Knock {
         try await self.messageModule.deleteMessageStatus(messageId: messageId, status: status)
     }
     
-    func deleteMessageStatus(messageId: String, status: KnockMessageStatusUpdateType, completionHandler: @escaping @Sendable ((Result<KnockMessage, Error>) -> Void)) {
+    func deleteMessageStatus(messageId: String, status: KnockMessageStatusUpdateType, completionHandler: @escaping @Sendable (Result<KnockMessage, Error>) -> Void) {
         Task {
             do {
                 let message = try await deleteMessageStatus(messageId: messageId, status: status)
@@ -194,7 +194,7 @@ public extension Knock {
         try await self.messageModule.batchUpdateStatuses(messageIds: messageIds, status: status)
     }
     
-    func batchUpdateStatuses(messageIds: [String], status: KnockMessageStatusUpdateType, completionHandler: @escaping @Sendable ((Result<[KnockMessage], Error>) -> Void)) {
+    func batchUpdateStatuses(messageIds: [String], status: KnockMessageStatusUpdateType, completionHandler: @escaping @Sendable (Result<[KnockMessage], Error>) -> Void) {
         Task {
             do {
                 let messages = try await batchUpdateStatuses(messageIds: messageIds, status: status)
@@ -220,7 +220,7 @@ public extension Knock {
         return try await self.messageModule.batchUpdateStatuses(messageIds: messageIds, status: status)
     }
     
-    func batchUpdateStatuses(messages: [KnockMessage], status: KnockMessageStatusUpdateType, completionHandler: @escaping @Sendable ((Result<[KnockMessage], Error>) -> Void)) {
+    func batchUpdateStatuses(messages: [KnockMessage], status: KnockMessageStatusUpdateType, completionHandler: @escaping @Sendable (Result<[KnockMessage], Error>) -> Void) {
         Task {
             do {
                 let messages = try await batchUpdateStatuses(messages: messages, status: status)

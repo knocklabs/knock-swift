@@ -253,7 +253,7 @@ public extension Knock {
     }
 
     func getUserChannelData(
-        channelId: String, completionHandler: @escaping @Sendable ((Result<ChannelData, Error>) -> Void)
+        channelId: String, completionHandler: @escaping @Sendable (Result<ChannelData, Error>) -> Void
     ) {
         Task {
             do {
@@ -280,7 +280,7 @@ public extension Knock {
 
     func updateUserChannelData(
         channelId: String, data: AnyEncodable,
-        completionHandler: @escaping @Sendable ((Result<ChannelData, Error>) -> Void)
+        completionHandler: @escaping @Sendable (Result<ChannelData, Error>) -> Void
     ) {
         Task {
             do {
@@ -327,7 +327,7 @@ public extension Knock {
 
     func registerTokenForAPNS(
         channelId: String?, token: String,
-        completionHandler: @escaping @Sendable ((Result<ChannelData, Error>) -> Void)
+        completionHandler: @escaping @Sendable (Result<ChannelData, Error>) -> Void
     ) {
         Task {
             do {
@@ -348,7 +348,7 @@ public extension Knock {
 
     func registerTokenForAPNS(
         channelId: String, token: Data,
-        completionHandler: @escaping @Sendable ((Result<ChannelData, Error>) -> Void)
+        completionHandler: @escaping @Sendable (Result<ChannelData, Error>) -> Void
     ) {
         // 1. Convert device token to string
         let tokenString = Knock.convertTokenToString(token: token)
@@ -371,7 +371,7 @@ public extension Knock {
 
     func unregisterTokenForAPNS(
         channelId: String, token: String,
-        completionHandler: @escaping @Sendable ((Result<ChannelData, Error>) -> Void)
+        completionHandler: @escaping @Sendable (Result<ChannelData, Error>) -> Void
     ) {
         Task {
             do {
@@ -393,7 +393,7 @@ public extension Knock {
 
     func unregisterTokenForAPNS(
         channelId: String, token: Data,
-        completionHandler: @escaping @Sendable ((Result<ChannelData, Error>) -> Void)
+        completionHandler: @escaping @Sendable (Result<ChannelData, Error>) -> Void
     ) {
         // 1. Convert device token to string
         let tokenString = Knock.convertTokenToString(token: token)

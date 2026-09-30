@@ -55,7 +55,7 @@ public extension Knock {
         try await self.preferenceModule.getAllUserPreferences()
     }
     
-    func getAllUserPreferences(completionHandler: @escaping @Sendable ((Result<[PreferenceSet], Error>) -> Void)) {
+    func getAllUserPreferences(completionHandler: @escaping @Sendable (Result<[PreferenceSet], Error>) -> Void) {
         Task {
             do {
                 let preferences = try await getAllUserPreferences()
@@ -77,7 +77,7 @@ public extension Knock {
         try await self.preferenceModule.getUserPreferences(preferenceId: preferenceId)
     }
     
-    func getUserPreferences(preferenceId: String, completionHandler: @escaping @Sendable ((Result<PreferenceSet, Error>) -> Void)) {
+    func getUserPreferences(preferenceId: String, completionHandler: @escaping @Sendable (Result<PreferenceSet, Error>) -> Void) {
         Task {
             do {
                 let preferences = try await getUserPreferences(preferenceId: preferenceId)
@@ -105,7 +105,7 @@ public extension Knock {
         try await self.preferenceModule.setUserPreferences(preferenceId: preferenceId, preferenceSet: preferenceSet)
     }
     
-    func setUserPreferences(preferenceId: String, preferenceSet: PreferenceSet, completionHandler: @escaping @Sendable ((Result<PreferenceSet, Error>) -> Void)) {
+    func setUserPreferences(preferenceId: String, preferenceSet: PreferenceSet, completionHandler: @escaping @Sendable (Result<PreferenceSet, Error>) -> Void) {
         Task {
             do {
                 let preferences = try await setUserPreferences(preferenceId: preferenceId, preferenceSet: preferenceSet)

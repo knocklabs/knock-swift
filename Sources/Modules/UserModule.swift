@@ -43,7 +43,7 @@ public extension Knock {
         return try await userModule.getUser()
     }
     
-    func getUser(completionHandler: @escaping @Sendable ((Result<User, Error>) -> Void)) {
+    func getUser(completionHandler: @escaping @Sendable (Result<User, Error>) -> Void) {
         Task {
             do {
                 let user = try await getUser()
@@ -61,7 +61,7 @@ public extension Knock {
         return try await userModule.updateUser(user: user)
     }
     
-    func updateUser(user: User, completionHandler: @escaping @Sendable ((Result<User, Error>) -> Void)) {
+    func updateUser(user: User, completionHandler: @escaping @Sendable (Result<User, Error>) -> Void) {
         Task {
             do {
                 let user = try await updateUser(user: user)
