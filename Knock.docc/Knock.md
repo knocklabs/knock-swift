@@ -1,7 +1,6 @@
 # Offical Knock iOS SDK
 
 [![GitHub Release](https://img.shields.io/github/v/release/knocklabs/knock-swift?style=flat)](https://github.com/knocklabs/knock-swift/releases/latest)
-[![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
 [![Swift Package Manager compatible](https://img.shields.io/badge/Swift%20Package%20Manager-compatible-4BC51D.svg?style=flat)](https://swift.org/package-manager/)
 
 ![min swift version is 6.1](https://img.shields.io/badge/min%20Swift%20version-6.1-orange)
@@ -51,17 +50,11 @@ dependencies: [
 ]
 ```
 
-### Carthage
-
-1. Add this line to your Cartfile:
-
-```
-github "knocklabs/knock-swift" ~> 1.1.0
-```
-
 ### Manually
 
-As a last option, you could manually copy the files inside the `Sources` folder to your project.
+As a last option, you could manually copy the files inside the `Sources` folder to your project. You'll also need to add [PhoenixNectar](https://github.com/jvdvleuten/PhoenixNectar), which the realtime feed depends on.
+
+Carthage is not supported: PhoenixNectar is distributed as a Swift package only.
 
 ## Import and start using the SDK
 
