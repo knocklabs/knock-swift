@@ -8,10 +8,10 @@
 import Foundation
 
 internal extension Knock {
-    struct FeedSettings: Codable {
+    struct FeedSettings: Codable, Sendable {
         public let features: FeedFeatures
         
-        struct FeedFeatures: Codable {
+        struct FeedFeatures: Codable, Sendable {
             public let brandingRequired: Bool
             
             enum CodingKeys: String, CodingKey {

@@ -12,7 +12,7 @@ public extension Knock {
     
     //https://docs.knock.app/reference#preferences#preferences
     
-    struct PreferenceSet: Codable {
+    struct PreferenceSet: Codable, Sendable {
         public var id: String? = nil // default or tenant.id; TODO: check this, because the API allows any value to be used here, not only default and an existing tenant.id
         public var channel_types: ChannelTypePreferences = ChannelTypePreferences()
         public var workflows: [String: Either<Bool, WorkflowPreference>] = [:]

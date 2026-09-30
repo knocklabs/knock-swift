@@ -9,7 +9,7 @@ import Foundation
 
 public extension Knock {
     
-    struct NotificationSource: Codable {
+    struct NotificationSource: Codable, Sendable {
         public let key: String
         public let version_id: String
         

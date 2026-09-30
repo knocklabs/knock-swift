@@ -7,12 +7,12 @@
 
 import Foundation
 
-public protocol ContentBlockBase: Codable {
+public protocol ContentBlockBase: Codable, Sendable {
     var name: String { get }
     var type: ContentBlockType { get }
 }
 
-public enum ContentBlockType: String, Codable {
+public enum ContentBlockType: String, Codable, Sendable {
     case markdown // MarkdownContentBlock
     case text // TextContentBlock
     case buttonSet = "button_set" // ButtonSetContentBlock
@@ -97,7 +97,7 @@ public extension Knock {
         }
     }
     
-    struct BlockActionButton: Codable, Equatable {
+    struct BlockActionButton: Codable, Equatable, Sendable {
         public let label: String
         public let name: String
         public let action: String

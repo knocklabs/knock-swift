@@ -8,7 +8,7 @@
 import Foundation
 
 public extension Knock {
-    struct ChannelData: Codable {
+    struct ChannelData: Codable, Sendable {
         public let channel_id: String
         public let data: [String: AnyCodable]?
         
@@ -18,7 +18,7 @@ public extension Knock {
         }
     }
 
-    struct Device: Codable, Equatable {
+    struct Device: Codable, Equatable, Sendable {
         public let token: String
         public let locale: String?
         public let timezone: String?

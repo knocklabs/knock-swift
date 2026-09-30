@@ -9,7 +9,7 @@ import Foundation
 
 public extension Knock {
     
-    struct BulkOperation: Codable {
+    struct BulkOperation: Codable, Sendable {
         public let id: String
         public let name: String
         public let status: BulkOperationStatus
@@ -20,7 +20,7 @@ public extension Knock {
         public let failed_at: Date?
     }
     
-    enum BulkOperationStatus: String, Codable {
+    enum BulkOperationStatus: String, Codable, Sendable {
         case queued
         case processing
         case completed
