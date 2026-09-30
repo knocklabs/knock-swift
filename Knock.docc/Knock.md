@@ -4,7 +4,7 @@
 [![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
 [![Swift Package Manager compatible](https://img.shields.io/badge/Swift%20Package%20Manager-compatible-4BC51D.svg?style=flat)](https://swift.org/package-manager/)
 
-![min swift version is 5.3](https://img.shields.io/badge/min%20Swift%20version-5.3-orange)
+![min swift version is 6.1](https://img.shields.io/badge/min%20Swift%20version-6.1-orange)
 ![min ios version is 16](https://img.shields.io/badge/min%20iOS%20version-16-blue)
 [![GitHub license](https://img.shields.io/badge/license-MIT-lightgrey.svg?style=flat)](https://github.com/knocklabs/ios-example-app/blob/main/LICENSE)
 
