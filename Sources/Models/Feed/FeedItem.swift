@@ -9,7 +9,7 @@ import Foundation
 
 public extension Knock {
 
-    struct FeedItem {
+    struct FeedItem: Sendable {
         public var __cursor: String
         public var actors: [User]?
         public var activities: [FeedItemActivity]?

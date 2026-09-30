@@ -6,39 +6,77 @@
 //
 
 import Foundation
-import SwiftPhoenixClient
-import OSLog
 
-internal class FeedModule {
-    private let socket: Socket
-    private var feedChannel: Channel?
-    private let feedId: String
-    private var feedTopic: String
-    private var feedOptions: Knock.FeedClientOptions
+internal final class FeedModule: Sendable {
+    let feedId: String
+    let realtime: FeedRealtimeSession
+    private let feedOptions: Knock.FeedClientOptions
     private let feedService = FeedService()
-    
-    internal init(feedId: String, options: Knock.FeedClientOptions) async throws {
-        // use regex and circumflex accent to mark only the starting http to be replaced and not any others
-        let base = await Knock.shared.environment.getBaseUrl()
-        let websocketHostname = base.replacingOccurrences(of: "^http", with: "ws", options: .regularExpression) // default: wss://api.knock.app
-        let websocketPath = "\(websocketHostname)/ws/v1/websocket" // default: wss://api.knock.app/ws/v1/websocket
-        var userId = ""
+
+    /// - Parameter environment: Read on every connect, so the socket always uses the current user and token.
+    internal init(
+        feedId: String,
+        options: Knock.FeedClientOptions,
+        environment: @escaping @Sendable () -> KnockEnvironment = { Knock.shared.environment },
+        socketFactory: RealtimeSocketFactory? = nil,
+        realtimePolicy: FeedRealtimeSession.Policy = .default
+    ) {
+        self.feedId = feedId
+        self.feedOptions = options
+        self.realtime = FeedRealtimeSession(
+            socketFactory: socketFactory ?? FeedModule.phoenixNectarSocketFactory(environment: environment),
+            targetProvider: { overrides in
+                try await FeedModule.realtimeTarget(
+                    feedId: feedId,
+                    options: options.mergeOptions(options: overrides),
+                    environment: environment()
+                )
+            },
+            policy: realtimePolicy,
+            logger: FeedModule.realtimeLogger
+        )
+    }
+
+    /// Resolves the socket and channel for the signed-in user from the current Knock environment.
+    static func realtimeTarget(feedId: String, options: Knock.FeedClientOptions, environment: KnockEnvironment) async throws -> FeedRealtimeTarget {
+        let userId: String
         do {
-            userId = try await Knock.shared.environment.getSafeUserId()
-        } catch let error {
-            Knock.shared.log(type: .error, category: .feed, message: "FeedManager", status: .fail, errorMessage: "Must sign user in before initializing the FeedManager")
+            userId = try await environment.getSafeUserId()
+        } catch {
+            Knock.shared.log(type: .error, category: .feed, message: "FeedManager", status: .fail, errorMessage: "Must sign user in before connecting to the feed")
             throw error
         }
-        
-        let userToken = await Knock.shared.environment.getUserToken()
-        let publishableKey = try await Knock.shared.environment.getSafePublishableKey()
-        self.socket = Socket(websocketPath, params: ["vsn": "2.0.0", "api_key": publishableKey, "user_token": userToken ?? ""])
-        self.feedId = feedId
-        self.feedTopic = "feeds:\(feedId):\(userId)"
-        self.feedOptions = options
-        Knock.shared.log(type: .debug, category: .feed, message: "FeedManager", status: .success)
+        return FeedRealtimeTarget.make(
+            baseUrl: await environment.getBaseUrl(),
+            publishableKey: try await environment.getSafePublishableKey(),
+            userToken: await environment.getUserToken(),
+            userId: userId,
+            feedId: feedId,
+            options: options
+        )
     }
-    
+
+    static let realtimeLogger = RealtimeLogger(
+        isEnabled: { Knock.shared.logger.shouldLog($0) },
+        log: { type, message in
+            Knock.shared.log(type: type, category: .feed, message: "FeedRealtime", description: message)
+        }
+    )
+
+    /// Reconnects send the latest user token, so a token refreshed with `signIn` is used without reconnecting by hand.
+    static func phoenixNectarSocketFactory(environment: @escaping @Sendable () -> KnockEnvironment) -> RealtimeSocketFactory {
+        { configuration in
+            let publishableKey = configuration.connectParams["api_key"] ?? ""
+            return try PhoenixNectarRealtimeSocket(
+                endpoint: configuration.endpoint,
+                connectParams: {
+                    FeedRealtimeTarget.connectParams(publishableKey: publishableKey, userToken: environment().currentUserToken)
+                },
+                logger: realtimeLogger
+            )
+        }
+    }
+
     func getUserFeedContent(options: Knock.FeedClientOptions? = nil) async throws -> Knock.Feed {
         let mergedOptions = feedOptions.mergeOptions(options: options)
         
@@ -80,7 +118,7 @@ internal class FeedModule {
         let body: AnyEncodable = [
             "user_ids": [userId],
             "engagement_status": mergedOptions.status != nil && mergedOptions.status != .all ? mergedOptions.status!.rawValue : "",
-            "archived": mergedOptions.archived ?? "",
+            "archived": mergedOptions.archived?.rawValue ?? "",
             "has_tenant": mergedOptions.has_tenant ?? "",
             "tenants": (mergedOptions.tenant != nil) ? [mergedOptions.tenant!] : ""
         ]
@@ -94,110 +132,8 @@ internal class FeedModule {
         }
     }
     
-    func disconnectFromFeed() {
-        Knock.shared.log(type: .debug, category: .feed, message: "Disconnecting from feed")
-        
-        if let channel = self.feedChannel {
-            channel.leave()
-            self.socket.remove(channel)
-        }
-        
-        self.socket.disconnect()
-    }
-    
-    // Todo: Make AsyncStream method for this
-    func on(eventName: String, completionHandler: @escaping ((Message) -> Void)) {
-        if let channel = feedChannel {
-            channel.delegateOn(eventName, to: self) { (self, message) in
-                completionHandler(message)
-            }
-        }
-        else {
-            Knock.shared.log(type: .error, category: .feed, message: "FeedManager.on", status: .fail, errorMessage: "Feed channel is nil. You should call first connectToFeed()")
-        }
-    }
-    
-    func connectToFeed(options: Knock.FeedClientOptions? = nil) {
-        // Setup the socket to receive open/close events
-        socket.delegateOnOpen(to: self) { (self) in
-            Knock.shared.log(type: .debug, category: .feed, message: "connectToFeed", description: "Socket Opened")
-        }
-        
-        socket.delegateOnClose(to: self) { (self) in
-            Knock.shared.log(type: .debug, category: .feed, message: "connectToFeed", description: "Socket Closed")
-        }
-        
-        socket.delegateOnError(to: self) { (self, error) in
-            let (error, response) = error
-            if let statusCode = (response as? HTTPURLResponse)?.statusCode, statusCode > 400 {
-                Knock.shared.log(type: .error, category: .feed, message: "connectToFeed", description: "Socket Errored \(statusCode)", status: .fail, errorMessage: error.localizedDescription)
-                self.socket.disconnect()
-            } else {
-                Knock.shared.log(type: .error, category: .feed, message: "connectToFeed", description: "Socket Errored", status: .fail, errorMessage: error.localizedDescription)
-            }
-        }
-        
-        socket.logger = { msg in
-            Knock.shared.log(type: .debug, category: .feed, message: "SwiftPhoenixClient", description: msg)
-        }
-        
-        let mergedOptions = feedOptions.mergeOptions(options: options)
-        
-        let params = paramsFromOptions(options: mergedOptions)
-        
-        // Setup the Channel to receive and send messages
-        let channel = socket.channel(feedTopic, params: params)
-        
-        // Now connect the socket and join the channel
-        self.feedChannel = channel
-        self.feedChannel?
-            .join()
-            .delegateReceive("ok", to: self) { (self, _) in
-                Knock.shared.log(type: .debug, category: .feed, message: "connectToFeed", description: "CHANNEL: \(channel.topic) joined")
-            }
-            .delegateReceive("error", to: self) { (self, message) in
-                Knock.shared.log(type: .error, category: .feed, message: "connectToFeed", status: .fail, errorMessage: "CHANNEL: \(channel.topic) failed to join. \(message.payload)")
-            }
-        
-        self.socket.connect()
-    }
-    
     internal func getFeedSettings() async throws -> Knock.FeedSettings? {
         guard let userId = try? await Knock.shared.environment.getSafeUserId() else { return nil }
         return try? await feedService.getFeedSettings(userId: userId, feedId: feedId)
-    }
-    
-    private func paramsFromOptions(options: Knock.FeedClientOptions) -> [String: Any] {
-        var params: [String: Any] = [:]
-        
-        if let value = options.before {
-            params["before"] = value
-        }
-        if let value = options.after {
-            params["after"] = value
-        }
-        if let value = options.page_size {
-            params["page_size"] = value
-        }
-        if let value = options.status {
-            params["status"] = value.rawValue
-        }
-        if let value = options.source {
-            params["source"] = value
-        }
-        if let value = options.tenant {
-            params["tenant"] = value
-        }
-        if let value = options.has_tenant {
-            params["has_tenant"] = value
-        }
-        if let value = options.archived {
-            params["archived"] = value.rawValue
-        }
-        if let value = options.trigger_data {
-            params["trigger_data"] = value.dictionary()
-        }
-        
-        return params
     }
 }

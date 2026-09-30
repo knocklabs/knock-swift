@@ -9,7 +9,7 @@ import Foundation
 
 public extension Knock {
     
-    struct PageInfo {
+    struct PageInfo: Sendable {
         public var before: String?
         public var after: String?
         public var pageSize: Int = 0

@@ -1,10 +1,9 @@
 # Official Knock iOS SDK
 
 [![GitHub Release](https://img.shields.io/github/v/release/knocklabs/knock-swift?style=flat)](https://github.com/knocklabs/knock-swift/releases/latest)
-[![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
 [![Swift Package Manager compatible](https://img.shields.io/badge/Swift%20Package%20Manager-compatible-4BC51D.svg?style=flat)](https://swift.org/package-manager/)
 
-![min swift version is 5.3](https://img.shields.io/badge/min%20Swift%20version-5.3-orange)
+![min swift version is 6.1](https://img.shields.io/badge/min%20Swift%20version-6.1-orange)
 ![min ios version is 16](https://img.shields.io/badge/min%20iOS%20version-16-blue)
 [![GitHub license](https://img.shields.io/badge/license-MIT-lightgrey.svg?style=flat)](https://github.com/knocklabs/ios-example-app/blob/main/LICENSE)
 
@@ -52,21 +51,15 @@ If you are managing dependencies using the `Package.swift` file, just add this t
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/knocklabs/knock-swift.git", .upToNextMajor(from: "1.2.9"))
+    .package(url: "https://github.com/knocklabs/knock-swift.git", .upToNextMajor(from: "2.0.0-rc.1"))
 ]
-```
-
-### Carthage
-
-1. Add this line to your Cartfile:
-
-```
-github "knocklabs/knock-swift" ~> 1.1.0
 ```
 
 ### Manually
 
-As a last option, you could manually copy the files inside the `Sources` folder to your project.
+As a last option, you could manually copy the files inside the `Sources` folder to your project. You'll also need to add [PhoenixNectar](https://github.com/jvdvleuten/PhoenixNectar), which the realtime feed depends on.
+
+Carthage is not supported: PhoenixNectar is distributed as a Swift package only.
 
 ## Import and start using the SDK
 

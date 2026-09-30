@@ -12,7 +12,7 @@ public extension Knock {
     
     // https://docs.knock.app/reference#users#users
     
-    struct User: Codable {
+    struct User: Codable, Sendable {
         public let id: String
         public let name: String?
         public let email: String?

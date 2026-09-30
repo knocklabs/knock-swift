@@ -45,6 +45,9 @@ protocol _AnyEncodable {
 
 extension AnyEncodable: _AnyEncodable {}
 
+// See the note on `AnyCodable`'s `Sendable` conformance.
+extension AnyEncodable: @unchecked Sendable {}
+
 // MARK: - Encodable
 
 extension _AnyEncodable {

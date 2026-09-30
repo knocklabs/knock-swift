@@ -9,7 +9,7 @@ import Foundation
 import SwiftUI
 
 extension Knock {
-    public enum FeedNotificationRowSwipeAction {
+    public enum FeedNotificationRowSwipeAction: Sendable {
         case archive
         case markAsRead
         

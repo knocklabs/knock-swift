@@ -9,7 +9,7 @@ import Foundation
 
 public extension Knock {
 
-    struct FeedItemActivity: Codable {
+    struct FeedItemActivity: Codable, Sendable {
         public let actor: User?
         public let recipient: User?
         public let data: [String: AnyCodable]? // GenericData

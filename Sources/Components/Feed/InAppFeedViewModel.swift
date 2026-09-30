@@ -9,7 +9,8 @@ import Foundation
 import Combine
 
 extension Knock {
-    public class InAppFeedViewModel: ObservableObject {
+    @MainActor
+    public final class InAppFeedViewModel: ObservableObject {
         @Published public var feed: Knock.Feed = Knock.Feed() /// The current feed data.
         @Published public var filterOptions: [InAppFeedFilter] /// Available filter options for the feed.
         @Published public var topButtonActions: [Knock.FeedTopActionButtonType]? /// Actions available at the top of the feed interface.
@@ -29,88 +30,102 @@ extension Knock {
             (feedClientOptions.archived == .exclude || feedClientOptions.archived == nil)
         }
         
-        private var cancellables = Set<AnyCancellable>()
+        private let feedManagerProvider: @MainActor () -> Knock.FeedManager?
+        private var newMessagesTask: Task<Void, Never>?
         
         // MARK: Initialization
         
-        public init(
+        public convenience init(
             feedClientOptions: Knock.FeedClientOptions = .init(),
             currentFilter: InAppFeedFilter? = nil,
             filterOptions: [InAppFeedFilter]? = nil,
             topButtonActions: [Knock.FeedTopActionButtonType]? = [.markAllAsRead(), .archiveRead()]
         ) {
+            self.init(
+                feedClientOptions: feedClientOptions,
+                currentFilter: currentFilter,
+                filterOptions: filterOptions,
+                topButtonActions: topButtonActions,
+                feedManagerProvider: { Knock.shared.feedManager }
+            )
+        }
+        
+        internal init(
+            feedClientOptions: Knock.FeedClientOptions,
+            currentFilter: InAppFeedFilter?,
+            filterOptions: [InAppFeedFilter]?,
+            topButtonActions: [Knock.FeedTopActionButtonType]?,
+            feedManagerProvider: @escaping @MainActor () -> Knock.FeedManager?
+        ) {
             self.feedClientOptions = feedClientOptions
             self.filterOptions = filterOptions ?? [.init(scope: .all), .init(scope: .unread), .init(scope: .archived)]
             self.currentFilter = currentFilter ?? filterOptions?.first ?? .init(scope: .all)
             self.topButtonActions = topButtonActions
+            self.feedManagerProvider = feedManagerProvider
             self.feedClientOptions.status = self.currentFilter.scope
+        }
+        
+        deinit {
+            newMessagesTask?.cancel()
+        }
+        
+        /// The manager whose new messages are being observed. Requests go through it so they match the realtime feed.
+        /// Weak, since only its owner's release shuts its connection down.
+        private weak var observedFeedManager: Knock.FeedManager?
+
+        private var feedManager: Knock.FeedManager? {
+            observedFeedManager ?? feedManagerProvider()
         }
         
         // MARK: Public Methods
         
+        /// Connects to the feed, refreshes it, and prepends new messages as they arrive. Calling this again replaces the previous observation.
         public func connectFeedAndObserveNewMessages() async {
-            Knock.shared.feedManager?.connectToFeed()
-            Knock.shared.feedManager?.on(eventName: "new-message") { [weak self] _ in
-                guard let self = self else { return }
-                self.feedClientOptions.before = self.feed.pageInfo.before
-                Knock.shared.feedManager?.getUserFeedContent(options: feedClientOptions) { result in
-                    switch result {
-                    case .success(let newFeed):
-                        self.mergeFeedsForNewMessageReceived(feed: newFeed)
-                    case .failure(let error):
-                        self.handleFeedError(error)
-                    }
-                }
+            guard let feedManager = feedManagerProvider() else {
+                Knock.shared.log(type: .warning, category: .feed, message: "connectFeedAndObserveNewMessages", status: .fail, errorMessage: "No feed manager is set")
+                return
             }
+            feedManager.connectToFeed()
+            observeNewMessages(from: feedManager)
             
-            let required = await getBrandingRequired()
-            await MainActor.run { [weak self] in
-                self?.brandingRequired = required
-            }
-            
+            brandingRequired = await getBrandingRequired(feedManager: feedManager)
             await refreshFeed(showRefreshIndicator: false)
+        }
+        
+        /// Stops observing new messages. The feed manager's connection is left as is.
+        public func stopObservingNewMessages() {
+            newMessagesTask?.cancel()
+            newMessagesTask = nil
+            observedFeedManager = nil
         }
 
         public func refreshFeed(showRefreshIndicator: Bool = false) async {
             if showRefreshIndicator {
-                await MainActor.run { self.showRefreshIndicator = true }
+                self.showRefreshIndicator = true
             }
-            
-            let originalStatus = feedClientOptions.status
-            let archived: Knock.FeedItemArchivedScope? = feedClientOptions.status == .archived ? .only : nil
-            let status = feedClientOptions.status == .archived ? .all : feedClientOptions.status
-            feedClientOptions.archived = archived
-            feedClientOptions.status = status
-            feedClientOptions.before = nil
-            feedClientOptions.after = nil
-            
-            guard let userFeed = try? await Knock.shared.feedManager?.getUserFeedContent(options: feedClientOptions) else { return }
-            
-            await MainActor.run {
-                self.feed = userFeed
-                self.feed.pageInfo.before = self.feed.entries.first?.__cursor
-                self.feedClientOptions.status = originalStatus
-                if self.showRefreshIndicator {
+            defer {
+                if showRefreshIndicator {
                     self.showRefreshIndicator = false
                 }
+            }
+            
+            do {
+                guard let feedManager else { return }
+                var userFeed = try await feedManager.getUserFeedContent(options: requestOptions())
+                userFeed.pageInfo.before = userFeed.entries.first?.__cursor
+                feed = userFeed
+            } catch {
+                handleFeedError(error)
             }
         }
         
         public func fetchNewPageOfFeedItems() async {
-            guard let after = self.feed.pageInfo.after else { return }
-            feedClientOptions.after = after
-            let originalStatus = feedClientOptions.status
-            let archived: Knock.FeedItemArchivedScope? = feedClientOptions.status == .archived ? .only : nil
-            let status = feedClientOptions.status == .archived ? .all : feedClientOptions.status
-            feedClientOptions.archived = archived
-            feedClientOptions.status = status
-            
+            guard let after = feed.pageInfo.after, let feedManager else { return }
             do {
-                guard let newFeed = try await Knock.shared.feedManager?.getUserFeedContent(options: feedClientOptions) else { return }
-                self.feedClientOptions.status = originalStatus
-                self.mergeFeedsForNewPageOfFeed(feed: newFeed)
+                let newFeed = try await feedManager.getUserFeedContent(options: requestOptions(after: after))
+                mergeFeedsForNewPageOfFeed(feed: newFeed)
             } catch {
-                self.handleFeedError(error)
+                handleFeedError(error)
             }
         }
         
@@ -133,8 +148,8 @@ extension Knock {
             
             let feedOptions = Knock.FeedClientOptions(status: archivedScope, tenant: feedClientOptions.tenant, has_tenant: feedClientOptions.has_tenant, archived: feedClientOptions.archived)
             do {
-                _ = try await Knock.shared.feedManager?.makeBulkStatusUpdate(type: updatedStatus, options: feedOptions)
-                await optimisticallyBulkUpdateStatus(updatedStatus: updatedStatus, archivedScope: archivedScope)
+                _ = try await feedManager?.makeBulkStatusUpdate(type: updatedStatus, options: feedOptions)
+                optimisticallyBulkUpdateStatus(updatedStatus: updatedStatus, archivedScope: archivedScope)
             } catch {
                 logError("Failed: bulkUpdateMessageStatus for status: \(updatedStatus.rawValue)", error)
             }
@@ -152,7 +167,7 @@ extension Knock {
             }
             do {
                 _ = try await Knock.shared.messageModule.updateMessageStatus(messageId: item.id, status: updatedStatus)
-                await optimisticallyUpdateStatusForItem(item: item, status: updatedStatus)
+                optimisticallyUpdateStatusForItem(item: item, status: updatedStatus)
                 await fetchNewMetaData()
             } catch {
                 logError("Failed: updateMessageStatus for status: \(updatedStatus.rawValue)", error)
@@ -192,21 +207,123 @@ extension Knock {
             }
         }
         
-        // MARK: Private Methods
+        // MARK: Internal Methods
+        
+        /// The options for a feed request. The archived filter is sent as `archived: only` with an unfiltered status, since `archived` isn't a status the API accepts.
+        internal func requestOptions(before: String? = nil, after: String? = nil) -> Knock.FeedClientOptions {
+            var options = feedClientOptions
+            if options.status == .archived {
+                options.status = .all
+                options.archived = .only
+            }
+            options.before = before
+            options.after = after
+            return options
+        }
+        
+        internal func handleNewMessageEvent(from feedManager: Knock.FeedManager) async {
+            do {
+                let newFeed = try await feedManager.getUserFeedContent(options: requestOptions(before: feed.pageInfo.before))
+                mergeFeedsForNewMessageReceived(feed: newFeed)
+            } catch {
+                handleFeedError(error)
+            }
+        }
+        
+        internal func mergeFeedsForNewMessageReceived(feed newFeed: Knock.Feed) {
+            let existingIds = Set(feed.entries.map(\.id))
+            let newEntries = newFeed.entries.filter { !existingIds.contains($0.id) }
+            feed.entries.insert(contentsOf: newEntries, at: 0)
+            feed.meta = newFeed.meta
+            if let cursor = newFeed.entries.first?.__cursor {
+                feed.pageInfo.before = cursor
+            }
+        }
+        
+        internal func mergeFeedsForNewPageOfFeed(feed newFeed: Knock.Feed) {
+            let existingIds = Set(feed.entries.map(\.id))
+            feed.entries.append(contentsOf: newFeed.entries.filter { !existingIds.contains($0.id) })
+            feed.meta = newFeed.meta
+            feed.pageInfo.after = newFeed.pageInfo.after
+        }
         
         internal func optimisticallyBulkUpdateStatus(
             updatedStatus: Knock.KnockMessageStatusUpdateType,
             archivedScope: Knock.FeedItemScope = .all
-        ) async {
+        ) {
             let date = Date()
             let updatedEntries = updateEntriesStatus(entries: feed.entries, status: updatedStatus, date: date, archivedScope: archivedScope)
             
             // Filter entries based on the currentFilter
             let filteredEntries = currentFilter.scope != .all ? filterEntries(entries: updatedEntries, scope: currentFilter.scope) : updatedEntries
             
-            await MainActor.run {
-                self.feed.entries = filteredEntries
-                optimisticallyUpdateMetaCounts(status: updatedStatus)
+            feed.entries = filteredEntries
+            optimisticallyUpdateMetaCounts(status: updatedStatus)
+        }
+
+        internal func optimisticallyUpdateStatusForItem(item: Knock.FeedItem, status: Knock.KnockMessageStatusUpdateType) {
+            guard let index = feed.entries.firstIndex(where: { $0.id == item.id }) else { return }
+            switch status {
+            case .read:
+                feed.entries[index].read_at = Date()
+                if feed.meta.unreadCount > 0 {
+                    feed.meta.unreadCount -= 1
+                }
+                if feedClientOptions.status == .unread {
+                    feed.entries.remove(at: index)
+                }
+            case .unread:
+                feed.entries[index].read_at = nil
+                feed.meta.unreadCount += 1
+                if feedClientOptions.status == .read {
+                    feed.entries.remove(at: index)
+                }
+            case .seen:
+                feed.entries[index].seen_at = Date()
+                if feed.meta.unseenCount > 0 {
+                    feed.meta.unseenCount -= 1
+                }
+                if feedClientOptions.status == .unseen {
+                    feed.entries.remove(at: index)
+                }
+            case .unseen:
+                feed.entries[index].seen_at = nil
+                feed.meta.unseenCount += 1
+                if feedClientOptions.status == .seen {
+                    feed.entries.remove(at: index)
+                }
+            case .interacted:
+                if item.read_at == nil {
+                    feed.entries[index].read_at = Date()
+                    if feed.meta.unreadCount > 0 {
+                        feed.meta.unreadCount -= 1
+                    }
+                }
+                feed.entries[index].interacted_at = Date()
+                if feedClientOptions.status == .read {
+                    feed.entries.remove(at: index)
+                }
+            case .archived:
+                feed.entries[index].archived_at = Date()
+                if shouldHideArchived {
+                    feed.entries.remove(at: index)
+                }
+            default: break
+            }
+        }
+        
+        // MARK: Private Methods
+        
+        private func observeNewMessages(from feedManager: Knock.FeedManager) {
+            newMessagesTask?.cancel()
+            observedFeedManager = feedManager
+            // The events stream finishes when the manager is released, which ends the loop.
+            newMessagesTask = Task { [weak self, weak feedManager] in
+                guard let events = await feedManager?.events(named: "new-message") else { return }
+                for await _ in events {
+                    guard let self, let feedManager else { return }
+                    await self.handleNewMessageEvent(from: feedManager)
+                }
             }
         }
 
@@ -216,7 +333,7 @@ extension Knock {
             date: Date,
             archivedScope: Knock.FeedItemScope
         ) -> [Knock.FeedItem] {
-            return entries.map { item in
+            return entries.compactMap { item in
                 var mutableItem = item
                 switch status {
                 case .seen:
@@ -245,7 +362,7 @@ extension Knock {
                 default: break
                 }
                 return mutableItem
-            }.compactMap { $0 }
+            }
         }
 
         private func shouldArchive(item: Knock.FeedItem, scope: Knock.FeedItemScope) -> Bool {
@@ -281,61 +398,6 @@ extension Knock {
             default: break
             }
         }
-
-        internal func optimisticallyUpdateStatusForItem(item: Knock.FeedItem, status: Knock.KnockMessageStatusUpdateType) async {
-            if let index = feed.entries.firstIndex(where: { $0.id == item.id }) {
-                await MainActor.run { [weak self] in
-                    guard let self = self else { return }
-                    switch status {
-                    case .read:
-                        feed.entries[index].read_at = Date()
-                        if feed.meta.unreadCount > 0 {
-                            feed.meta.unreadCount -= 1
-                        }
-                        if feedClientOptions.status == .unread {
-                            feed.entries.remove(at: index)
-                        }
-                    case .unread:
-                        feed.entries[index].read_at = nil
-                        feed.meta.unreadCount += 1
-                        if feedClientOptions.status == .read {
-                            feed.entries.remove(at: index)
-                        }
-                    case .seen:
-                        feed.entries[index].seen_at = Date()
-                        if feed.meta.unseenCount > 0 {
-                            feed.meta.unseenCount -= 1
-                        }
-                        if feedClientOptions.status == .unseen {
-                            feed.entries.remove(at: index)
-                        }
-                    case .unseen:
-                        feed.entries[index].seen_at = nil
-                        feed.meta.unseenCount += 1
-                        if feedClientOptions.status == .seen {
-                            feed.entries.remove(at: index)
-                        }
-                    case .interacted:
-                        if item.read_at == nil {
-                            feed.entries[index].read_at = Date()
-                            if feed.meta.unreadCount > 0 {
-                                feed.meta.unreadCount -= 1
-                            }
-                        }
-                        feed.entries[index].interacted_at = Date()
-                        if feedClientOptions.status == .read {
-                            feed.entries.remove(at: index)
-                        }
-                    case .archived:
-                        feed.entries[index].archived_at = Date()
-                        if shouldHideArchived {
-                            feed.entries.remove(at: index)
-                        }
-                    default: break
-                    }
-                }
-            }
-        }
         
         private func logError(_ message: String, _ error: Error) {
             Knock.shared.log(type: .error, category: .feed, message: "\(message): \(error.localizedDescription)")
@@ -349,35 +411,17 @@ extension Knock {
         }
         
         private func fetchNewMetaData() async {
+            guard let feedManager else { return }
             do {
-                if let feed = try await Knock.shared.feedManager?.getUserFeedContent(options: feedClientOptions) {
-                    await MainActor.run {
-                        self.feed.meta = feed.meta
-                    }
-                }
+                let latest = try await feedManager.getUserFeedContent(options: requestOptions())
+                feed.meta = latest.meta
             } catch {
                 handleFeedError(error)
             }
         }
         
-        private func mergeFeedsForNewMessageReceived(feed: Knock.Feed) {
-            DispatchQueue.main.async {
-                self.feed.entries.insert(contentsOf: feed.entries, at: 0)
-                self.feed.meta = feed.meta
-                self.feed.pageInfo.before = feed.entries.first?.__cursor
-            }
-        }
-        
-        private func mergeFeedsForNewPageOfFeed(feed: Knock.Feed) {
-            DispatchQueue.main.async {
-                self.feed.entries.append(contentsOf: feed.entries)
-                self.feed.meta = feed.meta
-                self.feed.pageInfo.after = feed.pageInfo.after
-            }
-        }
-        
-        private func getBrandingRequired() async -> Bool {
-            let settings = try? await Knock.shared.feedManager?.feedModule.getFeedSettings()
+        private func getBrandingRequired(feedManager: Knock.FeedManager) async -> Bool {
+            let settings = try? await feedManager.feedModule.getFeedSettings()
             return settings?.features.brandingRequired ?? false
         }
         

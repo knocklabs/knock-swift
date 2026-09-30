@@ -36,3 +36,56 @@ Version 1.2.0 of our Swift SDK introduces our first pre-built component, the In-
 
 - **In-App Feed pre-built component**
 - **Knock.KnockMessageStatusBatchUpdateType is now just Knock.KnockMessageStatusUpdateType**
+
+## Upgrading to Version 2.0.0
+
+Version 2.0.0 builds the SDK in the Swift 6 language mode with complete concurrency checking, and replaces `SwiftPhoenixClient` with [PhoenixNectar](https://github.com/jvdvleuten/PhoenixNectar) for the realtime feed connection.
+
+### Requirements
+
+- iOS 16 or later.
+- Xcode 16.3 or later (Swift tools 6.1).
+- Swift Package Manager. Carthage is no longer supported, because PhoenixNectar is distributed as a Swift package only.
+
+### Realtime feed
+
+Realtime operations on `FeedManager` are processed in order, and the connection is suspended while the app is in the background and resumed when it becomes active.
+
+- `on(eventName:completionHandler:)` now calls its handler on the main actor with a `Knock.FeedEvent` (instead of a `SwiftPhoenixClient.Message`), and returns a `Knock.FeedEventSubscription` that you can `cancel()`. Read the event payload with `event.payload` or decode it with `event.decodePayload(as:)`.
+- `events(named:)` returns an `AsyncStream<Knock.FeedEvent>`. Subscriptions can be created before connecting and keep receiving events across reconnects.
+- `connect(options:)` connects and waits until the feed channel is joined, throwing a `Knock.RealtimeError` if it can't be. `connectToFeed(options:)` still returns immediately.
+- `disconnect()` disconnects and waits for the socket to close. `disconnectFromFeed()` still returns immediately.
+- `connectionState` and `connectionStates()` expose the connection as a `Knock.FeedConnectionState`.
+- Once connected, a dropped connection is retried indefinitely, and each reconnect sends the latest user token from `signIn`. Before the first successful connection, the feed gives up after about 30 seconds and moves to `.failed`. A failed connection is retried when the app becomes active or the network becomes available again; you can also call `connect()` again yourself.
+
+#### Previously:
+```swift
+feedManager.connectToFeed()
+feedManager.on(eventName: "new-message") { message in
+    print(message.payload)
+}
+```
+
+#### New in Version 2.0.0:
+```swift
+try await feedManager.connect()
+
+let task = Task {
+    for await event in await feedManager.events(named: "new-message") {
+        print(event.payload)
+    }
+}
+
+// Or, with a callback on the main actor:
+let subscription = feedManager.on(eventName: "new-message") { event in
+    print(event.payload)
+}
+subscription.cancel()
+```
+
+### Concurrency
+
+- `Knock`, `Knock.FeedManager` and the public models are `Sendable`. Completion handlers are `@Sendable`.
+- Types conforming to `ContentBlockBase` must be `Sendable`.
+- `Knock.InAppFeedViewModel` is `@MainActor` and `final`. Calling `connectFeedAndObserveNewMessages()` again replaces the previous observation, and `stopObservingNewMessages()` stops it. Feed requests no longer write `before`/`after` cursors back into `feedClientOptions`. They also no longer overwrite `feedClientOptions.archived`: the archived filter still requests `archived: only`, but other filters now send the `archived` value you configured instead of clearing it.
+- `KnockAppDelegate`'s `UNUserNotificationCenterDelegate` methods, `getMessageId(userInfo:)`, `pushNotificationDeliveredInForeground(notification:)` and `pushNotificationTapped(userInfo:)` are `nonisolated`, because the system doesn't guarantee they're called on the main actor. Mark your overrides `nonisolated` too.

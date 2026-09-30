@@ -19,7 +19,7 @@ public extension Knock {
      
      - Attention: for each attribute, if the value is of type `ConditionsArray`, you must ensure that it has at least one element inside `conditions`, otherwise, an error will arise when saving the preferences.
      */
-    struct ChannelTypePreferences: Codable {
+    struct ChannelTypePreferences: Codable, Sendable {
         public var email: Either<Bool, ConditionsArray>?
         public var in_app_feed: Either<Bool, ConditionsArray>?
         public var sms: Either<Bool, ConditionsArray>?
@@ -70,7 +70,7 @@ public extension Knock {
      
      It conforms to `Equatable` to be able to be monitored with `onChange` inside a SwiftUI List
      */
-    struct ChannelTypePreferenceItem: Identifiable, Equatable {
+    struct ChannelTypePreferenceItem: Identifiable, Equatable, Sendable {
         public static func == (lhs: Knock.ChannelTypePreferenceItem, rhs: Knock.ChannelTypePreferenceItem) -> Bool {
             switch lhs.value {
             case .left(let booll):
@@ -105,7 +105,7 @@ public extension Knock {
     
     
     
-    enum ChannelTypeKey: String, CaseIterable, Codable {
+    enum ChannelTypeKey: String, CaseIterable, Codable, Sendable {
         case email
         case in_app_feed
         case sms

@@ -55,11 +55,9 @@ extension Knock {
     }
 }
 
-struct InAppFeedNotificationIconButton_Previews: PreviewProvider {
-    static var previews: some View {
-        let viewModel = Knock.InAppFeedViewModel()
-        viewModel.feed.meta.unreadCount = 9
-        
-        return Knock.InAppFeedNotificationIconButton(action: {}).environmentObject(viewModel)
-    }
+#Preview {
+    let viewModel = Knock.InAppFeedViewModel()
+    viewModel.feed.meta.unreadCount = 9
+    
+    return Knock.InAppFeedNotificationIconButton(action: {}).environmentObject(viewModel)
 }

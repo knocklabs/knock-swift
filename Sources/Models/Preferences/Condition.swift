@@ -11,7 +11,7 @@ public extension Knock {
     /**
      Struct to model a condition, see [here](https://docs.knock.app/send-and-manage-data/conditions#modeling-conditions) for more info
      */
-    struct Condition: Codable, Equatable, Identifiable {
+    struct Condition: Codable, Equatable, Identifiable, Sendable {
         public var id = UUID.init().uuidString
         
         public let variable: String
@@ -45,7 +45,7 @@ public extension Knock {
         }
     }
     
-    struct ConditionsArray: Codable {
+    struct ConditionsArray: Codable, Sendable {
         public var conditions: [Condition]
         
         public init(conditions: [Condition]) {

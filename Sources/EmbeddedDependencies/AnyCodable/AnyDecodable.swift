@@ -47,6 +47,9 @@ protocol _AnyDecodable {
 
 extension AnyDecodable: _AnyDecodable {}
 
+// See the note on `AnyCodable`'s `Sendable` conformance.
+extension AnyDecodable: @unchecked Sendable {}
+
 extension _AnyDecodable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()

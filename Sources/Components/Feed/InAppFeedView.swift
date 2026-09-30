@@ -32,10 +32,8 @@ extension Knock {
                             .frame(maxWidth: .infinity)
                             .padding(48)
                         } else if viewModel.feed.entries.isEmpty {
-                            Knock.EmptyFeedView(config: viewModel.currentFilter.emptyViewConfig) {
-                                Task {
-                                    await viewModel.refreshFeed()
-                                }
+                            Knock.EmptyFeedView(config: viewModel.currentFilter.emptyViewConfig) { [viewModel] in
+                                await viewModel.refreshFeed()
                             }
                             .frame(maxWidth: .infinity)
                             .padding(48)
@@ -52,10 +50,7 @@ extension Knock {
                                     .background(self.selectedItemId == item.id ? Color.gray.opacity(0.4) : .clear)
                                     .animation(.easeInOut, value: self.selectedItemId)
                                     .onTapGesture {
-                                        self.selectedItemId = item.id
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                                            self.selectedItemId = nil
-                                        }
+                                        highlightTappedRow(id: item.id)
                                         viewModel.feedItemRowTapped(item: item)
                                     }
                                     .swipeActions(edge: .trailing) {
@@ -85,7 +80,7 @@ extension Knock {
                                     .listRowSeparator(.hidden)
                             }
                             .listStyle(PlainListStyle())
-                            .refreshable {
+                            .refreshable { [viewModel] in
                                 await viewModel.refreshFeed()
                             }
                         }
@@ -106,6 +101,16 @@ extension Knock {
             .onDisappear {
                 Task {
                     await viewModel.bulkUpdateMessageEngagementStatus(updatedStatus: .seen)
+                }
+            }
+        }
+        
+        private func highlightTappedRow(id: String) {
+            selectedItemId = id
+            Task {
+                try? await Task.sleep(for: .milliseconds(50))
+                if selectedItemId == id {
+                    selectedItemId = nil
                 }
             }
         }
@@ -146,7 +151,7 @@ extension Knock {
             .contentShape(Rectangle())
             .listRowBackground(theme.rowTheme.backgroundColor)
             .frame(height: 50)
-            .task {
+            .task { [viewModel] in
                 await viewModel.fetchNewPageOfFeedItems()
             }
         }
@@ -167,19 +172,17 @@ extension Knock {
     }
 }
 
-struct InAppFeedView_Previews: PreviewProvider {
-    static var previews: some View {
-        let viewModel = Knock.InAppFeedViewModel()
-        let markdown = Knock.MarkdownContentBlock(name: "markdown", content: "", rendered: "<p>Hey <strong>Dennis</strong> 👋 - Alan Grant completed an activity.</p>")
-                
-        let buttons = Knock.ButtonSetContentBlock(name: "buttons", buttons: [Knock.BlockActionButton(label: "Primary", name: "primary", action: ""), Knock.BlockActionButton(label: "Secondary", name: "secondary", action: "")])
-        
-        let item = Knock.FeedItem(__cursor: "", actors: [], activities: [], blocks: [markdown, buttons], data: [:], id: "", inserted_at: nil, interacted_at: nil, clicked_at: nil, link_clicked_at: nil, archived_at: nil, total_activities: 0, total_actors: 0, updated_at: nil)
-        
-        viewModel.feed.entries = [item, item, item, item, item, item, item, item, item]
-        let theme = Knock.InAppFeedTheme(titleString: "Notifications")
-        
-        return Knock.InAppFeedView(theme: theme)
-            .environmentObject(viewModel)
+#Preview {
+    let viewModel = Knock.InAppFeedViewModel()
+    let markdown = Knock.MarkdownContentBlock(name: "markdown", content: "", rendered: "<p>Hey <strong>Dennis</strong> 👋 - Alan Grant completed an activity.</p>")
+    
+    let buttons = Knock.ButtonSetContentBlock(name: "buttons", buttons: [Knock.BlockActionButton(label: "Primary", name: "primary", action: ""), Knock.BlockActionButton(label: "Secondary", name: "secondary", action: "")])
+    
+    let items = (0..<9).map { index in
+        Knock.FeedItem(__cursor: "", actors: [], activities: [], blocks: [markdown, buttons], data: [:], id: "\(index)", inserted_at: nil, interacted_at: nil, clicked_at: nil, link_clicked_at: nil, archived_at: nil, total_activities: 0, total_actors: 0, updated_at: nil)
     }
+    viewModel.feed.entries = items
+    
+    return Knock.InAppFeedView(theme: Knock.InAppFeedTheme(titleString: "Notifications"))
+        .environmentObject(viewModel)
 }

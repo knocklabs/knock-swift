@@ -7,7 +7,7 @@
 
 import Foundation
 
-internal class MessageService: KnockAPIService {
+internal final class MessageService: KnockAPIService {
     
     internal func getMessage(messageId: String) async throws -> Knock.KnockMessage {
         try await get(path: "/messages/\(messageId)", queryItems: nil)

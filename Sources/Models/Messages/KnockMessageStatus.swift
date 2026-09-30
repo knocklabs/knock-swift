@@ -8,7 +8,7 @@
 import Foundation
 
 public extension Knock {
-    enum KnockMessageStatus: String, Codable {
+    enum KnockMessageStatus: String, Codable, Sendable {
         // validate the possible values, from: https://docs.knock.app/reference#messages
         case queued
         case sent
@@ -19,7 +19,7 @@ public extension Knock {
         case unseen
     }
     
-    enum KnockMessageEngagementStatus: String, Codable {
+    enum KnockMessageEngagementStatus: String, Codable, Sendable {
         // validate the possible values, from: https://docs.knock.app/reference#messages
         case seen
         case read
@@ -28,7 +28,7 @@ public extension Knock {
         case archived
     }
     
-    enum KnockMessageStatusUpdateType: String, Codable {
+    enum KnockMessageStatusUpdateType: String, Codable, Sendable {
         case seen
         case read
         case interacted

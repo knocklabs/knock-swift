@@ -6,10 +6,9 @@
 //
 
 import Foundation
-import OSLog
 import UIKit
 
-internal class ChannelModule {
+internal final class ChannelModule: Sendable {
     let channelService: ChannelService = ChannelService()
 
     internal var userNotificationCenter: UNUserNotificationCenter {
@@ -254,7 +253,7 @@ public extension Knock {
     }
 
     func getUserChannelData(
-        channelId: String, completionHandler: @escaping ((Result<ChannelData, Error>) -> Void)
+        channelId: String, completionHandler: @escaping @Sendable (Result<ChannelData, Error>) -> Void
     ) {
         Task {
             do {
@@ -281,7 +280,7 @@ public extension Knock {
 
     func updateUserChannelData(
         channelId: String, data: AnyEncodable,
-        completionHandler: @escaping ((Result<ChannelData, Error>) -> Void)
+        completionHandler: @escaping @Sendable (Result<ChannelData, Error>) -> Void
     ) {
         Task {
             do {
@@ -303,7 +302,7 @@ public extension Knock {
         await environment.getDeviceToken()
     }
 
-    func getApnsDeviceToken(completion: @escaping (String?) -> Void) {
+    func getApnsDeviceToken(completion: @escaping @Sendable (String?) -> Void) {
         Task {
             completion(await environment.getDeviceToken())
         }
@@ -328,7 +327,7 @@ public extension Knock {
 
     func registerTokenForAPNS(
         channelId: String?, token: String,
-        completionHandler: @escaping ((Result<ChannelData, Error>) -> Void)
+        completionHandler: @escaping @Sendable (Result<ChannelData, Error>) -> Void
     ) {
         Task {
             do {
@@ -349,7 +348,7 @@ public extension Knock {
 
     func registerTokenForAPNS(
         channelId: String, token: Data,
-        completionHandler: @escaping ((Result<ChannelData, Error>) -> Void)
+        completionHandler: @escaping @Sendable (Result<ChannelData, Error>) -> Void
     ) {
         // 1. Convert device token to string
         let tokenString = Knock.convertTokenToString(token: token)
@@ -372,7 +371,7 @@ public extension Knock {
 
     func unregisterTokenForAPNS(
         channelId: String, token: String,
-        completionHandler: @escaping ((Result<ChannelData, Error>) -> Void)
+        completionHandler: @escaping @Sendable (Result<ChannelData, Error>) -> Void
     ) {
         Task {
             do {
@@ -394,7 +393,7 @@ public extension Knock {
 
     func unregisterTokenForAPNS(
         channelId: String, token: Data,
-        completionHandler: @escaping ((Result<ChannelData, Error>) -> Void)
+        completionHandler: @escaping @Sendable (Result<ChannelData, Error>) -> Void
     ) {
         // 1. Convert device token to string
         let tokenString = Knock.convertTokenToString(token: token)
@@ -406,7 +405,7 @@ public extension Knock {
      Convenience method to determine whether or not the user is allowing Push Notifications for the app.
      */
     func getNotificationPermissionStatus(
-        completion: @escaping (UNAuthorizationStatus) -> Void
+        completion: @escaping @Sendable (UNAuthorizationStatus) -> Void
     ) {
         channelModule.userNotificationCenter.getNotificationSettings(completionHandler: {
             settings in
@@ -424,7 +423,7 @@ public extension Knock {
      */
     func requestNotificationPermission(
         options: UNAuthorizationOptions = [.sound, .badge, .alert],
-        completion: @escaping (UNAuthorizationStatus) -> Void
+        completion: @escaping @Sendable (UNAuthorizationStatus) -> Void
     ) {
         channelModule.userNotificationCenter.requestAuthorization(
             options: options,
@@ -449,7 +448,7 @@ public extension Knock {
     func requestAndRegisterForPushNotifications() {
         Knock.shared.requestNotificationPermission { status in
             if status != .denied {
-                DispatchQueue.main.async {
+                Task { @MainActor in
                     UIApplication.shared.registerForRemoteNotifications()
                 }
             }

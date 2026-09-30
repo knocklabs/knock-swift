@@ -30,6 +30,8 @@ public enum Either<T, U> {
     }
 }
 
+extension Either: Sendable where T: Sendable, U: Sendable {}
+
 extension Either: Decodable where T: Decodable, U: Decodable {
     public init(from decoder: Decoder) throws {
         if let value = try? T(from: decoder) {
