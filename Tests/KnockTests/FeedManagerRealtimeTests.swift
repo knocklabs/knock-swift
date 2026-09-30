@@ -134,7 +134,8 @@ struct FeedManagerRealtimeTests {
 
         lifecycle.continuation.yield(.didEnterBackground)
         lifecycle.continuation.yield(.didBecomeActive)
-        await manager.disconnect()
+        lifecycle.continuation.yield(.networkBecameAvailable)
+        try await waitUntil("lifecycle events handled") { manager.handledLifecycleEventCount == 3 }
 
         #expect(factory.created.isEmpty)
     }
@@ -146,9 +147,46 @@ struct FeedManagerRealtimeTests {
 
         lifecycle.continuation.yield(.didEnterBackground)
         lifecycle.continuation.yield(.didBecomeActive)
-        await manager.disconnect()
+        lifecycle.continuation.yield(.networkBecameAvailable)
+        try await waitUntil("lifecycle events handled") { manager.handledLifecycleEventCount == 3 }
 
         #expect(factory.created.count == 1)
+    }
+
+    @Test func aFailedConnectionIsRetriedWhenTheNetworkBecomesAvailable() async throws {
+        let manager = makeManager()
+        factory.onCreate { $0.failConnect(with: "offline") }
+        await #expect(throws: Knock.RealtimeError.connectionFailed(reason: "offline")) {
+            try await withTimeout { try await manager.connect() }
+        }
+
+        factory.onCreate { _ in }
+        lifecycle.continuation.yield(.networkBecameAvailable)
+
+        try await waitUntil("reconnected") { await manager.connectionState == .connected }
+        #expect(factory.created.count == 2)
+    }
+
+    @Test func aNetworkRecoveryDoesNotResumeASuspendedConnection() async throws {
+        let manager = makeManager()
+        try await withTimeout { try await manager.connect() }
+
+        lifecycle.continuation.yield(.didEnterBackground)
+        lifecycle.continuation.yield(.networkBecameAvailable)
+        try await waitUntil("lifecycle events handled") { manager.handledLifecycleEventCount == 2 }
+
+        #expect(factory.created.count == 1)
+        #expect(await manager.connectionState == .disconnected)
+    }
+
+    @Test func reconnectsUseTheLatestUserToken() async throws {
+        #expect(environment.currentUserToken.value == "token-1")
+        await environment.setUserInfo(userId: "user-1", userToken: "token-2")
+        #expect(environment.currentUserToken.value == "token-2")
+
+        let params = ["api_key": "pk_test", "user_token": "token-1"]
+        #expect(FeedModule.connectParams(params, currentUserToken: "token-2") == ["api_key": "pk_test", "user_token": "token-2"])
+        #expect(FeedModule.connectParams(params, currentUserToken: nil) == params)
     }
 
     @Test func connectionStatesAreObservable() async throws {
@@ -158,7 +196,7 @@ struct FeedManagerRealtimeTests {
         try await withTimeout { try await manager.connect() }
         await manager.disconnect()
 
-        try await states.waitFor(.disconnected)
+        try await waitUntil("final state (recorded: \(states.values))") { states.values.count == 4 }
         #expect(states.values == [.disconnected, .connecting, .connected, .disconnected])
     }
 

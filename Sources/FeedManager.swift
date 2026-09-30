@@ -13,12 +13,14 @@ public extension Knock {
     ///
     /// Realtime operations are processed one at a time, in the order they are called, so a `connectToFeed()` followed
     /// by a `disconnectFromFeed()` always ends disconnected. While connected, the connection is suspended when the app
-    /// enters the background and re-established when it becomes active again.
+    /// enters the background and re-established when it becomes active again. A connection that failed is retried when
+    /// the app becomes active or the network becomes available again.
     final class FeedManager: Sendable {
         internal let feedModule: FeedModule
         private let realtime: FeedRealtimeSession
         private let operations: SerialExecutionQueue
         private let lifecycleTask: Task<Void, Never>
+        private let handledLifecycleEvents = LockIsolated(0)
 
         /// The id of the in-app feed channel.
         public var feedId: String {
@@ -62,22 +64,31 @@ public extension Knock {
             self.feedModule = feedModule
             self.realtime = realtime
             self.operations = operations
+            let handledLifecycleEvents = handledLifecycleEvents
             self.lifecycleTask = Task {
                 for await event in lifecycleEvents {
-                    switch event {
-                    case .didEnterBackground:
-                        operations.enqueue { await realtime.suspend() }
-                    case .didBecomeActive:
-                        operations.enqueue {
-                            do {
+                    operations.enqueue {
+                        do {
+                            switch event {
+                            case .didEnterBackground:
+                                await realtime.suspend()
+                            case .didBecomeActive:
                                 try await realtime.resume()
-                            } catch {
-                                Knock.shared.log(type: .error, category: .feed, message: "Resuming feed connection", status: .fail, errorMessage: error.localizedDescription)
+                            case .networkBecameAvailable:
+                                try await realtime.retryIfFailed()
                             }
+                        } catch {
+                            Knock.shared.log(type: .error, category: .feed, message: "Resuming feed connection", status: .fail, errorMessage: error.localizedDescription)
                         }
+                        handledLifecycleEvents.withLock { $0 += 1 }
                     }
                 }
             }
+        }
+
+        /// The number of lifecycle events whose realtime operation has finished. Only used by tests.
+        internal var handledLifecycleEventCount: Int {
+            handledLifecycleEvents.value
         }
 
         deinit {
