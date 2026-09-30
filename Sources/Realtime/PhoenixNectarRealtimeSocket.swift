@@ -49,7 +49,16 @@ internal final class PhoenixNectarRealtimeSocket: RealtimeSocket {
         await socket.setMetricsHook { event in
             switch event {
             case .frameReceived(let message):
-                hub.handle(message)
+                let frame = ChannelSignalClassifier.Frame(
+                    topic: message.topic.rawValue,
+                    event: message.event,
+                    ref: message.ref,
+                    joinRef: message.joinRef,
+                    status: message.pushStatus
+                )
+                hub.handle(frame) {
+                    Self.reason(fromResponse: try? message.replyEnvelope().decode([String: AnyCodable].self))
+                }
                 logger(.debug, "Received \(message.event.rawValue) on \(message.topic.rawValue)")
             case .frameSent(let ref, let topic, .system(.join)), .frameBuffered(let ref, let topic, .system(.join)):
                 hub.joinSent(topic: topic.rawValue, ref: ref)
@@ -87,15 +96,22 @@ internal final class PhoenixNectarRealtimeSocket: RealtimeSocket {
     }
 
     func join<Params: Encodable & Sendable>(topic: String, params: Params) async throws -> any RealtimeChannel {
-        // Signals for a previous join of this topic are stale once a new join starts.
-        signalHub.remove(topic: topic)
+        // Registered before the join is sent so a crash right after the join reply isn't missed. This replaces the
+        // stream of any earlier join of the topic.
+        let signals = signalHub.register(topic: topic)
         do {
             let channel = try await socket.joinChannel(topic, params: params, policy: joinPolicy)
-            return PhoenixNectarRealtimeChannel(channel: channel, signalStream: signalHub.register(topic: topic))
-        } catch let error as PhoenixError {
-            throw Self.joinError(from: error)
-        } catch let error as EncodingError {
-            throw RealtimeJoinError.unrecoverable(reason: "Encoding the join parameters failed: \(error)")
+            return PhoenixNectarRealtimeChannel(channel: channel, signalStream: signals)
+        } catch {
+            signalHub.remove(topic: topic)
+            switch error {
+            case let error as PhoenixError:
+                throw Self.joinError(from: error)
+            case let error as EncodingError:
+                throw RealtimeJoinError.unrecoverable(reason: "Encoding the join parameters failed: \(error)")
+            default:
+                throw error
+            }
         }
     }
 
@@ -154,8 +170,8 @@ private struct PhoenixNectarRealtimeChannel: RealtimeChannel {
     }
 }
 
-/// Routes inbound frames to the signal stream of the joined channel they belong to.
-private final class ChannelSignalHub: Sendable {
+/// Routes inbound frames to the signal stream of the channel they belong to.
+internal final class ChannelSignalHub: Sendable {
     private struct State {
         var classifier = ChannelSignalClassifier()
         var continuations: [String: AsyncStream<RealtimeChannelSignal>.Continuation] = [:]
@@ -185,20 +201,11 @@ private final class ChannelSignalHub: Sendable {
         state.withLock { $0.classifier.joinSent(topic: topic, ref: ref) }
     }
 
-    func handle(_ message: PhoenixMessage) {
-        let frame = ChannelSignalClassifier.Frame(
-            topic: message.topic.rawValue,
-            event: message.event,
-            ref: message.ref,
-            joinRef: message.joinRef,
-            status: message.pushStatus
-        )
-        // Every frame updates the classifier, including replies to explicit joins, which arrive before their topic is
-        // registered and so are never delivered as signals.
+    /// Every frame updates the classifier, even on a topic with no stream. A registered join's own `ok` reply is
+    /// delivered as `.rejoined`.
+    func handle(_ frame: ChannelSignalClassifier.Frame, reason: () -> String) {
         let delivery = state.withLock { state -> (AsyncStream<RealtimeChannelSignal>.Continuation, RealtimeChannelSignal)? in
-            let signal = state.classifier.signal(for: frame) {
-                PhoenixNectarRealtimeSocket.reason(fromResponse: try? message.replyEnvelope().decode([String: AnyCodable].self))
-            }
+            let signal = state.classifier.signal(for: frame, reason: reason)
             guard let signal, let continuation = state.continuations[frame.topic] else { return nil }
             return (continuation, signal)
         }

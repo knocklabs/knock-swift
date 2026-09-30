@@ -55,3 +55,47 @@ struct PhoenixNectarRealtimeSocketTests {
         _ = try PhoenixNectarRealtimeSocket(endpoint: "wss://api.knock.app/ws/v1/websocket", connectParams: { ["api_key": "pk_test"] })
     }
 }
+
+@Suite("ChannelSignalHub")
+struct ChannelSignalHubTests {
+    typealias Frame = ChannelSignalClassifier.Frame
+
+    static func collect(_ stream: AsyncStream<RealtimeChannelSignal>) async -> [RealtimeChannelSignal] {
+        var signals: [RealtimeChannelSignal] = []
+        for await signal in stream {
+            signals.append(signal)
+        }
+        return signals
+    }
+
+    @Test func aCrashRightAfterTheJoinReplyReachesTheJoiningStream() async {
+        let hub = ChannelSignalHub()
+        let signals = hub.register(topic: "feeds:1")
+        hub.joinSent(topic: "feeds:1", ref: "2")
+        hub.handle(Frame(topic: "feeds:1", event: .system(.reply), ref: "2", joinRef: "1", status: .ok)) { "" }
+        hub.handle(Frame(topic: "feeds:1", event: .system(.error), ref: nil, joinRef: "1", status: nil)) { "" }
+        hub.finishAll()
+
+        #expect(await Self.collect(signals) == [.rejoined, .errored])
+    }
+
+    @Test func registeringATopicAgainFinishesTheEarlierStream() async {
+        let hub = ChannelSignalHub()
+        let first = hub.register(topic: "feeds:1")
+        let second = hub.register(topic: "feeds:1")
+        hub.handle(Frame(topic: "feeds:1", event: .system(.close), ref: nil, joinRef: nil, status: nil)) { "" }
+        hub.remove(topic: "feeds:1")
+
+        #expect(await Self.collect(first).isEmpty)
+        #expect(await Self.collect(second) == [.closed])
+    }
+
+    @Test func framesForUnregisteredTopicsAreDropped() async {
+        let hub = ChannelSignalHub()
+        let signals = hub.register(topic: "feeds:1")
+        hub.handle(Frame(topic: "feeds:2", event: .system(.error), ref: nil, joinRef: nil, status: nil)) { "" }
+        hub.finishAll()
+
+        #expect(await Self.collect(signals).isEmpty)
+    }
+}
