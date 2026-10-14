@@ -9,7 +9,7 @@ import Foundation
 import Testing
 @testable import Knock
 
-@Suite("FeedRealtimeSession")
+@Suite("FeedRealtimeSession", .serialized)
 struct FeedRealtimeSessionTests {
     let factory = FakeRealtimeSocketFactory()
 

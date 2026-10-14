@@ -2,14 +2,15 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
   pull_request:
-    branches: [main, develop]
 
 jobs:
   build-and-test:
     name: Build and Test
     runs-on: macos-15
+    # A pull request from a branch in this repo already runs on push. Skip the
+    # duplicate, and still run pull requests that come from a fork.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
 
     steps:
       - name: Checkout code
