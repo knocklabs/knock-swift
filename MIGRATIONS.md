@@ -49,7 +49,7 @@ Version 2.0.0 builds the SDK in the Swift 6 language mode with complete concurre
 
 ### Realtime feed
 
-Realtime operations on `FeedManager` are processed in order, and the connection is suspended while the app is in the background and resumed when it becomes active.
+Realtime operations on `FeedManager` are processed in order, and the connection is suspended while the app is in the background and resumed when it returns to the foreground.
 
 - `on(eventName:completionHandler:)` now calls its handler on the main actor with a `Knock.FeedEvent` (instead of a `SwiftPhoenixClient.Message`), and returns a `Knock.FeedEventSubscription` that you can `cancel()`. Read the event payload with `event.payload` or decode it with `event.decodePayload(as:)`.
 - `events(named:)` returns an `AsyncStream<Knock.FeedEvent>`. Subscriptions can be created before connecting and keep receiving events across reconnects.

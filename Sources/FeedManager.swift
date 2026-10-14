@@ -13,7 +13,7 @@ public extension Knock {
     ///
     /// Realtime operations are processed one at a time, in the order they are called, so a `connectToFeed()` followed
     /// by a `disconnectFromFeed()` always ends disconnected. While connected, the connection is suspended when the app
-    /// enters the background and re-established when it becomes active again. A connection that failed is retried when
+    /// enters the background and re-established when it returns to the foreground. A connection that failed is retried when
     /// the app becomes active or the network becomes available again.
     final class FeedManager: Sendable {
         internal let feedModule: FeedModule

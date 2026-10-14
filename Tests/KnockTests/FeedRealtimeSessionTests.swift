@@ -641,14 +641,14 @@ struct FeedRealtimeSessionTests {
 
     @Test func lifecycleEventsDoNotConnectAnIdleSession() async throws {
         let session = makeSession()
-        for event in [AppLifecycleEvent.didEnterBackground, .didBecomeActive, .networkBecameAvailable] {
+        for event in [AppLifecycleEvent.didEnterBackground, .willEnterForeground, .didBecomeActive, .networkBecameAvailable] {
             try await session.handle(event)
         }
         #expect(factory.created.isEmpty)
 
         _ = try await connected(session)
         await session.disconnect()
-        for event in [AppLifecycleEvent.didEnterBackground, .didBecomeActive, .networkBecameAvailable] {
+        for event in [AppLifecycleEvent.didEnterBackground, .willEnterForeground, .didBecomeActive, .networkBecameAvailable] {
             try await session.handle(event)
         }
         #expect(factory.created.count == 1)

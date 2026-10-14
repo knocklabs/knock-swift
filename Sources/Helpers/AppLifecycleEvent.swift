@@ -15,6 +15,7 @@ import UIKit
 
 internal enum AppLifecycleEvent: Sendable, Equatable {
     case didBecomeActive
+    case willEnterForeground
     case didEnterBackground
     /// The device regained a usable network path after losing it.
     case networkBecameAvailable
@@ -46,6 +47,7 @@ internal enum AppLifecycleEvent: Sendable, Equatable {
             let names = await MainActor.run {
                 [
                     (UIApplication.didBecomeActiveNotification, AppLifecycleEvent.didBecomeActive),
+                    (UIApplication.willEnterForegroundNotification, AppLifecycleEvent.willEnterForeground),
                     (UIApplication.didEnterBackgroundNotification, AppLifecycleEvent.didEnterBackground),
                 ]
             }

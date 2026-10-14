@@ -129,6 +129,19 @@ struct FeedManagerRealtimeTests {
         try await waitUntil("delivery") { events.values.count == 1 }
     }
 
+    @Test func returningToTheForegroundResumesBeforeTheAppIsActive() async throws {
+        let manager = makeManager()
+        try await withTimeout { try await manager.connect() }
+        let first = try #require(factory.last)
+
+        lifecycle.continuation.yield(.didEnterBackground)
+        try await waitUntil("suspended") { first.disconnectCount == 1 }
+
+        lifecycle.continuation.yield(.willEnterForeground)
+        try await waitUntil("resumed") { await manager.connectionState == .connected }
+        #expect(factory.created.count == 2)
+    }
+
     @Test func aFailedConnectionIsRetriedWhenTheNetworkBecomesAvailable() async throws {
         let manager = makeManager()
         factory.onCreate { $0.failConnect(with: "offline") }

@@ -239,13 +239,15 @@ internal actor FeedRealtimeSession {
         }
     }
 
-    /// Applies an app lifecycle change. Backgrounding suspends an active connection, becoming active resumes it (or
-    /// retries it if it failed), and a recovered network retries a connection that failed to connect.
+    /// Applies an app lifecycle change. Backgrounding suspends an active connection. Returning to the foreground
+    /// resumes it, including when a system alert is still up: that posts `willEnterForeground` without
+    /// `didBecomeActive`, and the socket would otherwise stay suspended while the app is on screen. Becoming active
+    /// also retries a connection that failed. A recovered network retries a connection that failed to connect.
     func handle(_ event: AppLifecycleEvent) async throws {
         switch event {
         case .didEnterBackground:
             await suspend()
-        case .didBecomeActive:
+        case .willEnterForeground, .didBecomeActive:
             try await resume()
         case .networkBecameAvailable:
             // The network coming back can't fix a rejected join or a channel the server closed.
