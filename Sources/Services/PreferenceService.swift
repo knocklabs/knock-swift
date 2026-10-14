@@ -7,7 +7,7 @@
 
 import Foundation
 
-internal class PreferenceService: KnockAPIService {
+internal final class PreferenceService: KnockAPIService {
     
     internal func getAllUserPreferences(userId: String) async throws -> [Knock.PreferenceSet] {
         try await get(path: "/users/\(userId)/preferences", queryItems: nil)

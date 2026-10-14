@@ -7,7 +7,7 @@
 
 import Foundation
 
-internal class FeedService: KnockAPIService {
+internal final class FeedService: KnockAPIService {
     func getUserFeedContent(userId: String, queryItems: [URLQueryItem]?, feedId: String) async throws -> Knock.Feed {
         try await get(path: "/users/\(userId)/feeds/\(feedId)", queryItems: queryItems)
     }

@@ -8,7 +8,7 @@
 import Foundation
 
 public extension Knock {
-    struct FeedMetadata {
+    struct FeedMetadata: Sendable {
         public var totalCount: Int = 0
         public var unreadCount: Int = 0
         public var unseenCount: Int = 0

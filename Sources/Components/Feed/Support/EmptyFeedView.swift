@@ -10,7 +10,7 @@ import SwiftUI
 extension Knock {
     struct EmptyFeedView: View {
         let config: EmptyFeedViewConfig
-        let refreshAction: () -> Void
+        let refreshAction: @Sendable () async -> Void
         var body: some View {
             ScrollView {
                 VStack(alignment: .center, spacing: 12) {
@@ -37,8 +37,8 @@ extension Knock {
                     Spacer()
                 }
             }
-            .refreshable {
-                refreshAction()
+            .refreshable { [refreshAction] in
+                await refreshAction()
             }
         }
     }

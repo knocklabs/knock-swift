@@ -9,10 +9,9 @@ import XCTest
 @testable import Knock
 
 final class KnockTests: XCTestCase {
-    override func setUpWithError() throws {
-        Task {
-            try? await Knock.shared.setup(publishableKey: "pk_123", pushChannelId: "test")
-        }
+    override func setUp() async throws {
+        try await super.setUp()
+        try await Knock.shared.setup(publishableKey: "pk_123", pushChannelId: "test")
     }
 
     override func tearDownWithError() throws {

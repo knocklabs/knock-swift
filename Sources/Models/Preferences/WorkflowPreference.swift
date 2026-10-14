@@ -9,7 +9,7 @@ import Foundation
 
 public extension Knock {
     
-    struct WorkflowPreference: Codable {
+    struct WorkflowPreference: Codable, Sendable {
         public var channel_types: ChannelTypePreferences = ChannelTypePreferences()
         public var conditions: [Condition] = []
         
@@ -27,7 +27,7 @@ public extension Knock {
 
     
     
-    struct WorkflowPreferenceBoolItem: Identifiable, Equatable {
+    struct WorkflowPreferenceBoolItem: Identifiable, Equatable, Sendable {
         public var id: String
         public var value: Bool
         
@@ -37,7 +37,7 @@ public extension Knock {
         }
     }
     
-    struct WorkflowPreferenceChannelTypesItem: Identifiable, Equatable {
+    struct WorkflowPreferenceChannelTypesItem: Identifiable, Equatable, Sendable {
         public var id: String // workflow or category id
         public var channelTypes: [ChannelTypePreferenceItem] = []
         public var conditions: [Condition] = []
@@ -49,7 +49,7 @@ public extension Knock {
         }
     }
     
-    struct WorkflowPreferenceItems: Identifiable {
+    struct WorkflowPreferenceItems: Identifiable, Sendable {
         public var id = UUID.init().uuidString
         
         public var boolValues: [WorkflowPreferenceBoolItem] = []

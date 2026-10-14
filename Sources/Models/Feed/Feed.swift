@@ -10,7 +10,7 @@ import Foundation
 public extension Knock {
     
     // https://docs.knock.app/reference#get-feed#feeds
-    struct Feed {
+    struct Feed: Sendable {
         public var entries: [Knock.FeedItem] = []
         public var meta: FeedMetadata = FeedMetadata()
         public var pageInfo: PageInfo = PageInfo()

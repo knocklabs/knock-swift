@@ -40,7 +40,7 @@ extension Knock {
         }
     }
         
-    public enum ReadStatusType {
+    public enum ReadStatusType: Sendable {
         case unread
         case unseen
     }

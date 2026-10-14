@@ -6,15 +6,19 @@
 //
 
 import Foundation
-import OSLog
 
-internal protocol KnockAPIService {
+internal typealias KnockRequestBody = any Encodable & Sendable
+
+internal protocol KnockAPIService: Sendable {
     func get<T: Codable>(path: String, queryItems: [URLQueryItem]?) async throws -> T
-    func put<T: Codable>(path: String, body: Encodable?) async throws -> T
-    func post<T:Codable>(path: String, body: Encodable?) async throws -> T
-    func delete<T:Codable>(path: String, body: Encodable?) async throws -> T
-    func makeRequest<T:Codable>(method: String, path: String, queryItems: [URLQueryItem]?, body: Encodable?) async throws -> T
+    func put<T: Codable>(path: String, body: KnockRequestBody?) async throws -> T
+    func post<T:Codable>(path: String, body: KnockRequestBody?) async throws -> T
+    func delete<T:Codable>(path: String, body: KnockRequestBody?) async throws -> T
+    func makeRequest<T:Codable>(method: String, path: String, queryItems: [URLQueryItem]?, body: KnockRequestBody?) async throws -> T
 }
+
+/// Shared by every request so connections are reused.
+private let knockURLSession = URLSession(configuration: .default)
 
 extension KnockAPIService {
     
@@ -23,10 +27,7 @@ extension KnockAPIService {
         return "\(base)/v1"
     }
 
-    func makeRequest<T:Codable>(method: String, path: String, queryItems: [URLQueryItem]?, body: Encodable?) async throws -> T {
-        let sessionConfig = URLSessionConfiguration.default
-        let session = URLSession(configuration: sessionConfig, delegate: nil, delegateQueue: nil)
-        
+    func makeRequest<T:Codable>(method: String, path: String, queryItems: [URLQueryItem]?, body: KnockRequestBody?) async throws -> T {
         let baseUrl = await apiBaseUrl()
         
         let loggingMessageSummary = "\(method) \(baseUrl)\(path)"
@@ -37,19 +38,8 @@ extension KnockAPIService {
             throw networkError
         }
         
-        if queryItems != nil {
-            if #available(iOS 16.0, *) {
-                URL = URL.appending(queryItems: queryItems!)
-            } else {
-                if var components = URLComponents(url: URL, resolvingAgainstBaseURL: false) {
-                    var currentQueryItems = components.queryItems ?? []
-                    currentQueryItems.append(contentsOf: queryItems!)
-                    components.queryItems = currentQueryItems
-                    if let newURL = components.url {
-                        URL = newURL
-                    }
-                }
-            }
+        if let queryItems {
+            URL = URL.appending(queryItems: queryItems)
         }
         
         var request = URLRequest(url: URL)
@@ -57,10 +47,8 @@ extension KnockAPIService {
         
         request.addValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
         
-        if body != nil {
-            let encoder = JSONEncoder()
-            let data = try! encoder.encode(body!)
-            request.httpBody = data
+        if let body {
+            request.httpBody = try JSONEncoder().encode(body)
         }
         
         // Headers
@@ -75,8 +63,8 @@ extension KnockAPIService {
         }
         
         // Make the request
-        let (responseData, urlResponse) = try await session.data(for: request)
-        let statusCode = (urlResponse as! HTTPURLResponse).statusCode
+        let (responseData, urlResponse) = try await knockURLSession.data(for: request)
+        let statusCode = (urlResponse as? HTTPURLResponse)?.statusCode ?? 0
         if statusCode < 200 || statusCode > 299 {
             let networkError = Knock.NetworkError(title: "Status code error", description: String(data: responseData, encoding: .utf8) ?? "Unknown error", code: statusCode)
             Knock.shared.log(type: .warning, category: .networking, message: loggingMessageSummary, status: .fail, errorMessage: networkError.localizedDescription)
@@ -91,15 +79,15 @@ extension KnockAPIService {
         try await makeRequest(method: "GET", path: path, queryItems: queryItems, body: nil)
     }
     
-    internal func post<T:Codable>(path: String, body: Encodable?) async throws -> T  {
+    internal func post<T:Codable>(path: String, body: KnockRequestBody?) async throws -> T  {
         try await makeRequest(method: "POST", path: path, queryItems: nil, body: body)
     }
     
-    internal func put<T:Codable>(path: String, body: Encodable?) async throws -> T  {
+    internal func put<T:Codable>(path: String, body: KnockRequestBody?) async throws -> T  {
         try await makeRequest(method: "PUT", path: path, queryItems: nil, body: body)
     }
     
-    internal func delete<T:Codable>(path: String, body: Encodable?) async throws -> T {
+    internal func delete<T:Codable>(path: String, body: KnockRequestBody?) async throws -> T {
         try await makeRequest(method: "DELETE", path: path, queryItems: nil, body: body)
     }
     

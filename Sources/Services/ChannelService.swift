@@ -6,9 +6,8 @@
 //
 
 import Foundation
-import OSLog
 
-internal class ChannelService: KnockAPIService {
+internal final class ChannelService: KnockAPIService {
     
     func getUserChannelData(userId: String, channelId: String) async throws -> Knock.ChannelData {
         try await get(path: "/users/\(userId)/channel_data/\(channelId)", queryItems: nil)

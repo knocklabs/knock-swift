@@ -22,6 +22,10 @@ import Foundation
 
 extension AnyCodable: _AnyEncodable, _AnyDecodable {}
 
+// `value` holds JSON-compatible values (strings, numbers, booleans, and arrays/dictionaries of them), which are
+// immutable once wrapped. Wrapping a mutable reference type is not supported.
+extension AnyCodable: @unchecked Sendable {}
+
 extension AnyCodable: Equatable {
     public static func == (lhs: AnyCodable, rhs: AnyCodable) -> Bool {
         switch (lhs.value, rhs.value) {

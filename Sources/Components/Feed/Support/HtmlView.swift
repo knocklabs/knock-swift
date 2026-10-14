@@ -10,7 +10,6 @@ import SwiftUI
 import UIKit
 
 extension Knock {
-    @available(iOS 15, *)
     struct HTMLTextView: View {
         @Environment(\.colorScheme) var colorScheme
         

@@ -9,7 +9,7 @@ import Foundation
 
 
 extension Knock {
-    public enum FeedItemScope: String, Codable {
+    public enum FeedItemScope: String, Codable, Sendable {
         case archived
         case unarchived
         case interacted
@@ -20,14 +20,14 @@ extension Knock {
         case seen
     }
     
-    public enum FeedItemArchivedScope: String, Codable {
+    public enum FeedItemArchivedScope: String, Codable, Sendable {
         case include
         case exclude
         case only
     }
     
     @available(*, deprecated, renamed: "KnockMessageStatusBatchUpdateType", message: "To remove redundency, we will be removing BulkChannelMessageStatusUpdateType. Please use KnockMessageStatusBatchUpdateType instead")
-    public enum BulkChannelMessageStatusUpdateType: String {
+    public enum BulkChannelMessageStatusUpdateType: String, Sendable {
         case seen
         case read
         case archived

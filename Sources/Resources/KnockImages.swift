@@ -25,6 +25,6 @@ extension Bundle {
     }
 }
 
-struct KnockImages {
-    static let poweredByKnockIcon = Image("PoweredByKnockIcon", bundle: .currentImage(for: KnockImageBundleHelper.self))
+enum KnockImages {
+    static var poweredByKnockIcon: Image { Image("PoweredByKnockIcon", bundle: .currentImage(for: KnockImageBundleHelper.self)) }
 }

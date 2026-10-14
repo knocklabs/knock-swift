@@ -7,7 +7,7 @@
 
 import Foundation
 
-internal class AuthenticationModule {
+internal final class AuthenticationModule: Sendable {
     
     func signIn(userId: String, userToken: String?) async {
         await Knock.shared.environment.setUserInfo(userId: userId, userToken: userToken)
@@ -52,7 +52,7 @@ public extension Knock {
         return isUser
     }
     
-    func isAuthenticated(checkUserToken: Bool = false, completionHandler: @escaping ((Bool) -> Void)) {
+    func isAuthenticated(checkUserToken: Bool = false, completionHandler: @escaping @Sendable (Bool) -> Void) {
         Task {
             completionHandler(await isAuthenticated(checkUserToken: checkUserToken))
         }
@@ -72,7 +72,7 @@ public extension Knock {
         await authenticationModule.signIn(userId: userId, userToken: userToken)
     }
     
-    func signIn(userId: String, userToken: String?, completionHandler: @escaping (() -> Void)) {
+    func signIn(userId: String, userToken: String?, completionHandler: @escaping @Sendable () -> Void) {
         Task {
             await signIn(userId: userId, userToken: userToken)
             completionHandler()
@@ -89,7 +89,7 @@ public extension Knock {
         try await authenticationModule.signOut()
     }
     
-    func signOut(completionHandler: @escaping ((Result<Void, Error>) -> Void)) {
+    func signOut(completionHandler: @escaping @Sendable (Result<Void, Error>) -> Void) {
         Task {
             do {
                 try await signOut()

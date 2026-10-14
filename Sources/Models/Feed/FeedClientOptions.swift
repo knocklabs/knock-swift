@@ -8,7 +8,7 @@
 import Foundation
 
 extension Knock {
-    public struct FeedClientOptions: Codable {
+    public struct FeedClientOptions: Codable, Sendable {
         public var before: String?
         public var after: String?
         public var page_size: Int?

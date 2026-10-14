@@ -8,7 +8,7 @@
 import Foundation
 
 extension Knock {
-    public enum FeedTopActionButtonType: Hashable {
+    public enum FeedTopActionButtonType: Hashable, Sendable {
         case markAllAsRead(title: String = "Mark all as read")
         case archiveRead(title: String = "Archive read")
         case archiveAll(title: String = "Archive all")
