@@ -16,7 +16,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Select Xcode version
-        run: sudo xcode-select -switch /Applications/Xcode_16.4.app
+        run: |
+          sudo xcode-select -switch /Applications/Xcode_16.4.app
+          # The runner image ships several Xcode versions. Listing devices after the
+          # switch makes CoreSimulator recache runtimes, otherwise xcodebuild sees
+          # no concrete simulators and OS:latest points at a runtime 16.4 cannot use.
+          xcrun simctl list devices available
 
       - name: Show versions
         run: |
@@ -31,7 +36,7 @@ jobs:
           xcodebuild build-for-testing \
             -scheme Knock \
             -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             ONLY_ACTIVE_ARCH=NO
@@ -41,5 +46,5 @@ jobs:
           xcodebuild test-without-building \
             -scheme Knock \
             -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' \
             -enableCodeCoverage YES
