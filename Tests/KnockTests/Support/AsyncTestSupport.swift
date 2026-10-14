@@ -12,9 +12,9 @@ struct TimeoutError: Error, CustomStringConvertible {
     let description: String
 }
 
-/// How long async helpers wait before failing. Generous because shared CI simulators can stall for seconds; passing
-/// tests return as soon as their condition holds.
-let defaultTestTimeout = Duration.seconds(10)
+/// How long async helpers wait before failing. The realtime suites run serialized so they don't starve each other
+/// on a shared CI simulator. Passing tests return as soon as their condition holds.
+let defaultTestTimeout = Duration.seconds(30)
 
 /// A generic failure for fakes and test closures to throw.
 struct TestError: Error, Equatable, LocalizedError {
