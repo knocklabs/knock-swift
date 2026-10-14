@@ -9,7 +9,7 @@ import Foundation
 import Testing
 @testable import Knock
 
-@Suite("FeedManager realtime")
+@Suite("FeedManager realtime", .serialized)
 struct FeedManagerRealtimeTests {
     let factory = FakeRealtimeSocketFactory()
     let environment = KnockEnvironment()
