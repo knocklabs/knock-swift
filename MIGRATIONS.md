@@ -43,9 +43,9 @@ Version 2.0.0 builds the SDK in the Swift 6 language mode with complete concurre
 
 ### Requirements
 
-- iOS 16 or later.
+- iOS 16 or later (previously iOS 15).
 - Xcode 16.3 or later (Swift tools 6.1).
-- Swift Package Manager. Carthage is no longer supported, because PhoenixNectar is distributed as a Swift package only.
+- Swift Package Manager. CocoaPods and Carthage are no longer supported, because PhoenixNectar is distributed as a Swift package only.
 
 ### Realtime feed
 

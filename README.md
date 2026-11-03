@@ -51,7 +51,7 @@ If you are managing dependencies using the `Package.swift` file, just add this t
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/knocklabs/knock-swift.git", .upToNextMajor(from: "2.0.0-rc.1"))
+    .package(url: "https://github.com/knocklabs/knock-swift.git", .upToNextMajor(from: "2.0.0"))
 ]
 ```
 
