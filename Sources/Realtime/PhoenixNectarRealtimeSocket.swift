@@ -18,15 +18,22 @@ internal final class PhoenixNectarRealtimeSocket: RealtimeSocket {
     private let signalHub = ChannelSignalHub()
     private let joinPolicy: RequestPolicy
     private let logger: RealtimeLogger
+    private let stateObservers = LockIsolated<[UUID: AsyncStream<RealtimeConnectionState>.Continuation]>([:])
 
-    /// - Parameter connectParams: Read on every connection attempt, including automatic reconnects.
+    /// - Parameters:
+    ///   - connectParams: Read on every connection attempt, including automatic reconnects.
+    ///   - fetchGatewayConnection: Returns the signed URL to open the websocket with. Called on every connection attempt.
+    ///   - invalidateGatewayConnection: Called when a signed URL did not lead to an open websocket.
     init(
         endpoint: String,
         connectParams: @escaping @Sendable () -> [String: String],
+        fetchGatewayConnection: @escaping @Sendable () async throws -> SocketGatewayConnection,
+        invalidateGatewayConnection: @escaping @Sendable () async -> Void = {},
         joinTimeout: Duration = .seconds(10),
         logger: RealtimeLogger = .disabled
     ) throws {
         let joinPolicy = RequestPolicy(timeout: joinTimeout)
+        let unsupportedModeHandler = LockIsolated<(@Sendable (String?) async -> Void)?>(nil)
         self.socket = try Socket(
             endpoint: endpoint,
             configuration: Socket.Configuration(
@@ -37,10 +44,21 @@ internal final class PhoenixNectarRealtimeSocket: RealtimeSocket {
                     reconnectBackoff: RealtimeBackoff.delay(attempt:)
                 )
             ),
-            connectParamsProvider: { connectParams() }
+            connectParamsProvider: { connectParams() },
+            transportFactory: { url in
+                SocketGatewayTransport(
+                    url: url,
+                    fetchConnectUrl: fetchGatewayConnection,
+                    onConnectUrlInvalid: invalidateGatewayConnection,
+                    onUnsupportedMode: { mode in await unsupportedModeHandler.value?(mode) }
+                )
+            }
         )
         self.joinPolicy = joinPolicy
         self.logger = logger
+        unsupportedModeHandler.setValue { [weak self] mode in
+            await self?.handleUnsupportedMode(mode)
+        }
     }
 
     func connect() async throws {
@@ -84,15 +102,31 @@ internal final class PhoenixNectarRealtimeSocket: RealtimeSocket {
 
     func connectionStates() async -> AsyncStream<RealtimeConnectionState> {
         let source = await socket.connectionStateStream(bufferingPolicy: .unbounded)
+        let id = UUID()
+        let observers = stateObservers
         return AsyncStream(bufferingPolicy: .unbounded) { continuation in
+            observers.withLock { $0[id] = continuation }
             let task = Task {
                 for await state in source {
                     continuation.yield(Self.map(state))
                 }
                 continuation.finish()
             }
-            continuation.onTermination = { _ in task.cancel() }
+            continuation.onTermination = { _ in
+                task.cancel()
+                observers.withLock { $0[id] = nil }
+            }
         }
+    }
+
+    /// The gateway wants a connection mode this SDK does not support, so reconnecting would only repeat the problem.
+    /// Tells the observers, then disconnects, which cancels the reconnect PhoenixNectar scheduled.
+    private func handleUnsupportedMode(_ mode: String?) async {
+        logger(.error, "The socket gateway returned an unsupported mode: \(mode ?? "none")")
+        let observers = stateObservers.value.values
+        observers.forEach { $0.yield(.unsupportedMode(mode)) }
+        let socket = socket
+        Task { await socket.disconnect() }
     }
 
     func join<Params: Encodable & Sendable>(topic: String, params: Params) async throws -> any RealtimeChannel {

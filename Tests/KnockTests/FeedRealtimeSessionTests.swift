@@ -593,6 +593,20 @@ struct FeedRealtimeSessionTests {
         #expect(factory.created.count == 2)
     }
 
+    @Test func anUnsupportedGatewayModeFailsTheConnectionAndResumeReconnects() async throws {
+        let session = makeSession()
+        try await session.connect(options: nil)
+        let socket = try #require(factory.last)
+        try await waitUntil("connect") { socket.connectCount == 1 }
+
+        socket.emit(.unsupportedMode("polling"))
+        try await waitUntil("failed state") { await session.state.isFailed }
+
+        try await session.resume()
+        try await withTimeout { try await session.waitUntilConnected() }
+        #expect(factory.created.count == 2)
+    }
+
     @Test func waitUntilConnectedThrowsWhenASuspendedConnectionIsDisconnected() async throws {
         let session = makeSession()
         _ = try await connected(session)

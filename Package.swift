@@ -15,8 +15,9 @@ let package = Package(
             targets: ["Knock"]),
     ],
     dependencies: [
-        // PhoenixNectar is pre-1.0, so pin to the minor version to avoid picking up breaking changes.
-        .package(url: "https://github.com/jvdvleuten/PhoenixNectar.git", .upToNextMinor(from: "0.1.0"))
+        // PhoenixNectar is pre-1.0, so pin to the minor version to avoid picking up breaking changes. This is Knock's fork of
+        // jvdvleuten/PhoenixNectar, which makes the transport factory public.
+        .package(url: "https://github.com/knocklabs/PhoenixNectar.git", .upToNextMinor(from: "0.2.0"))
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.

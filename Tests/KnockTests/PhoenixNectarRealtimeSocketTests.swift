@@ -35,7 +35,7 @@ struct PhoenixNectarRealtimeSocketTests {
 
     @Test func joinParametersThatCannotBeEncodedAreUnrecoverable() async throws {
         struct Params: Encodable, Sendable { let value = Double.nan }
-        let socket = try PhoenixNectarRealtimeSocket(endpoint: "wss://api.knock.app/ws/v1/websocket", connectParams: { [:] })
+        let socket = try PhoenixNectarRealtimeSocket(endpoint: "wss://api.knock.app/ws/v1/websocket", connectParams: { [:] }, fetchGatewayConnection: { throw TestError(reason: "unused") })
 
         do {
             _ = try await socket.join(topic: "feeds:1", params: Params())
@@ -50,9 +50,9 @@ struct PhoenixNectarRealtimeSocketTests {
 
     @Test func theSocketValidatesItsEndpoint() throws {
         #expect(throws: PhoenixError.malformedEndpoint("")) {
-            try PhoenixNectarRealtimeSocket(endpoint: "", connectParams: { [:] })
+            try PhoenixNectarRealtimeSocket(endpoint: "", connectParams: { [:] }, fetchGatewayConnection: { throw TestError(reason: "unused") })
         }
-        _ = try PhoenixNectarRealtimeSocket(endpoint: "wss://api.knock.app/ws/v1/websocket", connectParams: { ["api_key": "pk_test"] })
+        _ = try PhoenixNectarRealtimeSocket(endpoint: "wss://api.knock.app/ws/v1/websocket", connectParams: { ["api_key": "pk_test"] }, fetchGatewayConnection: { throw TestError(reason: "unused") })
     }
 }
 
