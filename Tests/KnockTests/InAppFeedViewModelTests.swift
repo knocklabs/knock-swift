@@ -286,10 +286,10 @@ final class InAppFeedViewModelTests: XCTestCase {
             )
             weakViewModel = viewModel
             await viewModel.connectFeedAndObserveNewMessages()
-            try await waitUntil { await feedManager.feedModule.realtime.subscriberCount == 1 }
+            try await waitUntil("realtime subscription") { await feedManager.feedModule.realtime.subscriberCount == 1 }
         }
         XCTAssertNil(weakViewModel)
-        try await waitUntil { await feedManager.feedModule.realtime.subscriberCount == 0 }
+        try await waitUntil("realtime unsubscription") { await feedManager.feedModule.realtime.subscriberCount == 0 }
     }
 
     func testObservingNewMessagesDoesNotKeepTheFeedManagerAlive() async throws {
@@ -311,9 +311,9 @@ final class InAppFeedViewModelTests: XCTestCase {
                 feedManagerProvider: { [weak feedManager] in feedManager }
             )
             await viewModel.connectFeedAndObserveNewMessages()
-            try await waitUntil { await feedManager.feedModule.realtime.subscriberCount == 1 }
+            try await waitUntil("realtime subscription") { await feedManager.feedModule.realtime.subscriberCount == 1 }
         }
-        try await waitUntil { weakFeedManager == nil }
+        try await waitUntil("feed manager release") { weakFeedManager == nil }
         withExtendedLifetime(viewModel) {}
     }
 }
