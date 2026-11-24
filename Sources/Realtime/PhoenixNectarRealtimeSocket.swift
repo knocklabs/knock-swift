@@ -126,7 +126,7 @@ internal final class PhoenixNectarRealtimeSocket: RealtimeSocket {
         logger(.error, "The socket gateway returned an unsupported mode: \(mode ?? "none")")
         let observers = stateObservers.value.values
         observers.forEach { $0.yield(.unsupportedMode(mode)) }
-        await socket.disconnect()
+        await disconnect()
     }
 
     func join<Params: Encodable & Sendable>(topic: String, params: Params) async throws -> any RealtimeChannel {
