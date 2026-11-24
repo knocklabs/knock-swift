@@ -57,7 +57,7 @@ dependencies: [
 
 ### Manually
 
-As a last option, you could manually copy the files inside the `Sources` folder to your project. You'll also need to add [PhoenixNectar](https://github.com/jvdvleuten/PhoenixNectar), which the realtime feed depends on.
+As a last option, you could manually copy the files inside the `Sources` folder to your project. You'll also need to add [PhoenixNectar](https://github.com/knocklabs/PhoenixNectar), which the realtime feed depends on.
 
 Carthage is not supported: PhoenixNectar is distributed as a Swift package only.
 

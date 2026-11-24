@@ -15,6 +15,8 @@ internal enum RealtimeConnectionState: Sendable, Equatable {
     case reconnecting(attempt: Int)
     case disconnected(code: Int, reason: String?)
     case failed(reason: String)
+    /// The socket gateway asked for a connection mode this SDK does not support. The socket will not reconnect.
+    case unsupportedMode(String?)
 }
 
 internal struct RealtimeSocketConfiguration: Sendable, Equatable {

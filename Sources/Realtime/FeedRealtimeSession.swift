@@ -456,6 +456,11 @@ internal actor FeedRealtimeSession {
             connection?.lastTransportFailure = "Socket closed with code \(code)" + (reason.map { ": \($0)" } ?? "")
         case .failed(let reason):
             connection?.lastTransportFailure = reason
+        case .unsupportedMode(let mode):
+            // The socket will never reconnect, so waiting for it would hang. `resume()` connects again later.
+            let reason = "The socket gateway returned an unsupported mode: \(mode ?? "none")"
+            log(.error, reason)
+            await fail(connectionID: id, error: .connectionFailed(reason: reason))
         }
     }
 

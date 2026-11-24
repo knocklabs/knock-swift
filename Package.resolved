@@ -1,13 +1,13 @@
 {
-  "originHash" : "eea8e518d5e091c48cfce72aaa4c9eebb16b426bb8b61679b0b3809a39162c6e",
+  "originHash" : "0a27d07462f4bbd106a0c726c9db1b9341016745b363ab6ac81c46d3987595cf",
   "pins" : [
     {
       "identity" : "phoenixnectar",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/jvdvleuten/PhoenixNectar.git",
+      "location" : "https://github.com/knocklabs/PhoenixNectar.git",
       "state" : {
-        "revision" : "5f9eea6b8c3f24379491784f5c79078b061ed682",
-        "version" : "0.1.0"
+        "revision" : "5cf92cb6675d05dfcd9ba7c7c324a23a73838ff7",
+        "version" : "0.2.0"
       }
     }
   ],

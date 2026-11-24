@@ -35,7 +35,7 @@ struct PhoenixNectarRealtimeSocketTests {
 
     @Test func joinParametersThatCannotBeEncodedAreUnrecoverable() async throws {
         struct Params: Encodable, Sendable { let value = Double.nan }
-        let socket = try PhoenixNectarRealtimeSocket(endpoint: "wss://api.knock.app/ws/v1/websocket", connectParams: { [:] })
+        let socket = try PhoenixNectarRealtimeSocket(endpoint: "wss://api.knock.app/ws/v1/websocket", connectParams: { [:] }, fetchGatewayConnection: { throw TestError(reason: "unused") })
 
         do {
             _ = try await socket.join(topic: "feeds:1", params: Params())
@@ -48,11 +48,36 @@ struct PhoenixNectarRealtimeSocketTests {
         }
     }
 
+    @Test func anUnsupportedGatewayModeDisconnectsWithoutReconnecting() async throws {
+        let fetchCount = LockIsolated(0)
+        let socket = try PhoenixNectarRealtimeSocket(
+            endpoint: "wss://api.knock.app/ws/v1/websocket",
+            connectParams: { ["api_key": "pk_test"] },
+            fetchGatewayConnection: {
+                fetchCount.withLock { $0 += 1 }
+                throw UnsupportedSocketModeError(mode: "polling")
+            }
+        )
+        let states = StreamRecorder(await socket.connectionStates())
+
+        try await socket.connect()
+        try await states.waitFor(.unsupportedMode("polling"))
+
+        // The first reconnect backoff is at most 625ms.
+        try await expectStaysTrue("a single gateway fetch", for: .seconds(1)) { fetchCount.value == 1 }
+        #expect(!states.values.contains { state in
+            switch state {
+            case .reconnecting, .failed: return true
+            default: return false
+            }
+        })
+    }
+
     @Test func theSocketValidatesItsEndpoint() throws {
         #expect(throws: PhoenixError.malformedEndpoint("")) {
-            try PhoenixNectarRealtimeSocket(endpoint: "", connectParams: { [:] })
+            try PhoenixNectarRealtimeSocket(endpoint: "", connectParams: { [:] }, fetchGatewayConnection: { throw TestError(reason: "unused") })
         }
-        _ = try PhoenixNectarRealtimeSocket(endpoint: "wss://api.knock.app/ws/v1/websocket", connectParams: { ["api_key": "pk_test"] })
+        _ = try PhoenixNectarRealtimeSocket(endpoint: "wss://api.knock.app/ws/v1/websocket", connectParams: { ["api_key": "pk_test"] }, fetchGatewayConnection: { throw TestError(reason: "unused") })
     }
 }
 

@@ -64,14 +64,29 @@ internal final class FeedModule: Sendable {
     )
 
     /// Reconnects send the latest user token, so a token refreshed with `signIn` is used without reconnecting by hand.
+    ///
+    /// The signed gateway URL is cached for the factory's lifetime, so reconnects reuse it until it expires. A socket for a
+    /// different configuration (another user, key or endpoint) gets its own cache.
     static func phoenixNectarSocketFactory(environment: @escaping @Sendable () -> KnockEnvironment) -> RealtimeSocketFactory {
-        { configuration in
+        let service = SocketGatewayService()
+        let cache = LockIsolated<(configuration: RealtimeSocketConfiguration, cache: SocketGatewayConnectionCache)?>(nil)
+        return { configuration in
             let publishableKey = configuration.connectParams["api_key"] ?? ""
+            let gatewayCache = cache.withLock { current in
+                if let current, current.configuration == configuration {
+                    return current.cache
+                }
+                let replacement = SocketGatewayConnectionCache(fetch: { try await service.fetchConnection() })
+                current = (configuration, replacement)
+                return replacement
+            }
             return try PhoenixNectarRealtimeSocket(
                 endpoint: configuration.endpoint,
                 connectParams: {
                     FeedRealtimeTarget.connectParams(publishableKey: publishableKey, userToken: environment().currentUserToken)
                 },
+                fetchGatewayConnection: { try await gatewayCache.get() },
+                invalidateGatewayConnection: { await gatewayCache.invalidate() },
                 logger: realtimeLogger
             )
         }
