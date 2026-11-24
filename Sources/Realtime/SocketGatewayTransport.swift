@@ -104,8 +104,12 @@ internal actor SocketGatewayTransport: PhoenixTransport {
             connection = try await fetchConnectUrl()
         } catch let error as UnsupportedSocketModeError {
             guard !settled else { return }
+            // The handler disconnects the socket. Emits no error or close: PhoenixNectar would reconnect on either.
             await onUnsupportedMode(error.mode)
-            fail(error: error.localizedDescription, code: 1000, reason: "unsupported_socket_mode")
+            if !settled {
+                settled = true
+                finish()
+            }
             return
         } catch {
             guard !settled, !Task.isCancelled else { return }

@@ -173,7 +173,7 @@ struct SocketGatewayTransportTests {
         #expect(harness.unsupportedModes.value.isEmpty)
     }
 
-    @Test func anUnsupportedModeClosesCleanlyAndIsReported() async throws {
+    @Test func anUnsupportedModeIsReportedWithoutAnErrorOrClose() async throws {
         let harness = Harness()
         harness.result.setValue(.failure(UnsupportedSocketModeError(mode: "polling")))
         let transport = harness.makeTransport()
@@ -181,12 +181,13 @@ struct SocketGatewayTransportTests {
         await transport.connect(with: [:])
 
         try await waitUntil("finished") { events.isFinished }
-        #expect(events.values == [.error("Unsupported socket mode: polling"), .close(1000, "unsupported_socket_mode")])
+        #expect(events.values.isEmpty)
         #expect(harness.unsupportedModes.value == ["polling"])
         #expect(harness.bases.value.isEmpty)
+        #expect(await transport.readyState() == .closed)
 
         await transport.disconnect(code: 1000, reason: nil)
-        #expect(events.values.count == 2)
+        #expect(events.values.isEmpty)
     }
 
     @Test func aHandshakeFailureInvalidatesTheUrl() async throws {

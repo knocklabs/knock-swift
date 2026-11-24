@@ -120,13 +120,13 @@ internal final class PhoenixNectarRealtimeSocket: RealtimeSocket {
     }
 
     /// The gateway wants a connection mode this SDK does not support, so reconnecting would only repeat the problem.
-    /// Tells the observers, then disconnects, which cancels the reconnect PhoenixNectar scheduled.
+    /// Tells the observers, then disconnects before the transport reports anything, so PhoenixNectar never schedules a
+    /// reconnect. The transport is suspended in this call, so the socket's disconnect can reach it.
     private func handleUnsupportedMode(_ mode: String?) async {
         logger(.error, "The socket gateway returned an unsupported mode: \(mode ?? "none")")
         let observers = stateObservers.value.values
         observers.forEach { $0.yield(.unsupportedMode(mode)) }
-        let socket = socket
-        Task { await socket.disconnect() }
+        await socket.disconnect()
     }
 
     func join<Params: Encodable & Sendable>(topic: String, params: Params) async throws -> any RealtimeChannel {
