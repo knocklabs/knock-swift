@@ -89,3 +89,10 @@ subscription.cancel()
 - Types conforming to `ContentBlockBase` must be `Sendable`.
 - `Knock.InAppFeedViewModel` is `@MainActor` and `final`. Calling `connectFeedAndObserveNewMessages()` again replaces the previous observation, and `stopObservingNewMessages()` stops it. Feed requests no longer write `before`/`after` cursors back into `feedClientOptions`. They also no longer overwrite `feedClientOptions.archived`: the archived filter still requests `archived: only`, but other filters now send the `archived` value you configured instead of clearing it.
 - `KnockAppDelegate`'s `UNUserNotificationCenterDelegate` methods, `getMessageId(userInfo:)`, `pushNotificationDeliveredInForeground(notification:)` and `pushNotificationTapped(userInfo:)` are `nonisolated`, because the system doesn't guarantee they're called on the main actor. Mark your overrides `nonisolated` too.
+
+## Upgrading to Version 2.1.0
+
+#### New in Version 2.1.0:
+
+- The SDK now makes a request to the `POST /v1/sockets/connect` endpoint of the Knock API before establishing the WebSocket connection used for real-time feed updates.
+- The SDK now depends on [Knock's fork of PhoenixNectar](https://github.com/knocklabs/PhoenixNectar) instead of [jvdvleuten/PhoenixNectar](https://github.com/jvdvleuten/PhoenixNectar). If you previously added PhoenixNectar to your project manually, use the new repository URL.
