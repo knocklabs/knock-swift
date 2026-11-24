@@ -95,4 +95,4 @@ subscription.cancel()
 #### New in Version 2.1.0:
 
 - The SDK now makes a request to the `POST /v1/sockets/connect` endpoint of the Knock API before establishing the WebSocket connection used for real-time feed updates.
-- The SDK now depends on [Knock's fork of PhoenixNectar](https://github.com/knocklabs/PhoenixNectar) instead of [jvdvleuten/PhoenixNectar](https://github.com/jvdvleuten/PhoenixNectar). If you previously added PhoenixNectar to your project manually, use the new repository URL.
+- The SDK now depends on [Knock's fork of PhoenixNectar](https://github.com/knocklabs/PhoenixNectar) instead of [jvdvleuten/PhoenixNectar](https://github.com/jvdvleuten/PhoenixNectar). If you previously added PhoenixNectar to your project manually, switch to the new repository URL.
